@@ -1,1 +1,6 @@
-.rsc
+# Generated folder
+/vcpkg_installed/
+/build/
+
+# Subject ressources
+/.rsc/
