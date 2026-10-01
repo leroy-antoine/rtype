@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.25)
+
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/vcpkg/scripts/buildsystems/vcpkg.cmake")
+    message(FATAL_ERROR
+        "vcpkg submodule is missing. Run:\n"
+        "    git submodule update --init\n"
+        "then configure again.")
+endif()
+
 project(rtype LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
