@@ -15,4 +15,5 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "$<1:${CMAKE_SOURCE_DIR}/build/binaries>")
 
+add_subdirectory(engine)
 add_subdirectory(src)
