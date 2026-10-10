@@ -2,45 +2,36 @@
 
 #include <cstdint>
 #include <limits>
-#include <stdexcept>
+#include <cassert>
 #include <vector>
 
 namespace Engine {
     struct Entity {
         std::uint64_t id = std::numeric_limits<std::uint64_t>::max();
 
-        static const Entity null;
-
         bool operator==(const Entity &) const = default;
-    };
 
-    inline constexpr Entity Entity::null{};
+        std::uint32_t getIndex() const
+        {
+            return static_cast<std::uint32_t>(this->id & 0xFFFFFFFF);
+        }
+
+        std::uint32_t getGeneration() const
+        {
+            return static_cast<std::uint32_t>(this->id >> 32);
+        }
+    };
 
     class EntityManager
     {
     public:
-        EntityManager() = default;
-        ~EntityManager() = default;
-
-        static constexpr std::uint32_t getIndex(Entity e)
-        {
-            return static_cast<std::uint32_t>(e.id & 0xFFFFFFFF);
-        }
-
-        static constexpr std::uint32_t getGeneration(Entity e)
-        {
-            return static_cast<std::uint32_t>(e.id >> 32);
-        }
-
         Entity create()
         {
             std::uint32_t index;
             std::uint32_t generation;
 
             if (_freeList.empty()) {
-                if (_generations.size() >= std::numeric_limits<std::uint32_t>::max()) {
-                    throw std::length_error("EntityManager: entity limit reached");
-                }
+                assert(_generations.size() < std::numeric_limits<std::uint32_t>::max());
                 index = static_cast<std::uint32_t>(_generations.size());
                 _generations.push_back(0);
             } else {
@@ -53,10 +44,10 @@ namespace Engine {
 
         bool alive(Entity e) const
         {
-            std::uint32_t index = getIndex(e);
-            std::uint32_t generation = getGeneration(e);
+            std::uint32_t index = e.getIndex();
+            std::uint32_t generation = e.getGeneration();
 
-            return (index <_generations.size() && _generations.at(index) == generation);
+            return (index <_generations.size() && _generations[index] == generation);
         }
         
         void destroy(Entity e)
@@ -66,8 +57,8 @@ namespace Engine {
             if (!alive(e)) {
                 return;
             }
-            index = getIndex(e);
-            ++_generations.at(index);
+            index = e.getIndex();
+            ++_generations[index];
             _freeList.push_back(index);
         }
     private:

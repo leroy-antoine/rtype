@@ -1,20 +1,47 @@
 #pragma once
 
 #include <cstdint>
+#include <cstddef>
 #include <limits>
+#include <mutex>
+#include <new>
 #include <type_traits>
-#include <atomic>
+#include <utility>
+#include <vector>
 
 namespace Engine {
     struct ComponentId {
         std::uint64_t id = std::numeric_limits<std::uint64_t>::max();
 
-        static const ComponentId null;
-
         bool operator==(const ComponentId &) const = default;
     };
 
-    inline constexpr ComponentId ComponentId::null{};
+    struct ComponentInfo {
+        std::size_t size;
+        std::size_t align;
+        void (*move)(void *dest, void *src);
+        void (*destroy)(void *ptr);
+    };
+
+    template<typename T>
+    ComponentInfo infoOf()
+    {
+        static_assert(std::is_nothrow_move_constructible_v<T>,
+            "Components must have a noexcept move constructor");
+
+        return {
+            sizeof(T),
+            alignof(T),
+            [](void *dest, void *src) {
+                T *obj = std::launder(static_cast<T *>(src));
+
+                new (dest) T(std::move(*obj));
+            },
+            [](void *ptr) {
+                std::launder(static_cast<T *>(ptr))->~T();
+            }
+        };
+    }
 
     class ComponentRegistry
     {
@@ -24,19 +51,32 @@ namespace Engine {
         {
             return idOf<std::remove_cvref_t<T>>();
         }
+
+        static ComponentInfo getInfo(ComponentId id)
+        {
+            std::lock_guard lock(_mutex);
+
+            return _infos.at(id.id);
+        }
     private:
         template<typename T>
         static ComponentId idOf()
         {
-            static const ComponentId id{_next++};
-            
+            static const ComponentId id = registerType<T>();
+
             return id;
         }
-        inline static std::atomic<std::uint64_t> _next = 0;
-    };
 
-    struct ComponentInfo {
-        std::size_t size;
-        
+        template<typename T>
+        static ComponentId registerType()
+        {
+            std::lock_guard lock(_mutex);
+
+            _infos.push_back(infoOf<T>());
+            return {_infos.size() - 1};
+        }
+
+        inline static std::mutex _mutex;
+        inline static std::vector<ComponentInfo> _infos;
     };
 }
