@@ -3,6 +3,7 @@
 #include <any>
 #include <mutex>
 #include <limits>
+#include <bitset>
 #include <vector>
 #include <cassert>
 #include <cstdint>
@@ -12,6 +13,8 @@
 
 namespace Engine {
     namespace detail {
+        inline constexpr std::size_t MAX_COMPONENTS = 64;
+
         struct ComponentInfo {
             std::any (*makeStorage)();
             std::size_t (*size)(const std::any &data);
@@ -61,6 +64,8 @@ namespace Engine {
         }
     }
 
+    using Signature = std::bitset<detail::MAX_COMPONENTS>;
+
     struct ComponentId {
         std::uint64_t id = std::numeric_limits<std::uint64_t>::max();
 
@@ -96,6 +101,7 @@ namespace Engine {
         {
             std::lock_guard lock(_mutex);
 
+            assert(_infos.size() < detail::MAX_COMPONENTS && "registerType: number of type out of range");
             _infos.push_back(detail::infoOf<T>());
             return {_infos.size() - 1};
         }
