@@ -1,47 +1,71 @@
 #pragma once
 
+#include <any>
+#include <mutex>
+#include <limits>
+#include <vector>
+#include <cassert>
 #include <cstdint>
 #include <cstddef>
-#include <limits>
-#include <mutex>
-#include <new>
-#include <type_traits>
 #include <utility>
-#include <vector>
+#include <type_traits>
 
 namespace Engine {
+    namespace detail {
+        struct ComponentInfo {
+            std::any (*makeStorage)();
+            std::size_t (*size)(const std::any &data);
+            void (*swapRemove)(std::any &data, std::size_t row);
+            void (*moveRow)(std::any &src, std::size_t row, std::any &dst);
+        };
+
+        template<typename T>
+        void swapRemove(std::vector<T> &vec, std::size_t row)
+        {
+            std::size_t last;
+
+            assert(row < vec.size() && "swapRemove: row out of range");
+            last = vec.size() - 1;
+            if (row != last) {
+                vec[row] = std::move(vec[last]);
+            }
+            vec.pop_back();
+        }
+    
+        template<typename T>
+        ComponentInfo infoOf()
+        {
+            static_assert(std::is_copy_constructible_v<T>,
+                "Components must be copyable (std::any requirement)");
+            static_assert(std::is_move_assignable_v<T>,
+                "Components must be move assignable (swapRemove requirement)");
+
+            return {
+                []() -> std::any {
+                    return std::vector<T>{};
+                },
+                [](const std::any &data) -> std::size_t {
+                    return std::any_cast<const std::vector<T> &>(data).size();
+                },
+                [](std::any &data, std::size_t row) {
+                    swapRemove(std::any_cast<std::vector<T> &>(data), row);
+                },
+                [](std::any &src, std::size_t row, std::any &dst) {
+                    std::vector<T> &from = std::any_cast<std::vector<T> &>(src);
+                    std::vector<T> &to = std::any_cast<std::vector<T> &>(dst);
+
+                    to.push_back(std::move(from[row]));
+                    swapRemove(from, row);
+                }
+            };
+        }
+    }
+
     struct ComponentId {
         std::uint64_t id = std::numeric_limits<std::uint64_t>::max();
 
         bool operator==(const ComponentId &) const = default;
     };
-
-    struct ComponentInfo {
-        std::size_t size;
-        std::size_t align;
-        void (*move)(void *dest, void *src);
-        void (*destroy)(void *ptr);
-    };
-
-    template<typename T>
-    ComponentInfo infoOf()
-    {
-        static_assert(std::is_nothrow_move_constructible_v<T>,
-            "Components must have a noexcept move constructor");
-
-        return {
-            sizeof(T),
-            alignof(T),
-            [](void *dest, void *src) {
-                T *obj = std::launder(static_cast<T *>(src));
-
-                new (dest) T(std::move(*obj));
-            },
-            [](void *ptr) {
-                std::launder(static_cast<T *>(ptr))->~T();
-            }
-        };
-    }
 
     class ComponentRegistry
     {
@@ -52,7 +76,7 @@ namespace Engine {
             return idOf<std::remove_cvref_t<T>>();
         }
 
-        static ComponentInfo getInfo(ComponentId id)
+        static detail::ComponentInfo getInfo(ComponentId id)
         {
             std::lock_guard lock(_mutex);
 
@@ -72,11 +96,11 @@ namespace Engine {
         {
             std::lock_guard lock(_mutex);
 
-            _infos.push_back(infoOf<T>());
+            _infos.push_back(detail::infoOf<T>());
             return {_infos.size() - 1};
         }
 
         inline static std::mutex _mutex;
-        inline static std::vector<ComponentInfo> _infos;
+        inline static std::vector<detail::ComponentInfo> _infos;
     };
 }
