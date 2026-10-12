@@ -15,5 +15,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "$<1:${CMAKE_SOURCE_DIR}/build/binaries>")
 
+option(BUILD_SHARED_LIBS "Build engine libraries as shared libraries" ON)
+
 add_subdirectory(engine)
 add_subdirectory(src)
