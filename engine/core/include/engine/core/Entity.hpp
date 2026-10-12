@@ -1,9 +1,9 @@
 #pragma once
 
-#include <cstdint>
 #include <limits>
-#include <cassert>
 #include <vector>
+#include <cstdint>
+#include <cassert>
 
 namespace Engine {
     struct Entity {
