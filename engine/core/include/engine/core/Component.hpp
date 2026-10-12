@@ -1,7 +1,6 @@
 #pragma once
 
 #include <any>
-#include <mutex>
 #include <limits>
 #include <bitset>
 #include <vector>
@@ -9,7 +8,9 @@
 #include <cstdint>
 #include <cstddef>
 #include <utility>
+#include <typeindex>
 #include <type_traits>
+#include "engine/core/Export.hpp"
 
 namespace Engine {
     namespace detail {
@@ -72,7 +73,7 @@ namespace Engine {
         bool operator==(const ComponentId &) const = default;
     };
 
-    class ComponentRegistry
+    class ENGINE_CORE_EXPORT ComponentRegistry
     {
     public:
         template<typename T>
@@ -81,32 +82,16 @@ namespace Engine {
             return idOf<std::remove_cvref_t<T>>();
         }
 
-        static detail::ComponentInfo getInfo(ComponentId id)
-        {
-            std::lock_guard lock(_mutex);
-
-            return _infos.at(id.id);
-        }
+        static detail::ComponentInfo getInfo(ComponentId id);
     private:
         template<typename T>
         static ComponentId idOf()
         {
-            static const ComponentId id = registerType<T>();
+            static const ComponentId id = registerType(typeid(T), detail::infoOf<T>());
 
             return id;
         }
 
-        template<typename T>
-        static ComponentId registerType()
-        {
-            std::lock_guard lock(_mutex);
-
-            assert(_infos.size() < detail::MAX_COMPONENTS && "registerType: number of type out of range");
-            _infos.push_back(detail::infoOf<T>());
-            return {_infos.size() - 1};
-        }
-
-        inline static std::mutex _mutex;
-        inline static std::vector<detail::ComponentInfo> _infos;
+        static ComponentId registerType(std::type_index type, detail::ComponentInfo info);
     };
 }
