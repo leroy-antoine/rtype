@@ -3,7 +3,7 @@
 #include <any>
 #include <cstddef>
 #include <vector>
-#include "Component.hpp"
+#include "engine/core/Component.hpp"
 
 namespace Engine {
     namespace detail {

@@ -47,7 +47,7 @@ namespace Engine {
             std::uint32_t index = e.getIndex();
             std::uint32_t generation = e.getGeneration();
 
-            return (index <_generations.size() && _generations[index] == generation);
+            return (index < _generations.size() && _generations[index] == generation);
         }
         
         void destroy(Entity e)
