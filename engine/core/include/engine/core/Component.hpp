@@ -63,35 +63,35 @@ namespace Engine {
                 }
             };
         }
+
+        using Signature = std::bitset<MAX_COMPONENTS>;
+
+        struct ComponentId {
+            std::uint64_t id = std::numeric_limits<std::uint64_t>::max();
+
+            bool operator==(const ComponentId &) const = default;
+        };
+
+        class ENGINE_CORE_EXPORT ComponentRegistry
+        {
+        public:
+            template<typename T>
+            static ComponentId getId()
+            {
+                return idOf<std::remove_cvref_t<T>>();
+            }
+
+            static ComponentInfo getInfo(ComponentId id);
+        private:
+            template<typename T>
+            static ComponentId idOf()
+            {
+                static const ComponentId id = registerType(typeid(T), infoOf<T>());
+
+                return id;
+            }
+
+            static ComponentId registerType(std::type_index type, ComponentInfo info);
+        };
     }
-
-    using Signature = std::bitset<detail::MAX_COMPONENTS>;
-
-    struct ComponentId {
-        std::uint64_t id = std::numeric_limits<std::uint64_t>::max();
-
-        bool operator==(const ComponentId &) const = default;
-    };
-
-    class ENGINE_CORE_EXPORT ComponentRegistry
-    {
-    public:
-        template<typename T>
-        static ComponentId getId()
-        {
-            return idOf<std::remove_cvref_t<T>>();
-        }
-
-        static detail::ComponentInfo getInfo(ComponentId id);
-    private:
-        template<typename T>
-        static ComponentId idOf()
-        {
-            static const ComponentId id = registerType(typeid(T), detail::infoOf<T>());
-
-            return id;
-        }
-
-        static ComponentId registerType(std::type_index type, detail::ComponentInfo info);
-    };
 }
