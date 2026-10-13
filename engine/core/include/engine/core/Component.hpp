@@ -43,7 +43,6 @@ namespace Engine {
                 "Components must be copyable (std::any requirement)");
             static_assert(std::is_move_assignable_v<T>,
                 "Components must be move assignable (swapRemove requirement)");
-
             return {
                 []() -> std::any {
                     return std::vector<T>{};
