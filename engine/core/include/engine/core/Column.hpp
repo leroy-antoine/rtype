@@ -17,17 +17,32 @@ namespace Engine {
             Column(Column &&) noexcept = default;
             Column &operator=(Column &&) noexcept = default;
         
-            std::size_t size() const { return _info.size(_data); }
+            std::size_t size() const
+            {
+                return _info.size(_data);
+            }
         
-            void swapRemove(std::size_t row) { _info.swapRemove(_data, row); }
+            void swapRemove(std::size_t row)
+            {
+                _info.swapRemove(_data, row);
+            }
         
-            void moveRowTo(std::size_t row, Column &dst) { _info.moveRow(_data, row, dst._data); }
-        
+            void moveRowTo(std::size_t row, Column &dst)
+            {
+                _info.moveRow(_data, row, dst._data);
+            }
+
             template<typename T>
-            std::vector<T> &as() { return std::any_cast<std::vector<T> &>(_data); }
+            std::vector<T> &as()
+            {
+                return std::any_cast<std::vector<T> &>(_data);
+            }
             
             template<typename T>
-            const std::vector<T> &as() const { return std::any_cast<const std::vector<T> &>(_data); }
+            const std::vector<T> &as() const
+            {
+                return std::any_cast<const std::vector<T> &>(_data);
+            }
         private:
             ComponentInfo _info;
             std::any _data;
