@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <vector>
 #include <cassert>
 #include <cstddef>
@@ -27,21 +28,38 @@ namespace Engine {
         Entity create()
         {
             Entity e;
-            std::size_t row;
 
             assert(_iterating == 0 && "create: structural change during each");
+            e = reserve();
+            materialize(e);
+            return e;
+        }
+
+        Entity reserve()
+        {
+            Entity e;
+
             e = _entities.create();
-            row = _archetypes[EMPTY_ARCHETYPE].addEntity(e);
             if (e.getIndex() >= _records.size()) {
                 _records.resize(e.getIndex() + 1);
             }
-            _records[e.getIndex()] = {EMPTY_ARCHETYPE, row};
+            _records[e.getIndex()] = {NO_ARCHETYPE, 0};
             return e;
+        }
+
+        void materialize(Entity e)
+        {
+            std::size_t row;
+
+            assert(_iterating == 0 && "materialize: structural change during each");
+            assert(reserved(e) && "materialize: entity is not reserved");
+            row = _archetypes[EMPTY_ARCHETYPE].addEntity(e);
+            _records[e.getIndex()] = {EMPTY_ARCHETYPE, row};
         }
 
         bool alive(Entity e) const
         {
-            return _entities.alive(e);
+            return _entities.alive(e) && _records[e.getIndex()].archetype != NO_ARCHETYPE;
         }
 
         void destroy(Entity e)
@@ -50,6 +68,10 @@ namespace Engine {
             Entity moved;
 
             assert(_iterating == 0 && "destroy: structural change during each");
+            if (reserved(e)) {
+                _entities.destroy(e);
+                return;
+            }
             if (!alive(e)) {
                 return;
             }
@@ -166,6 +188,12 @@ namespace Engine {
         };
 
         static constexpr std::size_t EMPTY_ARCHETYPE = 0;
+        static constexpr std::size_t NO_ARCHETYPE = std::numeric_limits<std::size_t>::max();
+
+        bool reserved(Entity e) const
+        {
+            return _entities.alive(e) && _records[e.getIndex()].archetype == NO_ARCHETYPE;
+        }
 
         template<typename Func, typename... Columns>
         static void eachRow(const std::vector<Entity> &entities, Func &func, Columns &...columns)
