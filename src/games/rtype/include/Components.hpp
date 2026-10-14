@@ -6,6 +6,7 @@
 #define RTYPE_COMPONENTS_HPP
 #include <vector>
 
+#include "Movements.hpp"
 #include "utils/vectors.hpp"
 
 namespace rtype {
@@ -20,7 +21,15 @@ namespace rtype {
         gameLogic::Vec2 direction = {0, 0}; //En gros, si fleche gauche est touché, x = -1, y = 0
         gameLogic::Velocity velocity = {direction.x * speed, direction.y * speed};
 
+        void updateVelocity()
+        {
+            velocity.calculateVelocity(direction, speed);
+        }
 
+        void updatePos(const float dt)
+        {
+            pos = calculatePos(pos, velocity.velocity, dt);
+        }
     };
 }
 
