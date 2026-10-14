@@ -23,21 +23,20 @@ namespace Engine {
             }
         }
 
+        std::optional<Event> convert(const sf::Event::Closed &) { return Events::Closed{}; }
+        std::optional<Event> convert(const sf::Event::FocusLost &) { return Events::FocusLost{}; }
+        std::optional<Event> convert(const sf::Event::FocusGained &) { return Events::FocusGained{}; }
+        std::optional<Event> convert(const sf::Event::Resized &e) { return Events::Resized{e.size.x, e.size.y}; }
+        std::optional<Event> convert(const sf::Event::KeyPressed &e) { return Events::KeyPressed{toKey(e.code)}; }
+        std::optional<Event> convert(const sf::Event::KeyReleased &e) { return Events::KeyReleased{toKey(e.code)}; }
+
+        // pour tous les events SFML qu'on gere pas
+        template <typename T>
+        std::optional<Event> convert(const T &) { return std::nullopt; }
+
         std::optional<Event> translate(const sf::Event &event)
         {
-            if (event.is<sf::Event::Closed>())
-                return Events::Closed{};
-            if (event.is<sf::Event::FocusLost>())
-                return Events::FocusLost{};
-            if (event.is<sf::Event::FocusGained>())
-                return Events::FocusGained{};
-            if (const auto *e = event.getIf<sf::Event::Resized>())
-                return Events::Resized{e->size.x, e->size.y};
-            if (const auto *e = event.getIf<sf::Event::KeyPressed>())
-                return Events::KeyPressed{toKey(e->code)};
-            if (const auto *e = event.getIf<sf::Event::KeyReleased>())
-                return Events::KeyReleased{toKey(e->code)};
-            return std::nullopt;
+            return event.visit([](const auto &e) { return convert(e); });
         }
     }
 
