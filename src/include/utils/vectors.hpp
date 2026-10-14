@@ -14,13 +14,15 @@ namespace gameLogic {
         return {a.x * x, a.y * x};
     }
 
-
-    struct Velocity {
-        Vec2 velocity; //Si j'ai x = 100 et y = 0, mon projectile va à 100 px/temps vers la droite
+    struct Vec2Pos : Vec2 {};       // position dans le monde
+    struct Vec2Direction : Vec2 {}; // direction voulue, ex. {-1, 0} = gauche
+    struct Vec2Velocity : Vec2 {
+        Vec2 velocity;
 
         void calculateVelocity(const Vec2 direction, const float speed) {
             velocity = direction * speed;
         }
-    };
+    };  // direction * vitesse, en unités par seconde
+    struct Vec2Hitbox : Vec2 {};    // taille de la boite de collision (largeur, hauteur)
 }
 
