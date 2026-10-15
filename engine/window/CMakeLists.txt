@@ -4,6 +4,8 @@ find_package(SFML 3 REQUIRED COMPONENTS Graphics)
 
 add_library(engine_window
         src/Window.cpp
+        src/TextureManager.cpp
+        src/Renderer.cpp
 )
 add_library(engine::window ALIAS engine_window)
 
