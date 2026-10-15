@@ -1,12 +1,14 @@
 #pragma once
 
-#include <vector>
 #include <algorithm>
+#include <optional>
+#include <vector>
 #include "engine/core/Registry.hpp"
 #include "utils/Vectors.hpp"
 #include "Components.hpp"
 #include "Colisions.hpp"
 #include "Movements.hpp"
+#include "Queries.hpp"
 
 
 namespace rtype {
@@ -44,5 +46,42 @@ namespace rtype {
         reg.each<Vec2Pos, gameLogic::Vec2Velocity>([dt](Engine::Entity, Vec2Pos &pos, const gameLogic::Vec2Velocity &vel) {
                 pos = Vec2Pos{calculatePos(pos, vel, dt)};
             });
+    }
+
+    // Les joueurs dont le centre est hors de la carte perdent toute leur vie.
+    // C'est deathSystem qui les detruit ensuite.
+    inline void killPlayersOutOfBounds(Engine::Registry &reg)
+    {
+        if (!config::PLAYERS_DIE_OUT_OF_MAP) {
+            return;
+        }
+        for (const Engine::Entity e : collectPlayers(reg)) {
+            const std::optional<Collider> collider = getCollider(reg, e);
+
+            if (collider && isOutOfBounds(*collider) && reg.has<Health>(e)) {
+                reg.get<Health>(e).hp = 0;
+            }
+        }
+    }
+
+    // Detruit les entites de la liste qui sont loin au-dela de la carte.
+    inline void destroyFarEntities(Engine::Registry &reg,
+                                   const std::vector<Engine::Entity> &entities)
+    {
+        for (const Engine::Entity e : entities) {
+            const std::optional<Collider> collider = getCollider(reg, e);
+
+            if (collider && isFarOutOfBounds(*collider)) {
+                reg.destroy(e);
+            }
+        }
+    }
+
+    // A appeler apres movementSystem et avant deathSystem.
+    inline void deleteUnitsOutOfBounds(Engine::Registry &reg)
+    {
+        killPlayersOutOfBounds(reg);
+        destroyFarEntities(reg, collectMonsters(reg));
+        destroyFarEntities(reg, collectProjectileEntities(reg));
     }
 }

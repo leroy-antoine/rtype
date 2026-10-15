@@ -4,6 +4,7 @@ add_library(rtype_game INTERFACE
         include/Factories.hpp
         include/Damages.hpp
         include/Colisions.hpp
+        include/Queries.hpp
         include/Systems.hpp
         include/Config.hpp)
 add_library(rtype::game ALIAS rtype_game)

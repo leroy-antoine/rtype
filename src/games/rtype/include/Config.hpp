@@ -9,6 +9,7 @@
 namespace rtype::config {
     constexpr float MAP_WIDTH = 1920.f;
     constexpr float MAP_HEIGHT = 1080.f;
+    constexpr float MAP_ORIGIN = 0.f;
     // Les monstres apparaissent dans cette marge, a droite de la carte.
     constexpr float SPAWN_MARGIN = 100.f; // -> Spawn point des mobs, ils pop à droite de la carte
     constexpr float DESPAWN_MARGIN = 200.f; // -> Au delà de cette marge, les mobs et les projectiles depop

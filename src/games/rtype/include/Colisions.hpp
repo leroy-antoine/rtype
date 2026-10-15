@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "Components.hpp"
+#include "Config.hpp"
 #include "Damages.hpp"
 #include "engine/core/Registry.hpp"
 #include "utils/Vectors.hpp"
@@ -16,6 +17,20 @@ namespace rtype {
         Team team;
     };
 
+
+    inline bool isOutOfBounds(const Collider &entity)
+    {
+        Vec2Pos const center = {
+            entity.pos.x + entity.box.x/2.f,
+            entity.pos.y + entity.box.y/2.f
+        };
+
+        if (center.x >= config::MAP_WIDTH || center.x <= config::MAP_ORIGIN ||
+            center.y >= config::MAP_HEIGHT || center.y <= config::MAP_ORIGIN) {
+            return true;
+        }
+        return false;
+    }
 
     inline bool overlaps(const Collider &a, const Collider &b)
     {
@@ -49,7 +64,7 @@ namespace rtype {
         std::vector<Collider> targets;
 
         reg.each<Vec2Pos, Vec2Hitbox, Team, Health>(
-            [&](Engine::Entity e, const Vec2Pos &pos, const Vec2Hitbox &box,
+            [&](const Engine::Entity e, const Vec2Pos &pos, const Vec2Hitbox &box,
                 const Team &team, const Health &) {
                 targets.push_back({e, pos, box, team});
             });
@@ -66,5 +81,17 @@ namespace rtype {
             }
         }
         return false;
+    }
+
+    inline bool isFarOutOfBounds(const Collider &entity)
+    {
+        const float margin = config::DESPAWN_MARGIN;
+        const float right = entity.pos.x + entity.box.x;
+        const float bottom = entity.pos.y + entity.box.y;
+
+        return right < config::MAP_ORIGIN - margin
+            || entity.pos.x > config::MAP_WIDTH + margin
+            || bottom < config::MAP_ORIGIN - margin
+            || entity.pos.y > config::MAP_HEIGHT + margin;
     }
 }
