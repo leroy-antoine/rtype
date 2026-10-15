@@ -29,12 +29,14 @@ namespace rtype {
         int slot = 0;
     };
 
-    struct MonsterTag {};
+    struct MonsterTag {
+        int slot = 0;
+    };
 
     enum class TeamId { Player, Monster };
 
     struct Team {
-        TeamId id = TeamId::Player;
+        TeamId id;
     };
 
     struct Projectile {};

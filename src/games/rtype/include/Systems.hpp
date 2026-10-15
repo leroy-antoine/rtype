@@ -6,6 +6,7 @@
 #include "utils/Vectors.hpp"
 #include "Components.hpp"
 #include "Colisions.hpp"
+#include "Movements.hpp"
 
 
 namespace rtype {
@@ -36,5 +37,12 @@ namespace rtype {
         for (const Engine::Entity e : spent) {
             reg.destroy(e);
         }
+    }
+
+    inline void movementSystem(Engine::Registry &reg, const float dt)
+    {
+        reg.each<Vec2Pos, gameLogic::Vec2Velocity>([dt](Engine::Entity, Vec2Pos &pos, const gameLogic::Vec2Velocity &vel) {
+                pos = Vec2Pos{calculatePos(pos, vel, dt)};
+            });
     }
 }
