@@ -9,3 +9,5 @@ rtype-project(sans appendix).pdf
 # IDE build dirs
 /cmake-build-*/
 cmake-build-*/
+.idea/
+a.out

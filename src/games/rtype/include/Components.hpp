@@ -1,6 +1,4 @@
-#ifndef RTYPE_COMPONENTS_HPP
-#define RTYPE_COMPONENTS_HPP
-
+#pragma once
 namespace rtype {
     struct PlayerInput {
         bool up = false;
@@ -32,6 +30,15 @@ namespace rtype {
     };
 
     struct MonsterTag {};
+
+    // Camp d'une entite : un projectile ne blesse que le camp adverse.
+    enum class TeamId { Player, Monster };
+
+    struct Team {
+        TeamId id = TeamId::Player;
+    };
+
+    // Marque les projectiles : seules les entites avec Projectile + Damage infligent des degats au contact.
+    struct Projectile {};
 }
 
-#endif //RTYPE_COMPONENTS_HPP
