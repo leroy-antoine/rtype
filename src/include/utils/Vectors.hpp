@@ -14,9 +14,9 @@ namespace gameLogic {
         return {a.x * x, a.y * x};
     }
 
-    struct Vec2Pos : Vec2 {};       // position dans le monde
-    struct Vec2Direction : Vec2 {}; // direction voulue, ex. {-1, 0} = gauche
-    struct Vec2Velocity : Vec2 {};  // direction * vitesse, en unités par seconde
-    struct Vec2Hitbox : Vec2 {};    // taille de la boite de collision (largeur, hauteur)
+    struct Vec2Pos : Vec2 {};
+    struct Vec2Direction : Vec2 {};
+    struct Vec2Velocity : Vec2 {};
+    struct Vec2Hitbox : Vec2 {};
 }
 
