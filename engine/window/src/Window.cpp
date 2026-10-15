@@ -1,13 +1,8 @@
 #include <SFML/Graphics.hpp>
 #include "engine/window/Window.hpp"
+#include "engine/window/WindowImpl.hpp"
 
 namespace Engine {
-    struct Window::Impl {
-        Impl(std::uint32_t width, std::uint32_t height, const std::string &title)
-        : window(sf::VideoMode({width, height}), title) {}
-        sf::RenderWindow window;
-    };
-
     namespace {
         Key toKey(sf::Keyboard::Key key)
         {

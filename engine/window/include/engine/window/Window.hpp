@@ -24,6 +24,7 @@ namespace Engine {
         void display();
 
         private:
+        friend class Renderer;
         struct Impl;
         std::unique_ptr<Impl> _impl;
     };
