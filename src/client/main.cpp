@@ -1,6 +1,8 @@
 // #include <SFML/Graphics.hpp>
 #include "rtype/ReturnCodes.hpp"
 #include "engine/window/Window.hpp"
+#include "engine/window/TextureManager.hpp"
+#include "engine/window/Renderer.hpp"
 #include <variant>
 
 
@@ -16,11 +18,16 @@ static void handleEvents(Engine::Window &window)
 int main()
 {
     Engine::Window window(800, 600, "Rtype client");
+    Engine::TextureManager textures;
+    Engine::Renderer renderer(window, textures);
+
+    const Engine::TextureID ship = textures.load("sprites/r-typesheet42.gif");
 
     window.setFramerateLimit(60);
     while (window.isOpen()) {
         handleEvents(window);
         window.clear(0, 0, 0);
+        renderer.draw(ship, {100.f, 300.f}, {0, 0, 33, 17}, {3.f, 3.f});
         window.display();
     }
     return RTYPE_SUCCESS;
