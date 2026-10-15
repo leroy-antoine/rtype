@@ -1,7 +1,7 @@
 #pragma once
 
 #include "engine/core/Registry.hpp"
-#include "utils/vectors.hpp"
+#include "utils/Vectors.hpp"
 #include "Components.hpp"
 
 namespace rtype {

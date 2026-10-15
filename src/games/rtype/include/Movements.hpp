@@ -3,7 +3,7 @@
 //
 
 #pragma once
-#include "utils/vectors.hpp"
+#include "utils/Vectors.hpp"
 
 namespace rtype {
     inline gameLogic::Vec2 calculatePos(gameLogic::Vec2 actualPos,

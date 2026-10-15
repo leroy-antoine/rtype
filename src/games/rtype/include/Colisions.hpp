@@ -3,7 +3,7 @@
 #include "Components.hpp"
 #include "Damages.hpp"
 #include "engine/core/Registry.hpp"
-#include "utils/vectors.hpp"
+#include "utils/Vectors.hpp"
 
 namespace rtype {
     using gameLogic::Vec2Hitbox;
