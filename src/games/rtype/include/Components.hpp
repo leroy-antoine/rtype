@@ -33,12 +33,13 @@ namespace rtype {
         int slot = 0;
     };
 
+    struct ProjectileTag {
+    };
+
     enum class TeamId { Player, Monster };
 
     struct Team {
         TeamId id;
     };
-
-    struct Projectile {};
 }
 

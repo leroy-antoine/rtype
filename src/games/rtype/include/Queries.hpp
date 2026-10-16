@@ -33,7 +33,7 @@ namespace rtype {
     inline std::vector<Engine::Entity> collectProjectileEntities(
         Engine::Registry &reg)
     {
-        return collectWith<Projectile>(reg);
+        return collectWith<ProjectileTag>(reg);
     }
 
     inline std::optional<Collider> getCollider(Engine::Registry &reg,

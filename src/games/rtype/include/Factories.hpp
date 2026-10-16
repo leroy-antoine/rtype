@@ -6,12 +6,13 @@
 #include "utils/Vectors.hpp"
 #include "Components.hpp"
 #include "Config.hpp"
+#include "Bullet.hpp"
 
 namespace rtype {
     inline Engine::Entity createPlayer(Engine::Registry &reg, const int slot)
     {
-        Engine::Entity e = reg.create();
-        const std::size_t index = static_cast<std::size_t>(slot);
+        const Engine::Entity e = reg.create();
+        const auto index = static_cast<std::size_t>(slot);
 
         assert(slot >= 0 && index < config::MAX_PLAYERS);
         reg.add(e, PlayerTag{slot});
@@ -32,7 +33,7 @@ namespace rtype {
 
     inline Engine::Entity createMonster(Engine::Registry &reg, const int slot)
     {
-        Engine::Entity e = reg.create();
+        const Engine::Entity e = reg.create();
 
         reg.add(e, MonsterTag{slot});
         reg.add(e, gameLogic::Vec2Pos{0, 0});
@@ -45,6 +46,31 @@ namespace rtype {
         reg.add(e, Weapon{config::MONSTER_FIRE_COOLDOWN});
         reg.add(e, Damage{config::MONSTER_DAMAGE});
         reg.add(e, Team{TeamId::Monster});
+        return e;
+    }
+
+    inline Engine::Entity createBullet(Engine::Registry &reg,
+        const Engine::Entity shooter)
+    {
+        if (!isShooter(reg, shooter)) {
+            return Engine::Entity{};
+        }
+        const gameLogic::Vec2Pos pos = reg.get<gameLogic::Vec2Pos>(shooter);
+        const gameLogic::Vec2Hitbox box =
+            reg.get<gameLogic::Vec2Hitbox>(shooter);
+        const Team team = reg.get<Team>(shooter);
+        const Damage damage = reg.get<Damage>(shooter);
+        const float direction = bulletDirection(team);
+        const Engine::Entity e = reg.create();
+
+        reg.add(e, ProjectileTag{});
+        reg.add(e, bulletStartPos(pos, box, direction));
+        reg.add(e, gameLogic::Vec2Hitbox{{config::BULLET_WIDTH,
+            config::BULLET_HEIGHT}});
+        reg.add(e, gameLogic::Vec2Velocity{{direction * config::BULLET_SPEED,
+            0.f}});
+        reg.add(e, damage);
+        reg.add(e, team);
         return e;
     }
 }

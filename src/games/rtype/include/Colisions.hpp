@@ -51,9 +51,9 @@ namespace rtype {
     {
         std::vector<Collider> projectiles;
 
-        reg.each<gameLogic::Vec2Pos, gameLogic::Vec2Hitbox, Team, Projectile>(
+        reg.each<gameLogic::Vec2Pos, gameLogic::Vec2Hitbox, Team, ProjectileTag>(
             [&](const Engine::Entity e, const gameLogic::Vec2Pos &pos, const gameLogic::Vec2Hitbox &box,
-                const Team &team, const Projectile &) {
+                const Team &team, const ProjectileTag &) {
                 projectiles.push_back({e, pos, box, team});
             });
         return projectiles;
