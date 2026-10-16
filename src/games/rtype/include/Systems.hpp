@@ -7,6 +7,7 @@
 #include "utils/Vectors.hpp"
 #include "Components.hpp"
 #include "Colisions.hpp"
+#include "Factories.hpp"
 #include "Movements.hpp"
 #include "Queries.hpp"
 
@@ -83,5 +84,37 @@ namespace rtype {
         killPlayersOutOfBounds(reg);
         destroyFarEntities(reg, collectMonsters(reg));
         destroyFarEntities(reg, collectProjectileEntities(reg));
+    }
+
+    inline void updateWeaponTimers(Engine::Registry &reg, const float dt)
+    {
+        reg.each<Weapon>([dt](const Engine::Entity, Weapon &weapon) {
+            weapon.timer -= dt;
+            if (weapon.timer < 0.f) {
+                weapon.timer = 0.f;
+            }
+        });
+    }
+
+    inline bool isReadyToShoot(const Engine::Registry &reg,
+        const Engine::Entity e)
+    {
+        if (!reg.has<Weapon>(e)) {
+            return false;
+        }
+        return reg.get<Weapon>(e).timer <= 0.f;
+    }
+
+    inline void shoot(Engine::Registry &reg, const Engine::Entity shooter)
+    {
+        if (!isReadyToShoot(reg, shooter)) {
+            return;
+        }
+        if (createBullet(reg, shooter) == Engine::Entity{}) {
+            return;
+        }
+        auto &[cooldown, timer] = reg.get<Weapon>(shooter);
+
+        timer = cooldown;
     }
 }
