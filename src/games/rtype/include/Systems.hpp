@@ -117,4 +117,23 @@ namespace rtype {
 
         timer = cooldown;
     }
+
+    inline bool wantsToShoot(const Engine::Registry &reg,
+        const Engine::Entity e)
+    {
+        if (reg.has<PlayerInput>(e)) {
+            return reg.get<PlayerInput>(e).fire;
+        }
+        return true;
+    }
+
+    // Fait tirer toutes les entites armees qui le veulent.
+    inline void shootingSystem(Engine::Registry &reg)
+    {
+        for (const Engine::Entity e : collectWith<Weapon>(reg)) {
+            if (wantsToShoot(reg, e)) {
+                shoot(reg, e);
+            }
+        }
+    }
 }
