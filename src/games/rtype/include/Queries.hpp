@@ -66,6 +66,18 @@ namespace rtype {
         return std::nullopt;
     }
 
+    // Entite du joueur qui occupe ce slot, ou rien s'il n'y en a pas.
+    inline std::optional<Engine::Entity> findPlayerBySlot(
+        Engine::Registry &reg, const int slot)
+    {
+        for (const Engine::Entity e : collectPlayers(reg)) {
+            if (reg.get<PlayerTag>(e).slot == slot) {
+                return e;
+            }
+        }
+        return std::nullopt;
+    }
+
     inline std::optional<Collider> getCollider(Engine::Registry &reg,
                                                const Engine::Entity e)
     {
