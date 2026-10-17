@@ -49,8 +49,18 @@ namespace rtype {
             });
     }
 
+    // Transforme les touches de chaque joueur en vitesse.
+    inline void playerControlSystem(Engine::Registry &reg)
+    {
+        reg.each<PlayerInput, Speed, gameLogic::Vec2Velocity>(
+            [](Engine::Entity, const PlayerInput &input, const Speed &speed,
+               gameLogic::Vec2Velocity &vel) {
+                vel = gameLogic::Vec2Velocity{
+                    inputDirection(input) * speed.value};
+            });
+    }
+
     // Les joueurs dont le centre est hors de la carte perdent toute leur vie.
-    // C'est deathSystem qui les detruit ensuite.
     inline void killPlayersOutOfBounds(Engine::Registry &reg)
     {
         if (!config::PLAYERS_DIE_OUT_OF_MAP) {

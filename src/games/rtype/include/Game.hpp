@@ -55,6 +55,7 @@ namespace rtype {
             updateWeaponTimers(_reg, dt);
             shootingSystem(_reg);
             updateSpawn(dt);
+            playerControlSystem(_reg);
             movementSystem(_reg, dt);
             collisionSystem(_reg);
             deleteUnitsOutOfBounds(_reg);
