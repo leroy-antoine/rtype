@@ -6,7 +6,9 @@ add_library(rtype_game INTERFACE
         include/Colisions.hpp
         include/Queries.hpp
         include/Systems.hpp
-        include/Config.hpp)
+        include/Config.hpp
+        include/Bullet.hpp
+        include/Monsters.hpp)
 add_library(rtype::game ALIAS rtype_game)
 target_include_directories(rtype_game INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 

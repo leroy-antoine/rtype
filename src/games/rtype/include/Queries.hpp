@@ -1,14 +1,18 @@
 #pragma once
 
+#include <array>
+#include <cstddef>
 #include <optional>
 #include <vector>
 #include "engine/core/Registry.hpp"
 #include "utils/Vectors.hpp"
 #include "Components.hpp"
 #include "Colisions.hpp"
+#include "Config.hpp"
 
 
 namespace rtype {
+    using SlotTable = std::array<bool, config::MAX_PLAYERS>;
     template<typename Tag>
     std::vector<Engine::Entity> collectWith(Engine::Registry &reg)
     {
@@ -34,6 +38,32 @@ namespace rtype {
         Engine::Registry &reg)
     {
         return collectWith<ProjectileTag>(reg);
+    }
+
+
+    inline SlotTable collectUsedSlots(Engine::Registry &reg)
+    {
+        SlotTable used{};
+
+        reg.each<PlayerTag>([&used](Engine::Entity, const PlayerTag &tag) {
+            const auto index = static_cast<std::size_t>(tag.slot);
+
+            if (tag.slot >= 0 && index < used.size())
+                used[index] = true;
+        });
+        return used;
+    }
+
+    // En gros ça renvoie le premier slot vide OU un nullopt(rien) si la partie est full
+    inline std::optional<int> findFreeSlot(Engine::Registry &reg)
+    {
+        const SlotTable used = collectUsedSlots(reg);
+
+        for (std::size_t i = 0; i < used.size(); ++i) {
+            if (!used[i])
+                return static_cast<int>(i);
+        }
+        return std::nullopt;
     }
 
     inline std::optional<Collider> getCollider(Engine::Registry &reg,

@@ -40,6 +40,7 @@ namespace rtype::config {
     constexpr float MONSTER_HEIGHT = 80.f;
     constexpr int MONSTER_DAMAGE = 10;
     constexpr float MONSTER_FIRE_COOLDOWN = 2.f;
+    constexpr float MONSTER_SPAWN_INTERVAL = 2.f; // -> Secondes entre deux mobs
 
     constexpr int BOSS_HP = 1000;
     constexpr float BOSS_SPEED = 120.f;
