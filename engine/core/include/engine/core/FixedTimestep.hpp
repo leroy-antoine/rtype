@@ -38,6 +38,11 @@ namespace Engine {
         {
             return _step;
         }
+
+        float alpha() const
+        {
+            return _accumulator / _step;
+        }
     private:
         float _step;
         float _maxAccumulator = 0;

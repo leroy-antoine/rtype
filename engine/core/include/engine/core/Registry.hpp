@@ -118,23 +118,45 @@ namespace Engine {
         template<typename T>
         T &get(Entity e)
         {
-            if (!has<T>(e)) {
+            T *component = tryGet<T>(e);
+
+            if (component == nullptr) {
                 throw std::out_of_range("get: entity does not have this component");
             }
-            const EntityRecord &record = _records[e.getIndex()];
-
-            return _archetypes[record.archetype].getColumn<T>()[record.row];
+            return *component;
         }
 
         template<typename T>
         const T &get(Entity e) const
         {
-            if (!has<T>(e)) {
+            const T *component = tryGet<T>(e);
+
+            if (component == nullptr) {
                 throw std::out_of_range("get: entity does not have this component");
+            }
+            return *component;
+        }
+
+        template<typename T>
+        T *tryGet(Entity e)
+        {
+            if (!has<T>(e)) {
+                return nullptr;
             }
             const EntityRecord &record = _records[e.getIndex()];
 
-            return _archetypes[record.archetype].getColumn<T>()[record.row];
+            return &_archetypes[record.archetype].getColumn<T>()[record.row];
+        }
+
+        template<typename T>
+        const T *tryGet(Entity e) const
+        {
+            if (!has<T>(e)) {
+                return nullptr;
+            }
+            const EntityRecord &record = _records[e.getIndex()];
+
+            return &_archetypes[record.archetype].getColumn<T>()[record.row];
         }
 
         template<typename... Ts, typename Func>
