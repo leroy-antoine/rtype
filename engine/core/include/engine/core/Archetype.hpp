@@ -1,27 +1,27 @@
 #pragma once
 
-#include <array>
 #include <vector>
 #include <limits>
 #include <cassert>
-#include <cstdint>
 #include <cstddef>
+#include <utility>
 #include "engine/core/Entity.hpp"
 #include "engine/core/Column.hpp"
 #include "engine/core/Component.hpp"
+#include "engine/core/Signature.hpp"
 
 namespace Engine {
     namespace detail {
         class Archetype
         {
         public:
-            explicit Archetype(Signature sig) : _signature(sig)
+            explicit Archetype(Signature sig) : _signature(std::move(sig))
             {
-                _columnsIndex.fill(NO_COLUMN);
-                _columns.reserve(sig.count());
-                for (std::size_t i = 0; i < sig.size(); ++i) {
-                    if (sig[i]) {
-                        _columnsIndex[i] = static_cast<std::uint8_t>(_columns.size());
+                _columnsIndex.assign(_signature.size(), NO_COLUMN);
+                _columns.reserve(_signature.count());
+                for (std::size_t i = 0; i < _signature.size(); ++i) {
+                    if (_signature.test(i)) {
+                        _columnsIndex[i] = _columns.size();
                         _columns.emplace_back(ComponentRegistry::getInfo(ComponentId{i}));
                     }
                 }
@@ -62,8 +62,7 @@ namespace Engine {
 
             bool has(ComponentId id) const
             {
-                assert(id.id < MAX_COMPONENTS && "has: invalid component id");
-                return _columnsIndex[id.id] != NO_COLUMN;
+                return id.id < _columnsIndex.size() && _columnsIndex[id.id] != NO_COLUMN;
             }
 
             Column &column(ComponentId id)
@@ -120,7 +119,7 @@ namespace Engine {
                 assert(dst.isConsistent() && "moveRowTo: destination archetype has an incomplete row");
                 assert(row < size() && "moveRowTo: row out of range");
                 for (std::size_t i = 0; i < _signature.size(); ++i) {
-                    if (!_signature[i]) {
+                    if (!_signature.test(i)) {
                         continue;
                     }
                     id = {i};
@@ -135,10 +134,10 @@ namespace Engine {
                 return row < size() ? _entities[row] : Entity{};
             }
         private:
-            static constexpr std::uint8_t NO_COLUMN = std::numeric_limits<std::uint8_t>::max();
+            static constexpr std::size_t NO_COLUMN = std::numeric_limits<std::size_t>::max();
 
             Signature _signature;
-            std::array<std::uint8_t, MAX_COMPONENTS> _columnsIndex;
+            std::vector<std::size_t> _columnsIndex;
             std::vector<Column> _columns;
             std::vector<Entity> _entities;
         };

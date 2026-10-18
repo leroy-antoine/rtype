@@ -2,7 +2,6 @@
 
 #include <any>
 #include <limits>
-#include <bitset>
 #include <vector>
 #include <cassert>
 #include <cstdint>
@@ -14,8 +13,6 @@
 
 namespace Engine {
     namespace detail {
-        inline constexpr std::size_t MAX_COMPONENTS = 64;
-
         struct ComponentInfo {
             std::any (*makeStorage)();
             std::size_t (*size)(const std::any &data);
@@ -62,8 +59,6 @@ namespace Engine {
                 }
             };
         }
-
-        using Signature = std::bitset<MAX_COMPONENTS>;
 
         struct ComponentId {
             std::uint64_t id = std::numeric_limits<std::uint64_t>::max();
