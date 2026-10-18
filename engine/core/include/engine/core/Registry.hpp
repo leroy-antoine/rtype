@@ -1,14 +1,17 @@
 #pragma once
 
 #include <limits>
+#include <string>
 #include <vector>
 #include <cassert>
 #include <cstddef>
 #include <utility>
+#include <stdexcept>
 #include <type_traits>
 #include "engine/core/Entity.hpp"
 #include "engine/core/Archetype.hpp"
 #include "engine/core/Component.hpp"
+#include "engine/core/Signature.hpp"
 #include "engine/core/EntityManager.hpp"
 
 namespace Engine {
@@ -29,32 +32,10 @@ namespace Engine {
         {
             Entity e;
 
-            assert(_iterating == 0 && "create: structural change during each");
+            checkNotIterating("create");
             e = reserve();
             materialize(e);
             return e;
-        }
-
-        Entity reserve()
-        {
-            Entity e;
-
-            e = _entities.create();
-            if (e.getIndex() >= _records.size()) {
-                _records.resize(e.getIndex() + 1);
-            }
-            _records[e.getIndex()] = {NO_ARCHETYPE, 0};
-            return e;
-        }
-
-        void materialize(Entity e)
-        {
-            std::size_t row;
-
-            assert(_iterating == 0 && "materialize: structural change during each");
-            assert(reserved(e) && "materialize: entity is not reserved");
-            row = _archetypes[EMPTY_ARCHETYPE].addEntity(e);
-            _records[e.getIndex()] = {EMPTY_ARCHETYPE, row};
         }
 
         bool alive(Entity e) const
@@ -67,7 +48,7 @@ namespace Engine {
             EntityRecord record;
             Entity moved;
 
-            assert(_iterating == 0 && "destroy: structural change during each");
+            checkNotIterating("destroy");
             if (reserved(e)) {
                 _entities.destroy(e);
                 return;
@@ -90,8 +71,10 @@ namespace Engine {
             detail::Signature sig;
             std::size_t dst;
 
-            assert(_iterating == 0 && "add: structural change during each");
-            assert(alive(e) && "add: dead entity");
+            checkNotIterating("add");
+            if (!alive(e)) {
+                throw std::invalid_argument("add: entity is not alive");
+            }
             if (has<T>(e)) {
                 T &slot = get<T>(e);
 
@@ -114,7 +97,7 @@ namespace Engine {
             detail::ComponentId id = detail::ComponentRegistry::getId<T>();
             detail::Signature sig;
 
-            assert(_iterating == 0 && "remove: structural change during each");
+            checkNotIterating("remove");
             if (!has<T>(e)) {
                 return;
             }
@@ -135,18 +118,22 @@ namespace Engine {
         template<typename T>
         T &get(Entity e)
         {
+            if (!has<T>(e)) {
+                throw std::out_of_range("get: entity does not have this component");
+            }
             const EntityRecord &record = _records[e.getIndex()];
 
-            assert(has<T>(e) && "get: entity does not have this component");
             return _archetypes[record.archetype].getColumn<T>()[record.row];
         }
 
         template<typename T>
         const T &get(Entity e) const
         {
+            if (!has<T>(e)) {
+                throw std::out_of_range("get: entity does not have this component");
+            }
             const EntityRecord &record = _records[e.getIndex()];
 
-            assert(has<T>(e) && "get: entity does not have this component");
             return _archetypes[record.archetype].getColumn<T>()[record.row];
         }
 
@@ -158,13 +145,15 @@ namespace Engine {
 
             (required.set(detail::ComponentRegistry::getId<Ts>().id), ...);
             for (detail::Archetype &arch : _archetypes) {
-                if (arch.size() == 0 || (arch.signature() & required) != required) {
+                if (arch.size() == 0 || !arch.signature().contains(required)) {
                     continue;
                 }
-                eachRow(arch.entities(), func, arch.getColumn<std::remove_cvref_t<Ts>>()...);
+                eachRow<Ts...>(arch.entities(), func, arch.getColumn<std::remove_cvref_t<Ts>>()...);
             }
         }
     private:
+        friend class CommandBuffer;
+
         struct EntityRecord {
             std::size_t archetype = 0;
             std::size_t row = 0;
@@ -190,16 +179,44 @@ namespace Engine {
         static constexpr std::size_t EMPTY_ARCHETYPE = 0;
         static constexpr std::size_t NO_ARCHETYPE = std::numeric_limits<std::size_t>::max();
 
+        Entity reserve()
+        {
+            Entity e;
+
+            e = _entities.create();
+            if (e.getIndex() >= _records.size()) {
+                _records.resize(e.getIndex() + 1);
+            }
+            _records[e.getIndex()] = {NO_ARCHETYPE, 0};
+            return e;
+        }
+
+        void materialize(Entity e)
+        {
+            std::size_t row;
+
+            assert(reserved(e) && "materialize: entity is not reserved");
+            row = _archetypes[EMPTY_ARCHETYPE].addEntity(e);
+            _records[e.getIndex()] = {EMPTY_ARCHETYPE, row};
+        }
+
         bool reserved(Entity e) const
         {
             return _entities.alive(e) && _records[e.getIndex()].archetype == NO_ARCHETYPE;
         }
 
-        template<typename Func, typename... Columns>
+        void checkNotIterating(const char *caller) const
+        {
+            if (_iterating != 0) {
+                throw std::logic_error(std::string(caller) + ": structural change during each");
+            }
+        }
+
+        template<typename... Ts, typename Func, typename... Columns>
         static void eachRow(const std::vector<Entity> &entities, Func &func, Columns &...columns)
         {
             for (std::size_t row = 0; row < entities.size(); ++row) {
-                func(entities[row], columns[row]...);
+                func(entities[row], static_cast<Ts &>(columns[row])...);
             }
         }
 

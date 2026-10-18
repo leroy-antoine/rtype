@@ -24,6 +24,9 @@ namespace Engine {
 
             e = _registry.reserve();
             _commands.emplace_back([e, ... components = std::move(components)](Registry &registry) mutable {
+                if (!registry.reserved(e)) {
+                    return;
+                }
                 registry.materialize(e);
                 (registry.add<Ts>(e, std::move(components)), ...);
             });
@@ -57,6 +60,7 @@ namespace Engine {
 
         void apply()
         {
+            _registry.checkNotIterating("CommandBuffer::apply");
             for (std::function<void(Registry &)> &command : _commands) {
                 command(_registry);
             }
