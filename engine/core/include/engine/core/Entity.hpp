@@ -11,12 +11,12 @@ namespace Engine {
 
         bool operator==(const Entity &) const = default;
 
-        [[nodiscard]] std::uint32_t getIndex() const
+        std::uint32_t getIndex() const
         {
             return static_cast<std::uint32_t>(this->id & 0xFFFFFFFF);
         }
 
-        [[nodiscard]] std::uint32_t getGeneration() const
+        std::uint32_t getGeneration() const
         {
             return static_cast<std::uint32_t>(this->id >> 32);
         }
