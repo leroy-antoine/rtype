@@ -34,6 +34,9 @@ namespace rtype::config {
     constexpr float BULLET_WIDTH = 24.f;
     constexpr float BULLET_HEIGHT = 8.f;
 
+    constexpr float EXPLOSION_DURATION = 0.4f;
+    constexpr float HIT_EXPLOSION_SIZE = 48.f;
+
     constexpr int MONSTER_HP = 30;
     constexpr float MONSTER_SPEED = 250.f;
     constexpr float MONSTER_WIDTH = 80.f;

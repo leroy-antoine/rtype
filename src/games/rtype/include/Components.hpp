@@ -44,9 +44,14 @@ namespace rtype {
         TeamId id = TeamId::Player;
     };
 
-    enum class SpriteId { Player, Monster, PlayerBullet, MonsterBullet, Count };
+    enum class SpriteId { Player, Monster, PlayerBullet, MonsterBullet, Explosion, Count };
 
     struct Renderable {
         SpriteId id = SpriteId::Player;
+    };
+
+    struct Lifetime {
+        float duration = config::EXPLOSION_DURATION;
+        float remaining = config::EXPLOSION_DURATION;
     };
 }

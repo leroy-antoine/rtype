@@ -1,4 +1,9 @@
-add_executable(r-type_client main.cpp)
+add_executable(r-type_client
+        main.cpp
+        game/App.cpp
+        game/Controls.cpp
+        game/GameView.cpp
+        game/SpriteBank.cpp)
 target_link_libraries(r-type_client PRIVATE rtype::common rtype::game engine::window)
 
 add_custom_command(TARGET r-type_client POST_BUILD

@@ -80,4 +80,30 @@ namespace rtype {
             ? SpriteId::PlayerBullet : SpriteId::MonsterBullet});
         return e;
     }
+
+    inline Engine::Entity createExplosion(Engine::Registry &reg,
+        const gameLogic::Vec2 &center, const float size)
+    {
+        const Engine::Entity e = reg.create();
+
+        reg.add(e, gameLogic::Vec2Pos{{center.x - size / 2.f,
+            center.y - size / 2.f}});
+        reg.add(e, gameLogic::Vec2Hitbox{{size, size}});
+        reg.add(e, Renderable{SpriteId::Explosion});
+        reg.add(e, Lifetime{});
+        return e;
+    }
+
+    inline Engine::Entity createExplosionOn(Engine::Registry &reg,
+        const Engine::Entity target, const float size)
+    {
+        if (!reg.has<gameLogic::Vec2Pos>(target)
+            || !reg.has<gameLogic::Vec2Hitbox>(target)) {
+            return Engine::Entity{};
+        }
+        const gameLogic::Vec2Pos pos = reg.get<gameLogic::Vec2Pos>(target);
+        const gameLogic::Vec2Hitbox box = reg.get<gameLogic::Vec2Hitbox>(target);
+
+        return createExplosion(reg, {pos.x + box.x / 2.f, pos.y + box.y / 2.f}, size);
+    }
 }

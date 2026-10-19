@@ -23,6 +23,11 @@ namespace rtype {
             }
         });
         for (const Engine::Entity e : dead) {
+            if (reg.has<gameLogic::Vec2Hitbox>(e)) {
+                const gameLogic::Vec2Hitbox box = reg.get<gameLogic::Vec2Hitbox>(e);
+
+                createExplosionOn(reg, e, std::max(box.x, box.y));
+            }
             reg.destroy(e);
         }
     }
@@ -38,6 +43,22 @@ namespace rtype {
             }
         }
         for (const Engine::Entity e : spent) {
+            createExplosionOn(reg, e, config::HIT_EXPLOSION_SIZE);
+            reg.destroy(e);
+        }
+    }
+
+    inline void lifetimeSystem(Engine::Registry &reg, const float dt)
+    {
+        std::vector<Engine::Entity> expired;
+
+        reg.each<Lifetime>([&expired, dt](const Engine::Entity e, Lifetime &lifetime) {
+            lifetime.remaining -= dt;
+            if (lifetime.remaining <= 0.f) {
+                expired.push_back(e);
+            }
+        });
+        for (const Engine::Entity e : expired) {
             reg.destroy(e);
         }
     }

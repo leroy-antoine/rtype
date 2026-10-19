@@ -65,6 +65,7 @@ namespace rtype {
         void update(const float dt)
         {
             updateWeaponTimers(_reg, dt);
+            lifetimeSystem(_reg, dt);
             playerControlSystem(_reg);
             updateSpawn(dt);
             shootingSystem(_reg);
