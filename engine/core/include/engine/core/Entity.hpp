@@ -2,6 +2,8 @@
 
 #include <limits>
 #include <cstdint>
+#include <cstddef>
+#include <functional>
 
 namespace Engine {
     struct Entity {
@@ -9,14 +11,24 @@ namespace Engine {
 
         bool operator==(const Entity &) const = default;
 
-        [[nodiscard]] std::uint32_t getIndex() const
+        std::uint32_t getIndex() const
         {
             return static_cast<std::uint32_t>(this->id & 0xFFFFFFFF);
         }
 
-        [[nodiscard]] std::uint32_t getGeneration() const
+        std::uint32_t getGeneration() const
         {
             return static_cast<std::uint32_t>(this->id >> 32);
+        }
+    };
+}
+
+namespace std {
+    template<>
+    struct hash<Engine::Entity> {
+        std::size_t operator()(const Engine::Entity &e) const noexcept
+        {
+            return std::hash<std::uint64_t>{}(e.id);
         }
     };
 }
