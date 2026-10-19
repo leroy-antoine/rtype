@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cassert>
 #include <cstddef>
 #include "engine/core/Registry.hpp"
 #include "utils/Vectors.hpp"
@@ -11,10 +10,13 @@
 namespace rtype {
     inline Engine::Entity createPlayer(Engine::Registry &reg, const int slot)
     {
-        const Engine::Entity e = reg.create();
         const auto index = static_cast<std::size_t>(slot);
 
-        assert(slot >= 0 && index < config::MAX_PLAYERS);
+        if (slot < 0 || index >= config::MAX_PLAYERS) {
+            return Engine::Entity{};
+        }
+        const Engine::Entity e = reg.create();
+
         reg.add(e, PlayerTag{slot});
         reg.add(e, PlayerInput{});
         reg.add(e, gameLogic::Vec2Pos{{config::PLAYER_START_X,
@@ -28,6 +30,7 @@ namespace rtype {
         reg.add(e, Weapon{config::PLAYER_FIRE_COOLDOWN});
         reg.add(e, Damage{config::PLAYER_DAMAGE});
         reg.add(e, Team{TeamId::Player});
+        reg.add(e, Renderable{SpriteId::Player});
         return e;
     }
 
@@ -36,16 +39,18 @@ namespace rtype {
         const Engine::Entity e = reg.create();
 
         reg.add(e, MonsterTag{slot});
-        reg.add(e, gameLogic::Vec2Pos{0, 0});
+        reg.add(e, gameLogic::Vec2Pos{});
         reg.add(e, gameLogic::Vec2Direction{});
         reg.add(e, gameLogic::Vec2Velocity{});
         reg.add(e, gameLogic::Vec2Hitbox{{config::MONSTER_WIDTH,
             config::MONSTER_HEIGHT}});
         reg.add(e, Speed{config::MONSTER_SPEED});
         reg.add(e, Health{config::MONSTER_HP});
-        reg.add(e, Weapon{config::MONSTER_FIRE_COOLDOWN});
+        reg.add(e, Weapon{config::MONSTER_FIRE_COOLDOWN,
+            config::MONSTER_FIRE_COOLDOWN});
         reg.add(e, Damage{config::MONSTER_DAMAGE});
         reg.add(e, Team{TeamId::Monster});
+        reg.add(e, Renderable{SpriteId::Monster});
         return e;
     }
 
@@ -71,6 +76,8 @@ namespace rtype {
             0.f}});
         reg.add(e, damage);
         reg.add(e, team);
+        reg.add(e, Renderable{team.id == TeamId::Player
+            ? SpriteId::PlayerBullet : SpriteId::MonsterBullet});
         return e;
     }
 }

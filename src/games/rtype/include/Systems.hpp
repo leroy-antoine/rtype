@@ -44,9 +44,28 @@ namespace rtype {
 
     inline void movementSystem(Engine::Registry &reg, const float dt)
     {
-        reg.each<Vec2Pos, gameLogic::Vec2Velocity>([dt](Engine::Entity, Vec2Pos &pos, const gameLogic::Vec2Velocity &vel) {
-                pos = Vec2Pos{calculatePos(pos, vel, dt)};
+        reg.each<gameLogic::Vec2Pos, gameLogic::Vec2Velocity>(
+            [dt](Engine::Entity, gameLogic::Vec2Pos &pos, const gameLogic::Vec2Velocity &vel) {
+                pos = gameLogic::Vec2Pos{calculatePos(pos, vel, dt)};
             });
+    }
+
+    inline void contactSystem(Engine::Registry &reg)
+    {
+        const std::vector<Engine::Entity> monsters = collectMonsters(reg);
+
+        for (const Engine::Entity p : collectPlayers(reg)) {
+            const std::optional<Collider> player = getCollider(reg, p);
+
+            if (!player) {
+                continue;
+            }
+            for (const Engine::Entity m : monsters) {
+                if (const std::optional<Collider> monster = getCollider(reg, m)) {
+                    applyContact(reg, *player, *monster);
+                }
+            }
+        }
     }
 
     // Transforme les touches de chaque joueur en vitesse.

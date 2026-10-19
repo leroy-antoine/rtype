@@ -9,7 +9,7 @@ namespace rtype {
         Engine::Registry &reg)
     {
         if (!reg.has<Health>(victim) || !reg.has<Damage>(attacker)) {
-            std::cerr << "ERROR : one of the two entities is missing a component (see Systmes.hpp line 27)" << std::endl;
+            std::cerr << "applyDamages: victim has no Health or attacker has no Damage" << std::endl;
             return;
         }
         reg.get<Health>(victim).hp -= reg.get<Damage>(attacker).value;
