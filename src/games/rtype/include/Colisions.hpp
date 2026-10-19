@@ -7,20 +7,17 @@
 #include "utils/Vectors.hpp"
 
 namespace rtype {
-    using gameLogic::Vec2Hitbox;
-    using gameLogic::Vec2Pos;
-
     struct Collider {
         Engine::Entity entity;
-        Vec2Pos pos;
-        Vec2Hitbox box;
+        gameLogic::Vec2Pos pos;
+        gameLogic::Vec2Hitbox box;
         Team team;
     };
 
 
     inline bool isOutOfBounds(const Collider &entity)
     {
-        Vec2Pos const center = {
+        gameLogic::Vec2Pos const center = {
             entity.pos.x + entity.box.x/2.f,
             entity.pos.y + entity.box.y/2.f
         };
@@ -63,24 +60,40 @@ namespace rtype {
     {
         std::vector<Collider> targets;
 
-        reg.each<Vec2Pos, Vec2Hitbox, Team, Health>(
-            [&](const Engine::Entity e, const Vec2Pos &pos, const Vec2Hitbox &box,
+        reg.each<gameLogic::Vec2Pos, gameLogic::Vec2Hitbox, Team, Health>(
+            [&](const Engine::Entity e, const gameLogic::Vec2Pos &pos, const gameLogic::Vec2Hitbox &box,
                 const Team &team, const Health &) {
                 targets.push_back({e, pos, box, team});
             });
         return targets;
     }
 
+    inline bool isAlive(const Engine::Registry &reg, const Engine::Entity e)
+    {
+        return reg.has<Health>(e) && reg.get<Health>(e).hp > 0;
+    }
+
     inline bool hitFirstTarget(Engine::Registry &reg, const Collider &bullet,
                                const std::vector<Collider> &targets)
     {
         for (const Collider &target : targets) {
-            if (canHit(bullet, target)) {
+            if (isAlive(reg, target.entity) && canHit(bullet, target)) {
                 applyDamages(target.entity, bullet.entity, reg);
                 return true;
             }
         }
         return false;
+    }
+
+    inline void applyContact(Engine::Registry &reg, const Collider &player,
+                             const Collider &monster)
+    {
+        if (!isAlive(reg, player.entity) || !isAlive(reg, monster.entity)
+            || !overlaps(player, monster)) {
+            return;
+        }
+        reg.get<Health>(player.entity).hp = 0;
+        applyDamages(monster.entity, player.entity, reg);
     }
 
     inline bool isFarOutOfBounds(const Collider &entity)

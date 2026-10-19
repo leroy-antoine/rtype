@@ -23,6 +23,11 @@ namespace rtype {
             }
         });
         for (const Engine::Entity e : dead) {
+            if (reg.has<gameLogic::Vec2Hitbox>(e)) {
+                const gameLogic::Vec2Hitbox box = reg.get<gameLogic::Vec2Hitbox>(e);
+
+                createExplosionOn(reg, e, std::max(box.x, box.y));
+            }
             reg.destroy(e);
         }
     }
@@ -38,15 +43,50 @@ namespace rtype {
             }
         }
         for (const Engine::Entity e : spent) {
+            createExplosionOn(reg, e, config::HIT_EXPLOSION_SIZE);
+            reg.destroy(e);
+        }
+    }
+
+    inline void lifetimeSystem(Engine::Registry &reg, const float dt)
+    {
+        std::vector<Engine::Entity> expired;
+
+        reg.each<Lifetime>([&expired, dt](const Engine::Entity e, Lifetime &lifetime) {
+            lifetime.remaining -= dt;
+            if (lifetime.remaining <= 0.f) {
+                expired.push_back(e);
+            }
+        });
+        for (const Engine::Entity e : expired) {
             reg.destroy(e);
         }
     }
 
     inline void movementSystem(Engine::Registry &reg, const float dt)
     {
-        reg.each<Vec2Pos, gameLogic::Vec2Velocity>([dt](Engine::Entity, Vec2Pos &pos, const gameLogic::Vec2Velocity &vel) {
-                pos = Vec2Pos{calculatePos(pos, vel, dt)};
+        reg.each<gameLogic::Vec2Pos, gameLogic::Vec2Velocity>(
+            [dt](Engine::Entity, gameLogic::Vec2Pos &pos, const gameLogic::Vec2Velocity &vel) {
+                pos = gameLogic::Vec2Pos{calculatePos(pos, vel, dt)};
             });
+    }
+
+    inline void contactSystem(Engine::Registry &reg)
+    {
+        const std::vector<Engine::Entity> monsters = collectMonsters(reg);
+
+        for (const Engine::Entity p : collectPlayers(reg)) {
+            const std::optional<Collider> player = getCollider(reg, p);
+
+            if (!player) {
+                continue;
+            }
+            for (const Engine::Entity m : monsters) {
+                if (const std::optional<Collider> monster = getCollider(reg, m)) {
+                    applyContact(reg, *player, *monster);
+                }
+            }
+        }
     }
 
     // Transforme les touches de chaque joueur en vitesse.

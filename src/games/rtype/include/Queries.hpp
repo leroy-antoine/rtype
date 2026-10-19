@@ -41,24 +41,9 @@ namespace rtype {
     }
 
 
-    inline SlotTable collectUsedSlots(Engine::Registry &reg)
-    {
-        SlotTable used{};
-
-        reg.each<PlayerTag>([&used](Engine::Entity, const PlayerTag &tag) {
-            const auto index = static_cast<std::size_t>(tag.slot);
-
-            if (tag.slot >= 0 && index < used.size())
-                used[index] = true;
-        });
-        return used;
-    }
-
     // En gros ça renvoie le premier slot vide OU un nullopt(rien) si la partie est full
-    inline std::optional<int> findFreeSlot(Engine::Registry &reg)
+    inline std::optional<int> findFreeSlot(const SlotTable &used)
     {
-        const SlotTable used = collectUsedSlots(reg);
-
         for (std::size_t i = 0; i < used.size(); ++i) {
             if (!used[i])
                 return static_cast<int>(i);
@@ -78,7 +63,7 @@ namespace rtype {
         return std::nullopt;
     }
 
-    inline std::optional<Collider> getCollider(Engine::Registry &reg,
+    inline std::optional<Collider> getCollider(const Engine::Registry &reg,
                                                const Engine::Entity e)
     {
         if (!reg.has<gameLogic::Vec2Pos>(e)

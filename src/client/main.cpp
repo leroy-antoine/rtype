@@ -1,36 +1,19 @@
-// #include <SFML/Graphics.hpp>
+#include <exception>
+#include <filesystem>
+#include <iostream>
 #include "rtype/ReturnCodes.hpp"
-#include "engine/window/Window.hpp"
-#include "engine/window/TextureManager.hpp"
-#include "engine/window/Renderer.hpp"
-#include <variant>
+#include "game/App.hpp"
 
-
-
-static void handleEvents(Engine::Window &window)
+int main(const int, char **argv)
 {
-    while (const std::optional event = window.pollEvent()) {
-        if (std::holds_alternative<Engine::Events::Closed>(*event))
-            window.close();
+    try {
+        client::App app(std::filesystem::path(argv[0]).parent_path() / "assets");
+
+        return app.run();
+    } catch (const std::exception &e) {
+        std::cerr << "R-Type: " << e.what() << std::endl;
+        return RTYPE_ERROR;
     }
-}
-
-int main()
-{
-    Engine::Window window(800, 600, "Rtype client");
-    Engine::TextureManager textures;
-    Engine::Renderer renderer(window, textures);
-
-    const Engine::TextureID ship = textures.load("sprites/r-typesheet42.gif");
-
-    window.setFramerateLimit(60);
-    while (window.isOpen()) {
-        handleEvents(window);
-        window.clear(0, 0, 0);
-        renderer.draw(ship, {100.f, 300.f}, {0, 0, 33, 17}, {3.f, 3.f});
-        window.display();
-    }
-    return RTYPE_SUCCESS;
 }
 
 // static void test(sf::RenderWindow &window)

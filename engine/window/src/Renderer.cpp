@@ -23,4 +23,14 @@ namespace Engine {
         sprite.setScale({scale.x, scale.y});
         _window._impl->window.draw(sprite);
     }
+    void Renderer::drawResized(TextureID id, Vector2f position, IntRect source, Vector2f size) {
+        if (source.width == 0 || source.height == 0)
+            return;
+        draw(id, position, source, {size.x / static_cast<float>(source.width),
+            size.y / static_cast<float>(source.height)});
+    }
+
+    void Renderer::draw(const Sprite &sprite, Vector2f position, Vector2f size, float elapsed) {
+        drawResized(sprite.texture, position, sprite.animation.frameAt(elapsed), size);
+    }
 }
