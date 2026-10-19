@@ -4,7 +4,7 @@ add_executable(r-type_client
         game/Controls.cpp
         game/GameView.cpp
         game/SpriteBank.cpp)
-target_link_libraries(r-type_client PRIVATE rtype::common rtype::game engine::window)
+target_link_libraries(r-type_client PRIVATE rtype::common rtype::game engine::window engine::audio)
 
 add_custom_command(TARGET r-type_client POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory

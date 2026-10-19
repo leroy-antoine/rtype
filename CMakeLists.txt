@@ -7,6 +7,11 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/vcpkg/scripts/buildsystems/vcpkg.cma
         "then configure again.")
 endif()
 
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    set(CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/external/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        CACHE STRING "vcpkg toolchain file")
+endif()
+
 project(rtype LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
