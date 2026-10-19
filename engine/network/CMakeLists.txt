@@ -2,6 +2,7 @@ add_library(engine_network
     src/BinaryWriter.cpp
     src/BinaryReader.cpp
     src/Packet.cpp
+    src/ReliableChannel.cpp
 )
 add_library(engine::network ALIAS engine_network)
 
