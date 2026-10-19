@@ -8,6 +8,7 @@ add_library(engine_network
     src/Connection.cpp
     src/UdpSocket.cpp
     src/Server.cpp
+    src/Client.cpp
 )
 add_library(engine::network ALIAS engine_network)
 
