@@ -1,6 +1,5 @@
 #include <mutex>
 #include <vector>
-#include <cassert>
 #include <typeindex>
 #include <unordered_map>
 #include "engine/core/Component.hpp"
@@ -40,7 +39,6 @@ namespace Engine {
             if (found != registry.ids.end()) {
                 return found->second;
             }
-            assert(registry.infos.size() < MAX_COMPONENTS && "registerType: too many component types, increase detail::MAX_COMPONENTS");
             id = {registry.infos.size()};
             registry.infos.push_back(info);
             registry.ids.emplace(type, id);

@@ -1,4 +1,6 @@
-// #include <SFML/Graphics.hpp>
+#include <exception>
+#include <filesystem>
+#include <iostream>
 #include "rtype/ReturnCodes.hpp"
 #include "engine/window/Window.hpp"
 #include "engine/window/TextureManager.hpp"
@@ -82,7 +84,6 @@ int main(int argc, char **argv)
         renderer.draw(ship, {100.f, 300.f}, {0, 0, 33, 17}, {3.f, 3.f});
         window.display();
     }
-    return RTYPE_SUCCESS;
 }
 
 // static void test(sf::RenderWindow &window)
