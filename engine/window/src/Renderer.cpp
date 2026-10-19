@@ -29,8 +29,4 @@ namespace Engine {
         draw(id, position, source, {size.x / static_cast<float>(source.width),
             size.y / static_cast<float>(source.height)});
     }
-
-    void Renderer::draw(const Sprite &sprite, Vector2f position, Vector2f size, float elapsed) {
-        drawResized(sprite.texture, position, sprite.animation.frameAt(elapsed), size);
-    }
 }

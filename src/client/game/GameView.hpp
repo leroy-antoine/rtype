@@ -14,10 +14,21 @@ namespace client {
         void draw(Engine::Registry &reg, float elapsed);
 
     private:
-        void drawEntity(Engine::Registry &reg, Engine::Entity e, const gameLogic::Vec2Pos &pos,
-            const gameLogic::Vec2Hitbox &box, rtype::SpriteId id, float elapsed);
-        [[nodiscard]] static Engine::IntRect frameFor(Engine::Registry &reg, Engine::Entity e,
+        static constexpr int PLAYER_FRAME_DOWN = 0;
+        static constexpr int PLAYER_FRAME_IDLE = 2;
+        static constexpr int PLAYER_FRAME_UP = 4;
+        static constexpr float ANIMATION_PHASE = 0.13f;
+
+        static int tiltFrame(const Engine::Registry &reg, Engine::Entity e);
+        static Engine::IntRect playerFrame(const Engine::Registry &reg, Engine::Entity e,
+            const Engine::Animation &animation);
+        static Engine::IntRect effectFrame(const rtype::Lifetime &lifetime, const Engine::Animation &animation);
+        static Engine::IntRect frameFor(const Engine::Registry &reg, Engine::Entity e,
             const Engine::Animation &animation, float elapsed);
+
+        void drawLayer(Engine::Registry &reg, float elapsed, bool effects);
+        void drawEntity(const Engine::Registry &reg, Engine::Entity e, const gameLogic::Vec2Pos &pos,
+            const gameLogic::Vec2Hitbox &box, rtype::SpriteId id, float elapsed);
 
         Engine::Renderer &_renderer;
         const SpriteBank &_sprites;

@@ -41,9 +41,18 @@ namespace rtype {
             if (player) {
                 _reg.destroy(*player);
             }
-            if (slot >= 0 && static_cast<std::size_t>(slot) < _usedSlots.size()) {
+            if (isUsedSlot(slot)) {
                 _usedSlots[static_cast<std::size_t>(slot)] = false;
             }
+        }
+
+        bool respawnPlayer(const int slot)
+        {
+            if (!isUsedSlot(slot) || isPlayerAlive(slot)) {
+                return false;
+            }
+            createPlayer(_reg, slot);
+            return true;
         }
 
         bool isPlayerAlive(const int slot)
@@ -82,6 +91,13 @@ namespace rtype {
         }
 
     private:
+        [[nodiscard]] bool isUsedSlot(const int slot) const
+        {
+            const auto index = static_cast<std::size_t>(slot);
+
+            return slot >= 0 && index < _usedSlots.size() && _usedSlots[index];
+        }
+
         void updateSpawn(const float dt)
         {
             _spawnTimer -= dt;
@@ -97,6 +113,6 @@ namespace rtype {
         float _spawnTimer = 0.f;
         std::mt19937 _rng;
         std::uniform_real_distribution<float> _spawnY{config::MAP_ORIGIN,
-            MONSTER_MAX_SPAWN_Y};
+            config::MONSTER_MAX_SPAWN_Y};
     };
 }
