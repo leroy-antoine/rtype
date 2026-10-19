@@ -6,6 +6,13 @@ add_library(engine_window
         src/Window.cpp
         src/TextureManager.cpp
         src/Renderer.cpp
+        include/engine/window/Event.hpp
+        include/engine/window/Renderer.hpp
+        include/engine/window/TextureManager.hpp
+        include/engine/window/TextureManagerImpl.hpp
+        include/engine/window/Types.hpp
+        include/engine/window/Window.hpp
+        include/engine/window/WindowImpl.hpp
 )
 add_library(engine::window ALIAS engine_window)
 

@@ -15,6 +15,7 @@ namespace Engine {
         void draw(TextureID id, Vector2f position, IntRect source, Vector2f scale = {1.f, 1.f});
         void drawResized(TextureID id, Vector2f position, IntRect source, Vector2f size);
 
+
         private:
         Window &_window;
         const TextureManager &_textures;

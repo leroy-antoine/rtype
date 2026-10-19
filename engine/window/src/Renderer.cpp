@@ -23,7 +23,6 @@ namespace Engine {
         sprite.setScale({scale.x, scale.y});
         _window._impl->window.draw(sprite);
     }
-
     void Renderer::drawResized(TextureID id, Vector2f position, IntRect source, Vector2f size) {
         if (source.width == 0 || source.height == 0)
             return;
