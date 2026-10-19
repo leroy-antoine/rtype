@@ -14,6 +14,8 @@ namespace Engine {
         {
             IntRect rect = firstFrame;
 
+            if (frameCount <= 1)
+                return rect;
             rect.left += std::clamp(index, 0, frameCount - 1) * (step > 0 ? step : firstFrame.width);
             return rect;
         }

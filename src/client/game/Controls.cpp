@@ -7,17 +7,7 @@ namespace client {
     {
         _respawn = false;
         while (const std::optional event = window.pollEvent()) {
-            if (std::holds_alternative<Engine::Events::Closed>(*event)) {
-                window.close();
-            } else if (const auto *pressed = std::get_if<Engine::Events::KeyPressed>(&*event)) {
-                if (pressed->key == Engine::Key::Escape) {
-                    window.close();
-                }
-                _respawn = _respawn || pressed->key == Engine::Key::Enter;
-                applyKey(pressed->key, true);
-            } else if (const auto *released = std::get_if<Engine::Events::KeyReleased>(&*event)) {
-                applyKey(released->key, false);
-            }
+            std::visit([this, &window](const auto &e) { handle(window, e); }, *event);
         }
     }
 
@@ -29,6 +19,27 @@ namespace client {
     bool Controls::respawnRequested() const
     {
         return _respawn;
+    }
+
+    void Controls::handle(Engine::Window &window, const Engine::Events::Closed &)
+    {
+        window.close();
+    }
+
+    void Controls::handle(Engine::Window &window, const Engine::Events::KeyPressed &event)
+    {
+        if (event.key == Engine::Key::Escape) {
+            window.close();
+        }
+        if (event.key == Engine::Key::Enter) {
+            _respawn = true;
+        }
+        applyKey(event.key, true);
+    }
+
+    void Controls::handle(Engine::Window &, const Engine::Events::KeyReleased &event)
+    {
+        applyKey(event.key, false);
     }
 
     void Controls::applyKey(const Engine::Key key, const bool pressed)

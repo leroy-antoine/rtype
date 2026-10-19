@@ -23,11 +23,7 @@ namespace rtype {
             }
         });
         for (const Engine::Entity e : dead) {
-            if (reg.has<gameLogic::Vec2Hitbox>(e)) {
-                const gameLogic::Vec2Hitbox box = reg.get<gameLogic::Vec2Hitbox>(e);
-
-                createExplosionOn(reg, e, std::max(box.x, box.y));
-            }
+            createExplosionOn(reg, e, explosionSize(reg, e));
             reg.destroy(e);
         }
     }
@@ -73,18 +69,11 @@ namespace rtype {
 
     inline void contactSystem(Engine::Registry &reg)
     {
-        const std::vector<Engine::Entity> monsters = collectMonsters(reg);
+        const std::vector<Collider> monsters = collectColliders(reg, collectMonsters(reg));
 
-        for (const Engine::Entity p : collectPlayers(reg)) {
-            const std::optional<Collider> player = getCollider(reg, p);
-
-            if (!player) {
-                continue;
-            }
-            for (const Engine::Entity m : monsters) {
-                if (const std::optional<Collider> monster = getCollider(reg, m)) {
-                    applyContact(reg, *player, *monster);
-                }
+        for (const Collider &player : collectColliders(reg, collectPlayers(reg))) {
+            for (const Collider &monster : monsters) {
+                applyContact(reg, player, monster);
             }
         }
     }

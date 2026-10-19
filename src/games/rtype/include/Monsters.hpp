@@ -5,8 +5,6 @@
 #include "Factories.hpp"
 
 namespace rtype {
-    constexpr float MONSTER_MAX_SPAWN_Y = config::MAP_HEIGHT - config::MONSTER_HEIGHT;
-
     //Fais spawn les monstres à droite de la map, à une hauteur y donnée par le dev
     //Dans le futur, pour avoir des mobs volants, il faudra créer un tag différent pour chaque type de mob
     inline Engine::Entity spawnMonster(Engine::Registry &reg, const float y,

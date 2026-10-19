@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include "engine/core/Registry.hpp"
 #include "utils/Vectors.hpp"
@@ -92,6 +93,16 @@ namespace rtype {
         reg.add(e, Renderable{SpriteId::Explosion});
         reg.add(e, Lifetime{});
         return e;
+    }
+
+    inline float explosionSize(const Engine::Registry &reg, const Engine::Entity e)
+    {
+        if (!reg.has<gameLogic::Vec2Hitbox>(e)) {
+            return 0.f;
+        }
+        const gameLogic::Vec2Hitbox &box = reg.get<gameLogic::Vec2Hitbox>(e);
+
+        return std::max(box.x, box.y);
     }
 
     inline Engine::Entity createExplosionOn(Engine::Registry &reg,

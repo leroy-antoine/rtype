@@ -74,4 +74,17 @@ namespace rtype {
         return Collider{e, reg.get<gameLogic::Vec2Pos>(e),
             reg.get<gameLogic::Vec2Hitbox>(e), reg.get<Team>(e)};
     }
+
+    inline std::vector<Collider> collectColliders(const Engine::Registry &reg,
+        const std::vector<Engine::Entity> &entities)
+    {
+        std::vector<Collider> colliders;
+
+        for (const Engine::Entity e : entities) {
+            if (const std::optional<Collider> collider = getCollider(reg, e)) {
+                colliders.push_back(*collider);
+            }
+        }
+        return colliders;
+    }
 }

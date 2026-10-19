@@ -1,70 +1,66 @@
-#include <chrono>
 #include <iostream>
 #include <optional>
 #include <utility>
 #include "engine/window/Renderer.hpp"
 #include "engine/window/TextureManager.hpp"
-#include "engine/window/Window.hpp"
 #include "rtype/ReturnCodes.hpp"
 #include "App.hpp"
-#include "Config.hpp"
-#include "Controls.hpp"
-#include "Game.hpp"
-#include "GameView.hpp"
 #include "SpriteBank.hpp"
 
 namespace client {
-    namespace {
-        constexpr unsigned int WINDOW_WIDTH = 1280;
-        constexpr unsigned int WINDOW_HEIGHT = 720;
-        constexpr float WORLD_TO_SCREEN = static_cast<float>(WINDOW_WIDTH) / rtype::config::MAP_WIDTH;
-    }
-
     App::App(std::filesystem::path assets) : _assets(std::move(assets))
     {
     }
 
     int App::run()
     {
-        using Clock = std::chrono::steady_clock;
-
         Engine::Window window(WINDOW_WIDTH, WINDOW_HEIGHT, "R-Type");
         Engine::TextureManager textures;
         Engine::Renderer renderer(window, textures);
         const SpriteBank sprites(textures, _assets);
         GameView view(renderer, sprites, WORLD_TO_SCREEN);
-        Controls controls;
-        rtype::Game game;
-        const std::optional<int> slot = game.addPlayer();
-        const Clock::time_point start = Clock::now();
-        Clock::time_point last = start;
-        float accumulator = 0.f;
+        const std::optional<int> slot = _game.addPlayer();
 
         if (!slot) {
             std::cerr << "R-Type: no free player slot" << std::endl;
             return RTYPE_ERROR;
         }
-        window.setFramerateLimit(60);
+        window.setFramerateLimit(FRAMERATE);
+        _start = Clock::now();
+        _last = _start;
+        loop(window, view, *slot);
+        return RTYPE_SUCCESS;
+    }
+
+    void App::loop(Engine::Window &window, GameView &view, const int slot)
+    {
         while (window.isOpen()) {
-            controls.poll(window);
-            if (controls.respawnRequested() && !game.isPlayerAlive(*slot)) {
-                game.removePlayer(*slot);
-                game.addPlayer();
+            _controls.poll(window);
+            if (_controls.respawnRequested()) {
+                _game.respawnPlayer(slot);
             }
-            game.setInput(*slot, controls.input());
-
-            const Clock::time_point now = Clock::now();
-            accumulator += std::chrono::duration<float>(now - last).count();
-            last = now;
-            while (accumulator >= rtype::config::FIXED_DT) {
-                game.update(rtype::config::FIXED_DT);
-                accumulator -= rtype::config::FIXED_DT;
-            }
-
+            _game.setInput(slot, _controls.input());
+            simulate();
             window.clear(0, 0, 0);
-            view.draw(game.registry(), std::chrono::duration<float>(now - start).count());
+            view.draw(_game.registry(), elapsed());
             window.display();
         }
-        return RTYPE_SUCCESS;
+    }
+
+    void App::simulate()
+    {
+        const Clock::time_point now = Clock::now();
+
+        _accumulator += std::chrono::duration<float>(now - _last).count();
+        _last = now;
+        while (_accumulator >= rtype::config::FIXED_DT) {
+            _game.update(rtype::config::FIXED_DT);
+            _accumulator -= rtype::config::FIXED_DT;
+        }
+    }
+
+    float App::elapsed() const
+    {
+        return std::chrono::duration<float>(_last - _start).count();
     }
 }
