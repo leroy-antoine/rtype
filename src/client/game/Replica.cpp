@@ -1,6 +1,22 @@
+#include <utility>
+#include "Config.hpp"
 #include "Replica.hpp"
 
 namespace client {
+    namespace {
+        // Les explosions de coup sont petites, celle du boss est enorme.
+        Cue explosionCue(const float size)
+        {
+            if (size <= rtype::config::HIT_EXPLOSION_SIZE) {
+                return Cue::Hit;
+            }
+            if (size >= rtype::config::BOSS_WIDTH * 0.8f) {
+                return Cue::BossExplosion;
+            }
+            return Cue::Explosion;
+        }
+    }
+
     void Replica::apply(const rtype::EntitySpawned &spawn)
     {
         apply(rtype::EntityDestroyed{spawn.id});
@@ -17,6 +33,7 @@ namespace client {
             _reg.add(e, rtype::Lifetime{});
         }
         _entities[spawn.id] = e;
+        recordSpawnCue(spawn);
     }
 
     void Replica::apply(const rtype::EntityDestroyed &destroy)
@@ -61,8 +78,50 @@ namespace client {
         });
     }
 
+    void Replica::apply(const rtype::GameStatus &status)
+    {
+        _status = status;
+    }
+
+    void Replica::assignSlot(const int slot)
+    {
+        _slot = slot;
+    }
+
     Engine::Registry &Replica::registry()
     {
         return _reg;
+    }
+
+    const std::optional<rtype::GameStatus> &Replica::status() const
+    {
+        return _status;
+    }
+
+    std::optional<int> Replica::slot() const
+    {
+        return _slot;
+    }
+
+    std::vector<Cue> Replica::takeCues()
+    {
+        return std::exchange(_cues, {});
+    }
+
+    void Replica::recordSpawnCue(const rtype::EntitySpawned &spawn)
+    {
+        switch (spawn.sprite) {
+            case rtype::SpriteId::PlayerBullet:
+                _cues.push_back(Cue::PlayerShot);
+                break;
+            case rtype::SpriteId::Boss:
+                _cues.push_back(Cue::BossAppears);
+                break;
+            case rtype::SpriteId::Explosion:
+                _cues.push_back(explosionCue(spawn.box.x));
+                break;
+            default:
+                break;
+        }
     }
 }

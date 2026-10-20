@@ -3,15 +3,20 @@
 #include "engine/core/Registry.hpp"
 #include "engine/window/Renderer.hpp"
 #include "Components.hpp"
+#include "Background.hpp"
+#include "Hud.hpp"
+#include "Replica.hpp"
 #include "SpriteBank.hpp"
 #include "utils/Vectors.hpp"
 
 namespace client {
     class GameView {
     public:
-        GameView(Engine::Renderer &renderer, const SpriteBank &sprites, float worldToScreen);
+        GameView(Engine::Renderer &renderer, const SpriteBank &sprites, float worldToScreen,
+            float screenWidth, float screenHeight);
 
-        void draw(Engine::Registry &reg, float elapsed);
+        // Fond, entites du monde puis interface.
+        void draw(Replica &replica, float elapsed);
 
     private:
         static constexpr int PLAYER_FRAME_DOWN = 0;
@@ -26,6 +31,7 @@ namespace client {
         static Engine::IntRect frameFor(const Engine::Registry &reg, Engine::Entity e,
             const Engine::Animation &animation, float elapsed);
 
+        void drawWorld(Engine::Registry &reg, float elapsed);
         void drawLayer(Engine::Registry &reg, float elapsed, bool effects);
         void drawEntity(const Engine::Registry &reg, Engine::Entity e, const gameLogic::Vec2Pos &pos,
             const gameLogic::Vec2Hitbox &box, rtype::SpriteId id, float elapsed);
@@ -33,5 +39,7 @@ namespace client {
         Engine::Renderer &_renderer;
         const SpriteBank &_sprites;
         float _worldToScreen;
+        Background _background;
+        Hud _hud;
     };
 }

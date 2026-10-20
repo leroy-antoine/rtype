@@ -44,15 +44,27 @@ namespace rtype::config {
     constexpr int MONSTER_DAMAGE = 10;
     constexpr float MONSTER_FIRE_COOLDOWN = 2.f;
     constexpr float MONSTER_MAX_SPAWN_Y = MAP_HEIGHT - MONSTER_HEIGHT;
-    constexpr float MONSTER_SPAWN_INTERVAL = 2.f; // -> Secondes entre deux mobs
 
-    constexpr int BOSS_HP = 1000;
-    constexpr float BOSS_SPEED = 120.f;
-    constexpr float BOSS_WIDTH = 400.f;
-    constexpr float BOSS_HEIGHT = 400.f;
+    constexpr int BOSS_HP = 600;
+    constexpr float BOSS_SPEED = 120.f;        // -> Vitesse d'entree
+    constexpr float BOSS_WIDTH = 480.f;
+    constexpr float BOSS_HEIGHT = 264.f;
     constexpr int BOSS_DAMAGE = 20;
-    constexpr float BOSS_FIRE_COOLDOWN = 0.8f;
+    constexpr float BOSS_FIRE_COOLDOWN = 0.9f;
+    constexpr float BOSS_STOP_X = MAP_WIDTH - BOSS_WIDTH - 60.f; // -> Il s'arrete la
+    constexpr float BOSS_SWAY_AMPLITUDE = 280.f; // -> Va-et-vient vertical
+    constexpr float BOSS_SWAY_FREQUENCY = 0.8f;
+    constexpr int BOSS_FAN_BULLETS = 5;        // -> Balles par tir (eventail)
+    constexpr float BOSS_FAN_ANGLE = 0.3f;     // -> Ecart (rad) entre 2 balles
+    constexpr float BOSS_BULLET_SPEED = 480.f;
+    constexpr float BOSS_BULLET_SIZE = 40.f;
+
+    constexpr float RESTART_DELAY = 6.f; // -> Secondes avant la nouvelle partie
+
+    // Hauteur (haut du monstre) tiree au hasard pour une vague.
+    constexpr float WAVE_MIN_Y = 100.f;
+    constexpr float WAVE_MAX_Y = MAP_HEIGHT - 300.f;
 
     constexpr float SCROLL_SPEED = 120.f; //-> Vitesse de défilement de la carte
-    constexpr float BOSS_SPAWN_SCROLL = 7200.f;  // -> Distance defilee (7200 / 120 = 60 s de jeu) a laquelle le boss arrive.
+    constexpr float BOSS_SPAWN_SCROLL = 2400.f;  // -> Distance defilee (2400 / 120 = 20 s de jeu) a laquelle le boss arrive.
 }

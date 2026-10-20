@@ -24,3 +24,8 @@ option(BUILD_SHARED_LIBS "Build engine libraries as shared libraries" ON)
 
 add_subdirectory(engine)
 add_subdirectory(src)
+
+include(CTest)
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()

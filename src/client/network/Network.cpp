@@ -15,6 +15,18 @@ namespace client {
         }
     }
 
+    void Network::assignSlot(Replica &replica, const std::optional<int> &slot)
+    {
+        if (slot) {
+            replica.assignSlot(*slot);
+        }
+    }
+
+    bool Network::connected() const
+    {
+        return _client.connected();
+    }
+
     Network::Network(const std::string &host, const std::uint16_t port)
         : _client(host, port, rtype::protocol::VERSION)
     {
@@ -77,6 +89,8 @@ namespace client {
             case rtype::protocol::SPAWN: applyDecoded(replica, rtype::protocol::decodeSpawn(event.payload)); break;
             case rtype::protocol::DESTROY: applyDecoded(replica, rtype::protocol::decodeDestroy(event.payload)); break;
             case rtype::protocol::STATES: applyDecoded(replica, rtype::protocol::decodeStates(event.payload)); break;
+            case rtype::protocol::STATUS: applyDecoded(replica, rtype::protocol::decodeStatus(event.payload)); break;
+            case rtype::protocol::YOU: assignSlot(replica, rtype::protocol::decodeYou(event.payload)); break;
             default: break;
         }
     }
