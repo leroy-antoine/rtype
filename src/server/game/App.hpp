@@ -11,7 +11,6 @@
 #include "Game.hpp"
 
 namespace server {
-    // Colle entre le reseau et rtype::Game: un client = un slot de joueur.
     class App {
     public:
         explicit App(std::uint16_t port);

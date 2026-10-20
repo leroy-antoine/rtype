@@ -56,7 +56,6 @@ namespace rtype {
         float remaining = config::EXPLOSION_DURATION;
     };
 
-    // Identifiant d'une entite partage avec les clients.
     struct NetId {
         std::uint32_t value = 0;
     };

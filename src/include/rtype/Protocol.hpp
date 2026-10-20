@@ -15,21 +15,17 @@
 #include "Config.hpp"
 #include "Events.hpp"
 
-// Messages du jeu R-Type, transportes par engine::network.
-// Toutes les valeurs sont en big-endian (BinaryWriter).
 namespace rtype::protocol {
     using Payload = std::vector<std::uint8_t>;
 
     constexpr std::uint8_t VERSION = 1;
 
-    // Client -> serveur
-    constexpr Engine::MessageType INPUT = 0x10;   // unreliable, [keys u8]
-    constexpr Engine::MessageType RESPAWN = 0x11; // reliable, vide
+    constexpr Engine::MessageType INPUT = 0x10;
+    constexpr Engine::MessageType RESPAWN = 0x11;
 
-    // Serveur -> client
-    constexpr Engine::MessageType SPAWN = 0x20;   // reliable
-    constexpr Engine::MessageType DESTROY = 0x21; // reliable, [id u32]
-    constexpr Engine::MessageType STATES = 0x22;  // unreliable
+    constexpr Engine::MessageType SPAWN = 0x20;
+    constexpr Engine::MessageType DESTROY = 0x21;
+    constexpr Engine::MessageType STATES = 0x22;
 
     constexpr std::uint8_t KEY_UP = 1 << 0;
     constexpr std::uint8_t KEY_DOWN = 1 << 1;
@@ -38,9 +34,7 @@ namespace rtype::protocol {
     constexpr std::uint8_t KEY_FIRE = 1 << 4;
     constexpr std::uint8_t KEYS_MASK = 0x1F;
 
-    // SPAWN: [id u32][sprite u8][slot u8][x f32][y f32][w f32][h f32]
     constexpr std::size_t SPAWN_SIZE = 22;
-    // STATES: [count u8] puis count fois [id u32][x f32][y f32]
     constexpr std::size_t STATE_SIZE = 12;
     constexpr std::size_t MAX_STATES_PER_MESSAGE =
         (Engine::Protocol::MAX_PAYLOAD_SIZE - 1) / STATE_SIZE;
@@ -52,7 +46,6 @@ namespace rtype::protocol {
         writer.writeFloat(v.y);
     }
 
-    // Refuse NaN et l'infini: un client ne doit jamais les recevoir.
     inline std::optional<gameLogic::Vec2> readVec2(
         Engine::BinaryReader &reader)
     {
@@ -87,7 +80,6 @@ namespace rtype::protocol {
         return {keys};
     }
 
-    // Un bit inconnu rend le message invalide.
     inline std::optional<PlayerInput> decodeInput(const Payload &payload)
     {
         if (payload.size() != 1 || (payload[0] & ~KEYS_MASK) != 0) {
@@ -181,8 +173,6 @@ namespace rtype::protocol {
         return writer.data();
     }
 
-    // Un payload est limite a MAX_PAYLOAD_SIZE: on coupe en plusieurs
-    // messages, que l'engine repartit ensuite dans les datagrammes.
     inline std::vector<Payload> encodeStates(
         const std::vector<EntityState> &states)
     {
@@ -210,8 +200,6 @@ namespace rtype::protocol {
         return EntityState{*id, gameLogic::Vec2Pos{*pos}};
     }
 
-    // La taille est verifiee avant de lire: pas d'allocation sur un
-    // compteur menteur.
     inline std::optional<std::vector<EntityState>> decodeStates(
         const Payload &payload)
     {

@@ -17,7 +17,6 @@ static std::uint16_t parsePort(const std::string &text)
     return static_cast<std::uint16_t>(port);
 }
 
-// Usage: r-type_server <port>
 int main(const int argc, char **argv)
 {
     if (argc != 2) {

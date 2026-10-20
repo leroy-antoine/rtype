@@ -10,7 +10,6 @@
 #include "Events.hpp"
 
 namespace rtype {
-    // Entites connues des clients, rangees par NetId.
     using TrackedTable = std::map<std::uint32_t, Engine::Entity>;
 
     inline int slotOf(const Engine::Registry &reg, const Engine::Entity e)
@@ -45,7 +44,6 @@ namespace rtype {
             reg.get<gameLogic::Vec2Hitbox>(e)};
     }
 
-    // Entites affichables qui n'ont pas encore d'identifiant reseau.
     inline std::vector<Engine::Entity> collectUntracked(Engine::Registry &reg)
     {
         std::vector<Engine::Entity> untracked;
@@ -59,7 +57,6 @@ namespace rtype {
         return untracked;
     }
 
-    // Toutes les entites connues, pour un client qui arrive en cours de jeu.
     inline std::vector<EntitySpawned> collectSpawns(
         const Engine::Registry &reg, const TrackedTable &tracked)
     {
@@ -74,7 +71,6 @@ namespace rtype {
         return spawns;
     }
 
-    // Seules les entites qui ont une vitesse bougent: les explosions non.
     inline std::vector<EntityState> collectStates(
         const Engine::Registry &reg, const TrackedTable &tracked)
     {

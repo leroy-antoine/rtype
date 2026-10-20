@@ -42,8 +42,6 @@ namespace server {
         return RTYPE_SUCCESS;
     }
 
-    // Les events du tick partent avant le prochain Connected: un nouveau
-    // client recoit le monde via sendWorld, jamais deux fois le meme SPAWN.
     void App::tick()
     {
         receive();
@@ -84,7 +82,6 @@ namespace server {
         }
     }
 
-    // Dort jusqu'au prochain tick.
     void App::sleep() const
     {
         const float remaining = _timestep.step() * (1.f - _timestep.alpha());
@@ -127,7 +124,6 @@ namespace server {
         std::cout << "client " << event.client << " left (reason " << static_cast<int>(event.reason) << ")" << std::endl;
     }
 
-    // Un message invalide est ignore: un client ne fait jamais planter le serveur.
     void App::handle(const Engine::ServerEvents::Message &event)
     {
         const std::optional<int> slot = slotOf(event.client);

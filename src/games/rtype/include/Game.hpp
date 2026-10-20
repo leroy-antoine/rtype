@@ -92,19 +92,16 @@ namespace rtype {
             trackSpawns();
         }
 
-        // Vide les evenements du dernier tick, a envoyer a tous les clients.
         std::vector<GameEvent> takeEvents()
         {
             return std::exchange(_events, {});
         }
 
-        // Tout ce que les clients connaissent, pour un nouveau client.
         [[nodiscard]] std::vector<EntitySpawned> spawns() const
         {
             return collectSpawns(_reg, _tracked);
         }
 
-        // Position des entites qui bougent, a envoyer a chaque tick.
         [[nodiscard]] std::vector<EntityState> states() const
         {
             return collectStates(_reg, _tracked);
@@ -133,7 +130,6 @@ namespace rtype {
             _spawnTimer = config::MONSTER_SPAWN_INTERVAL;
         }
 
-        // Donne un NetId aux nouvelles entites affichables.
         void trackSpawns()
         {
             for (const Engine::Entity e : collectUntracked(_reg)) {
@@ -147,7 +143,6 @@ namespace rtype {
             }
         }
 
-        // Oublie les entites detruites pendant le tick.
         void trackDestroys()
         {
             for (auto it = _tracked.begin(); it != _tracked.end();) {

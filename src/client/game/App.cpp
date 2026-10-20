@@ -28,7 +28,6 @@ namespace client {
         return RTYPE_SUCCESS;
     }
 
-    // Renvoie false si la boucle s'arrete parce que le serveur est perdu.
     bool App::loop(Engine::Window &window, GameView &view)
     {
         while (window.isOpen()) {

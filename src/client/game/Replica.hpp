@@ -7,7 +7,6 @@
 #include "Events.hpp"
 
 namespace client {
-    // Copie locale du monde du serveur, dessinee par GameView.
     class Replica {
     public:
         void apply(const rtype::EntitySpawned &spawn);

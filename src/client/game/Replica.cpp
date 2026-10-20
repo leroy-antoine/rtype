@@ -37,8 +37,6 @@ namespace client {
         }
     }
 
-    // Un etat peut arriver avant son SPAWN (reliable renvoye): on l'ignore.
-    // La vitesse n'est qu'un deplacement par tick, GameView n'en lit que le signe.
     void Replica::apply(const rtype::EntityState &state)
     {
         const auto found = _entities.find(state.id);
@@ -53,7 +51,6 @@ namespace client {
         pos = state.pos;
     }
 
-    // Anime les explosions; c'est le serveur qui les detruit.
     void Replica::update(const float dt)
     {
         _reg.each<rtype::Lifetime>([dt](Engine::Entity, rtype::Lifetime &lifetime) {

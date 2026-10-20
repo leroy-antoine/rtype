@@ -8,12 +8,10 @@
 #include "game/Replica.hpp"
 
 namespace client {
-    // Lien avec le serveur: envoie les touches, applique le monde recu.
     class Network {
     public:
         Network(const std::string &host, std::uint16_t port);
 
-        // Renvoie false quand la connexion est refusee ou perdue.
         bool update(Replica &replica);
         void sendInput(const rtype::PlayerInput &input);
         void requestRespawn();
