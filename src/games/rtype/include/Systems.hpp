@@ -10,6 +10,7 @@
 #include "Factories.hpp"
 #include "Movements.hpp"
 #include "Queries.hpp"
+#include "Boss.hpp"
 
 
 namespace rtype {
@@ -144,26 +145,48 @@ namespace rtype {
         return reg.get<Weapon>(e).timer <= 0.f;
     }
 
+    // Vitesses des balles d'un tir : un eventail pour le boss, sinon une
+    // seule balle droit devant (vers la droite pour les joueurs).
+    inline std::vector<gameLogic::Vec2> shotVelocities(
+        const Engine::Registry &reg, const Engine::Entity shooter)
+    {
+        if (reg.has<BossTag>(shooter)) {
+            return bossFan();
+        }
+        const float direction = bulletDirection(reg.get<Team>(shooter));
+
+        return {{direction * config::BULLET_SPEED, 0.f}};
+    }
+
     inline void shoot(Engine::Registry &reg, const Engine::Entity shooter)
     {
         if (!isReadyToShoot(reg, shooter)) {
             return;
         }
-        if (createBullet(reg, shooter) == Engine::Entity{}) {
-            return;
-        }
-        auto &[cooldown, timer] = reg.get<Weapon>(shooter);
+        bool fired = false;
 
-        timer = cooldown;
+        for (const gameLogic::Vec2 &velocity : shotVelocities(reg, shooter)) {
+            if (createBullet(reg, shooter, velocity) != Engine::Entity{}) {
+                fired = true;
+            }
+        }
+        if (fired) {
+            auto &[cooldown, timer] = reg.get<Weapon>(shooter);
+
+            timer = cooldown;
+        }
     }
 
+    // Les joueurs tirent quand ils appuient sur la touche, les monstres des
+    // qu'ils sont entres sur la carte.
     inline bool wantsToShoot(const Engine::Registry &reg,
         const Engine::Entity e)
     {
         if (reg.has<PlayerInput>(e)) {
             return reg.get<PlayerInput>(e).fire;
         }
-        return true;
+        return reg.has<gameLogic::Vec2Pos>(e)
+            && reg.get<gameLogic::Vec2Pos>(e).x < config::MAP_WIDTH;
     }
 
     // Fait tirer toutes les entites armees qui le veulent.

@@ -1,4 +1,5 @@
 #include <utility>
+#include <vector>
 #include "engine/window/Renderer.hpp"
 #include "engine/window/TextureManager.hpp"
 #include "rtype/ReturnCodes.hpp"
@@ -17,18 +18,19 @@ namespace client {
         Engine::TextureManager textures;
         Engine::Renderer renderer(window, textures);
         const SpriteBank sprites(textures, _assets);
-        GameView view(renderer, sprites, WORLD_TO_SCREEN);
+        GameView view(renderer, sprites, WORLD_TO_SCREEN, WINDOW_WIDTH, WINDOW_HEIGHT);
+        Audio audio(_assets);
 
         window.setFramerateLimit(FRAMERATE);
         _start = Clock::now();
         _last = _start;
-        if (!loop(window, view)) {
+        if (!loop(window, view, audio)) {
             return RTYPE_ERROR;
         }
         return RTYPE_SUCCESS;
     }
 
-    bool App::loop(Engine::Window &window, GameView &view)
+    bool App::loop(Engine::Window &window, GameView &view, Audio &audio)
     {
         while (window.isOpen()) {
             if (!_network.update(_replica)) {
@@ -37,11 +39,34 @@ namespace client {
             _controls.poll(window);
             sendControls();
             _replica.update(advance());
-            window.clear(0, 0, 0);
-            view.draw(_replica.registry(), elapsed());
+            playSounds(audio);
+            window.clear(4, 4, 18);
+            view.draw(_replica, elapsed());
             window.display();
         }
         return true;
+    }
+
+    void App::playSounds(Audio &audio)
+    {
+        const std::vector<Cue> cues = _replica.takeCues();
+
+        if (listening()) {
+            audio.play(cues);
+        }
+        audio.follow(_replica);
+    }
+
+    bool App::listening()
+    {
+        if (!_network.connected()) {
+            _connectedSince.reset();
+            return false;
+        }
+        if (!_connectedSince) {
+            _connectedSince = elapsed();
+        }
+        return elapsed() - *_connectedSince >= LISTEN_DELAY;
     }
 
     void App::sendControls()

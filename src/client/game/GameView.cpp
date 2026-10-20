@@ -1,12 +1,22 @@
 #include "GameView.hpp"
 
 namespace client {
-    GameView::GameView(Engine::Renderer &renderer, const SpriteBank &sprites, const float worldToScreen)
-        : _renderer(renderer), _sprites(sprites), _worldToScreen(worldToScreen)
+    GameView::GameView(Engine::Renderer &renderer, const SpriteBank &sprites, const float worldToScreen,
+        const float screenWidth, const float screenHeight)
+        : _renderer(renderer), _sprites(sprites), _worldToScreen(worldToScreen),
+        _background(screenWidth, screenHeight, worldToScreen),
+        _hud(renderer, screenWidth, screenHeight)
     {
     }
 
-    void GameView::draw(Engine::Registry &reg, const float elapsed)
+    void GameView::draw(Replica &replica, const float elapsed)
+    {
+        _background.draw(_renderer, elapsed);
+        drawWorld(replica.registry(), elapsed);
+        _hud.draw(replica, elapsed);
+    }
+
+    void GameView::drawWorld(Engine::Registry &reg, const float elapsed)
     {
         drawLayer(reg, elapsed, false);
         drawLayer(reg, elapsed, true);

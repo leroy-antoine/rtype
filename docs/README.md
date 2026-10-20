@@ -15,6 +15,7 @@ own documentation next to its code.
 
 | Page | Content |
 |---|---|
+| [Code explained](code-explained.md) | the whole code walked through, in French, for the defense |
 | [Architecture](architecture.md) | the layers, who depends on whom, how the pieces are glued |
 | [Build and run](build.md) | requirements, building on Linux and Windows, IDE setup, troubleshooting |
 | [Protocol](protocol.md) | client/server network protocol (draft skeleton) |

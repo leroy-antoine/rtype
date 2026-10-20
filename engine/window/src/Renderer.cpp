@@ -29,4 +29,12 @@ namespace Engine {
         draw(id, position, source, {size.x / static_cast<float>(source.width),
             size.y / static_cast<float>(source.height)});
     }
+
+    void Renderer::drawRect(Vector2f position, Vector2f size, Color color) {
+        sf::RectangleShape rect({size.x, size.y});
+
+        rect.setPosition({position.x, position.y});
+        rect.setFillColor(sf::Color(color.r, color.g, color.b, color.a));
+        _window._impl->window.draw(rect);
+    }
 }

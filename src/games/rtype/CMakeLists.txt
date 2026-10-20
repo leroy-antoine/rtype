@@ -1,5 +1,8 @@
 add_library(rtype_game INTERFACE
         include/Components.hpp
+        include/Waves.hpp
+        include/Boss.hpp
+        include/Status.hpp
         include/Movements.hpp
         include/Factories.hpp
         include/Damages.hpp

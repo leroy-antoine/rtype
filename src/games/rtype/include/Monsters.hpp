@@ -1,21 +1,36 @@
 #pragma once
+#include <algorithm>
 #include "engine/core/Registry.hpp"
 #include "utils/Vectors.hpp"
 #include "Config.hpp"
 #include "Factories.hpp"
 
 namespace rtype {
-    //Fais spawn les monstres à droite de la map, à une hauteur y donnée par le dev
-    //Dans le futur, pour avoir des mobs volants, il faudra créer un tag différent pour chaque type de mob
-    inline Engine::Entity spawnMonster(Engine::Registry &reg, const float y,
-        const int slot = 0)
+    // Fait apparaitre un monstre a droite de la carte, a la hauteur y donnee,
+    // et le lance vers la gauche.
+    inline Engine::Entity spawnMonster(Engine::Registry &reg, const float y)
     {
-        const Engine::Entity e = createMonster(reg, slot);
+        const Engine::Entity e = createMonster(reg);
         constexpr float x = config::MAP_WIDTH + config::SPAWN_MARGIN;
+        const float maxY = config::MAP_HEIGHT - config::MONSTER_HEIGHT;
 
-        reg.get<gameLogic::Vec2Pos>(e) = gameLogic::Vec2Pos{{x, y}};
+        reg.get<gameLogic::Vec2Pos>(e) =
+            gameLogic::Vec2Pos{{x, std::clamp(y, config::MAP_ORIGIN, maxY)}};
         reg.get<gameLogic::Vec2Velocity>(e) =
             gameLogic::Vec2Velocity{{-config::MONSTER_SPEED, 0.f}};
+        return e;
+    }
+
+    // Le boss entre par la droite, centre sur la hauteur de la carte.
+    inline Engine::Entity spawnBoss(Engine::Registry &reg)
+    {
+        const Engine::Entity e = createBoss(reg);
+        constexpr float x = config::MAP_WIDTH + config::SPAWN_MARGIN;
+
+        reg.get<gameLogic::Vec2Pos>(e) = gameLogic::Vec2Pos{{x,
+            (config::MAP_HEIGHT - config::BOSS_HEIGHT) / 2.f}};
+        reg.get<gameLogic::Vec2Velocity>(e) =
+            gameLogic::Vec2Velocity{{-config::BOSS_SPEED, 0.f}};
         return e;
     }
 }

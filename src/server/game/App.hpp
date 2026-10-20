@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <unordered_map>
@@ -20,10 +21,14 @@ namespace server {
     private:
         using Clock = std::chrono::steady_clock;
 
+        // Le statut (HUD) est envoye 10 fois par seconde, pas a chaque tick.
+        static constexpr std::size_t STATUS_EVERY_TICKS = 6;
+
         void tick();
         void receive();
         void broadcastEvents();
         void broadcastStates();
+        void broadcastStatus();
         void sendWorld(Engine::ClientId client);
         void sleep() const;
         [[nodiscard]] std::optional<int> slotOf(Engine::ClientId client) const;
@@ -36,5 +41,6 @@ namespace server {
         rtype::Game _game;
         Engine::FixedTimestep _timestep{rtype::config::FIXED_DT};
         std::unordered_map<Engine::ClientId, int> _slots;
+        std::size_t _ticks = 0;
     };
 }

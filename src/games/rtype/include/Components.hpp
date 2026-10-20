@@ -45,7 +45,10 @@ namespace rtype {
         TeamId id = TeamId::Player;
     };
 
-    enum class SpriteId { Player, Monster, PlayerBullet, MonsterBullet, Explosion, Count };
+    // Les valeurs sont envoyees sur le reseau : ajouter a la fin, avant Count.
+    enum class SpriteId {
+        Player, Monster, PlayerBullet, MonsterBullet, Explosion, Boss, Count
+    };
 
     struct Renderable {
         SpriteId id = SpriteId::Player;
@@ -58,5 +61,10 @@ namespace rtype {
 
     struct NetId {
         std::uint32_t value = 0;
+    };
+
+    // Le boss : il entre, s'arrete, puis fait des va-et-vient.
+    struct BossTag {
+        float age = 0.f;
     };
 }

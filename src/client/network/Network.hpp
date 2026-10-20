@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include "engine/network/Client.hpp"
 #include "engine/network/Event.hpp"
@@ -16,8 +17,10 @@ namespace client {
         void sendInput(const rtype::PlayerInput &input);
         void requestRespawn();
         void flush();
+        [[nodiscard]] bool connected() const;
 
     private:
+        static void assignSlot(Replica &replica, const std::optional<int> &slot);
         void handle(Replica &replica, const Engine::ClientEvents::Connected &event);
         void handle(Replica &replica, const Engine::ClientEvents::Refused &event);
         void handle(Replica &replica, const Engine::ClientEvents::Unreachable &event);

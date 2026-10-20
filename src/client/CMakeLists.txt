@@ -1,6 +1,10 @@
 add_executable(r-type_client
         main.cpp
         game/App.cpp
+        game/Audio.cpp
+        game/Background.cpp
+        game/Font.cpp
+        game/Hud.cpp
         game/Controls.cpp
         game/GameView.cpp
         game/Replica.cpp

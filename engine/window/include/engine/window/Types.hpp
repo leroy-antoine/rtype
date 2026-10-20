@@ -10,6 +10,13 @@ namespace Engine {
         float y = 0.0f;
     };
 
+    struct Color {
+        std::uint8_t r = 255;
+        std::uint8_t g = 255;
+        std::uint8_t b = 255;
+        std::uint8_t a = 255;
+    };
+
     struct IntRect {
         int left = 0;
         int top = 0;
