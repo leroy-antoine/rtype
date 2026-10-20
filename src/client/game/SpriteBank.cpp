@@ -6,9 +6,6 @@ namespace client {
         const auto load = [&](const char *file) {
             return textures.load((assets / file).string());
         };
-        const auto set = [this](rtype::SpriteId id, const Engine::Sprite &sprite) {
-            _sprites[static_cast<std::size_t>(id)] = sprite;
-        };
 
         set(rtype::SpriteId::Player, {load("r-typesheet42.gif"),
             {.firstFrame = {0, 0, 33, 17}, .frameCount = 5}});
@@ -20,6 +17,14 @@ namespace client {
             {.firstFrame = {226, 276, 16, 11}, .frameCount = 2, .step = 16, .frameDuration = 0.15f}});
         set(rtype::SpriteId::Explosion, {load("r-typesheet44.gif"),
             {.firstFrame = {129, 0, 33, 33}, .frameCount = 6}});
+        set(rtype::SpriteId::Boss, {load("r-typesheet32.gif"),
+            {.firstFrame = {0, 430, 260, 143}, .frameCount = 2, .step = 260,
+                .frameDuration = 0.35f}});
+    }
+
+    void SpriteBank::set(const rtype::SpriteId id, const Engine::Sprite &sprite)
+    {
+        _sprites[static_cast<std::size_t>(id)] = sprite;
     }
 
     const Engine::Sprite &SpriteBank::get(const rtype::SpriteId id) const
