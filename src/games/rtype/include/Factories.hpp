@@ -35,7 +35,8 @@ namespace rtype {
         return e;
     }
 
-    inline Engine::Entity createMonster(Engine::Registry &reg, const int slot)
+    inline Engine::Entity createMonster(Engine::Registry &reg,
+        const int slot = 0)
     {
         const Engine::Entity e = reg.create();
 
@@ -55,8 +56,26 @@ namespace rtype {
         return e;
     }
 
+    // Le boss est un monstre plus gros, avec BossTag pour le reconnaitre.
+    inline Engine::Entity createBoss(Engine::Registry &reg)
+    {
+        const Engine::Entity e = createMonster(reg);
+
+        reg.add(e, BossTag{});
+        reg.get<gameLogic::Vec2Hitbox>(e) = gameLogic::Vec2Hitbox{{
+            config::BOSS_WIDTH, config::BOSS_HEIGHT}};
+        reg.get<Speed>(e) = Speed{config::BOSS_SPEED};
+        reg.get<Health>(e) = Health{config::BOSS_HP};
+        reg.get<Weapon>(e) = Weapon{config::BOSS_FIRE_COOLDOWN,
+            config::BOSS_FIRE_COOLDOWN};
+        reg.get<Damage>(e) = Damage{config::BOSS_DAMAGE};
+        reg.get<Renderable>(e) = Renderable{SpriteId::Boss};
+        return e;
+    }
+
+    // Balle tiree par shooter avec la vitesse donnee.
     inline Engine::Entity createBullet(Engine::Registry &reg,
-        const Engine::Entity shooter)
+        const Engine::Entity shooter, const gameLogic::Vec2 &velocity)
     {
         if (!isShooter(reg, shooter)) {
             return Engine::Entity{};
@@ -66,20 +85,33 @@ namespace rtype {
             reg.get<gameLogic::Vec2Hitbox>(shooter);
         const Team team = reg.get<Team>(shooter);
         const Damage damage = reg.get<Damage>(shooter);
-        const float direction = bulletDirection(team);
+        const BulletLook look = bulletLook(reg, shooter, team);
+        float direction = 1.f;
         const Engine::Entity e = reg.create();
 
+        if (velocity.x < 0.f) {
+            direction = -1.f;
+        }
         reg.add(e, ProjectileTag{});
-        reg.add(e, bulletStartPos(pos, box, direction));
-        reg.add(e, gameLogic::Vec2Hitbox{{config::BULLET_WIDTH,
-            config::BULLET_HEIGHT}});
-        reg.add(e, gameLogic::Vec2Velocity{{direction * config::BULLET_SPEED,
-            0.f}});
+        reg.add(e, bulletStartPos(pos, box, look, direction));
+        reg.add(e, gameLogic::Vec2Hitbox{{look.width, look.height}});
+        reg.add(e, gameLogic::Vec2Velocity{velocity});
         reg.add(e, damage);
         reg.add(e, team);
-        reg.add(e, Renderable{team.id == TeamId::Player
-            ? SpriteId::PlayerBullet : SpriteId::MonsterBullet});
+        reg.add(e, Renderable{look.sprite});
         return e;
+    }
+
+    inline Engine::Entity createBullet(Engine::Registry &reg,
+        const Engine::Entity shooter)
+    {
+        if (!reg.has<Team>(shooter)) {
+            return Engine::Entity{};
+        }
+        const float direction = bulletDirection(reg.get<Team>(shooter));
+
+        return createBullet(reg, shooter,
+            gameLogic::Vec2{direction * config::BULLET_SPEED, 0.f});
     }
 
     inline Engine::Entity createExplosion(Engine::Registry &reg,

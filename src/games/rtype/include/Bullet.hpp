@@ -10,6 +10,13 @@
 #include "utils/Vectors.hpp"
 
 namespace rtype {
+    // Apparence d'un projectile : son sprite et sa taille.
+    struct BulletLook {
+        SpriteId sprite;
+        float width;
+        float height;
+    };
+
     inline bool isShooter(const Engine::Registry &reg, const Engine::Entity e)
     {
         return reg.has<gameLogic::Vec2Pos>(e)
@@ -26,11 +33,29 @@ namespace rtype {
         return -1.f;
     }
 
-    inline gameLogic::Vec2Pos bulletStartPos(const gameLogic::Vec2Pos &pos,
-        const gameLogic::Vec2Hitbox &box, const float direction)
+    // Les balles du boss sont plus grosses que les autres.
+    inline BulletLook bulletLook(const Engine::Registry &reg,
+        const Engine::Entity shooter, const Team &team)
     {
-        float x = pos.x - config::BULLET_WIDTH;
-        const float y = pos.y + box.y / 2.f - config::BULLET_HEIGHT / 2.f;
+        if (reg.has<BossTag>(shooter)) {
+            return {SpriteId::MonsterBullet, config::BOSS_BULLET_SIZE,
+                config::BOSS_BULLET_SIZE};
+        }
+        if (team.id == TeamId::Player) {
+            return {SpriteId::PlayerBullet, config::BULLET_WIDTH,
+                config::BULLET_HEIGHT};
+        }
+        return {SpriteId::MonsterBullet, config::BULLET_WIDTH,
+            config::BULLET_HEIGHT};
+    }
+
+    // La balle part du bord du tireur, centree sur sa hauteur.
+    inline gameLogic::Vec2Pos bulletStartPos(const gameLogic::Vec2Pos &pos,
+        const gameLogic::Vec2Hitbox &box, const BulletLook &look,
+        const float direction)
+    {
+        float x = pos.x - look.width;
+        const float y = pos.y + box.y / 2.f - look.height / 2.f;
 
         if (direction > 0.f) {
             x = pos.x + box.x;
