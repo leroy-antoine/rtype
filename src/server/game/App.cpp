@@ -48,6 +48,9 @@ namespace server {
         _game.update(_timestep.step());
         broadcastEvents();
         broadcastStates();
+        if (_ticks++ % STATUS_EVERY_TICKS == 0) {
+            broadcastStatus();
+        }
         _server.flush();
     }
 
@@ -73,6 +76,11 @@ namespace server {
         for (const rtype::protocol::Payload &payload : rtype::protocol::encodeStates(_game.states())) {
             _server.broadcast(rtype::protocol::STATES, payload);
         }
+    }
+
+    void App::broadcastStatus()
+    {
+        _server.broadcast(rtype::protocol::STATUS, rtype::protocol::encode(_game.status()));
     }
 
     void App::sendWorld(const Engine::ClientId client)
@@ -108,6 +116,8 @@ namespace server {
             return;
         }
         _slots[event.client] = *slot;
+        _server.send(event.client, rtype::protocol::YOU,
+            rtype::protocol::encodeYou(*slot), Engine::Delivery::Reliable);
         sendWorld(event.client);
         std::cout << "client " << event.client << " joined in slot " << *slot << std::endl;
     }

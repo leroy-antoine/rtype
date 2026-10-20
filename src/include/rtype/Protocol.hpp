@@ -14,11 +14,12 @@
 #include "Components.hpp"
 #include "Config.hpp"
 #include "Events.hpp"
+#include "Status.hpp"
 
 namespace rtype::protocol {
     using Payload = std::vector<std::uint8_t>;
 
-    constexpr std::uint8_t VERSION = 1;
+    constexpr std::uint8_t VERSION = 2;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
@@ -26,6 +27,8 @@ namespace rtype::protocol {
     constexpr Engine::MessageType SPAWN = 0x20;
     constexpr Engine::MessageType DESTROY = 0x21;
     constexpr Engine::MessageType STATES = 0x22;
+    constexpr Engine::MessageType STATUS = 0x23;
+    constexpr Engine::MessageType YOU = 0x24;
 
     constexpr std::uint8_t KEY_UP = 1 << 0;
     constexpr std::uint8_t KEY_DOWN = 1 << 1;
@@ -38,6 +41,11 @@ namespace rtype::protocol {
     constexpr std::size_t STATE_SIZE = 12;
     constexpr std::size_t MAX_STATES_PER_MESSAGE =
         (Engine::Protocol::MAX_PAYLOAD_SIZE - 1) / STATE_SIZE;
+
+    // STATUS : phase (1), boss hp (2), boss max hp (2), nombre de joueurs (1),
+    // puis par joueur : slot (1), hp (2), vivant (1).
+    constexpr std::size_t STATUS_HEADER_SIZE = 6;
+    constexpr std::size_t PLAYER_STATUS_SIZE = 4;
 
     inline void writeVec2(Engine::BinaryWriter &writer,
         const gameLogic::Vec2 &v)
@@ -219,5 +227,78 @@ namespace rtype::protocol {
             states.push_back(*state);
         }
         return states;
+    }
+
+    // YOU : le slot que le serveur a attribue au client qui vient de se connecter.
+    inline Payload encodeYou(const int slot)
+    {
+        return {static_cast<std::uint8_t>(slot)};
+    }
+
+    inline std::optional<int> decodeYou(const Payload &payload)
+    {
+        if (payload.size() != 1 || payload[0] >= config::MAX_PLAYERS) {
+            return std::nullopt;
+        }
+        return payload[0];
+    }
+
+    inline Payload encode(const GameStatus &status)
+    {
+        Engine::BinaryWriter writer;
+
+        writer.writeU8(static_cast<std::uint8_t>(status.phase));
+        writer.writeU16(static_cast<std::uint16_t>(status.bossHp));
+        writer.writeU16(static_cast<std::uint16_t>(status.bossMaxHp));
+        writer.writeU8(static_cast<std::uint8_t>(status.players.size()));
+        for (const PlayerStatus &player : status.players) {
+            writer.writeU8(static_cast<std::uint8_t>(player.slot));
+            writer.writeU16(static_cast<std::uint16_t>(player.hp));
+            writer.writeU8(player.alive ? 1 : 0);
+        }
+        return writer.data();
+    }
+
+    inline std::optional<PlayerStatus> readPlayerStatus(
+        Engine::BinaryReader &reader)
+    {
+        const std::optional<std::uint8_t> slot = reader.readU8();
+        const std::optional<std::uint16_t> hp = reader.readU16();
+        const std::optional<std::uint8_t> alive = reader.readU8();
+
+        if (!slot || !hp || !alive || *slot >= config::MAX_PLAYERS
+            || *alive > 1) {
+            return std::nullopt;
+        }
+        return PlayerStatus{*slot, *hp, *alive == 1};
+    }
+
+    inline std::optional<GameStatus> decodeStatus(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+        const std::optional<std::uint8_t> phase = reader.readU8();
+        const std::optional<std::uint16_t> bossHp = reader.readU16();
+        const std::optional<std::uint16_t> bossMaxHp = reader.readU16();
+        const std::optional<std::uint8_t> count = reader.readU8();
+        GameStatus status;
+
+        if (!phase || !bossHp || !bossMaxHp || !count
+            || *phase > static_cast<std::uint8_t>(Phase::Defeat)
+            || *count > config::MAX_PLAYERS || *bossHp > *bossMaxHp
+            || reader.remaining() != *count * PLAYER_STATUS_SIZE) {
+            return std::nullopt;
+        }
+        status.phase = static_cast<Phase>(*phase);
+        status.bossHp = *bossHp;
+        status.bossMaxHp = *bossMaxHp;
+        for (std::size_t i = 0; i < *count; ++i) {
+            const std::optional<PlayerStatus> player = readPlayerStatus(reader);
+
+            if (!player) {
+                return std::nullopt;
+            }
+            status.players.push_back(*player);
+        }
+        return status;
     }
 }
