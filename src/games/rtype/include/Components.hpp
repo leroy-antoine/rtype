@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include "Config.hpp"
 
 namespace rtype {
@@ -53,5 +54,9 @@ namespace rtype {
     struct Lifetime {
         float duration = config::EXPLOSION_DURATION;
         float remaining = config::EXPLOSION_DURATION;
+    };
+
+    struct NetId {
+        std::uint32_t value = 0;
     };
 }

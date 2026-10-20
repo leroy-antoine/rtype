@@ -1,5 +1,3 @@
-#include <iostream>
-#include <optional>
 #include <utility>
 #include "engine/window/Renderer.hpp"
 #include "engine/window/TextureManager.hpp"
@@ -8,7 +6,8 @@
 #include "SpriteBank.hpp"
 
 namespace client {
-    App::App(std::filesystem::path assets) : _assets(std::move(assets))
+    App::App(std::filesystem::path assets, const std::string &host, const std::uint16_t port)
+        : _assets(std::move(assets)), _network(host, port)
     {
     }
 
@@ -19,44 +18,48 @@ namespace client {
         Engine::Renderer renderer(window, textures);
         const SpriteBank sprites(textures, _assets);
         GameView view(renderer, sprites, WORLD_TO_SCREEN);
-        const std::optional<int> slot = _game.addPlayer();
 
-        if (!slot) {
-            std::cerr << "R-Type: no free player slot" << std::endl;
-            return RTYPE_ERROR;
-        }
         window.setFramerateLimit(FRAMERATE);
         _start = Clock::now();
         _last = _start;
-        loop(window, view, *slot);
+        if (!loop(window, view)) {
+            return RTYPE_ERROR;
+        }
         return RTYPE_SUCCESS;
     }
 
-    void App::loop(Engine::Window &window, GameView &view, const int slot)
+    bool App::loop(Engine::Window &window, GameView &view)
     {
         while (window.isOpen()) {
-            _controls.poll(window);
-            if (_controls.respawnRequested()) {
-                _game.respawnPlayer(slot);
+            if (!_network.update(_replica)) {
+                return false;
             }
-            _game.setInput(slot, _controls.input());
-            simulate();
+            _controls.poll(window);
+            sendControls();
+            _replica.update(advance());
             window.clear(0, 0, 0);
-            view.draw(_game.registry(), elapsed());
+            view.draw(_replica.registry(), elapsed());
             window.display();
         }
+        return true;
     }
 
-    void App::simulate()
+    void App::sendControls()
+    {
+        if (_controls.respawnRequested()) {
+            _network.requestRespawn();
+        }
+        _network.sendInput(_controls.input());
+        _network.flush();
+    }
+
+    float App::advance()
     {
         const Clock::time_point now = Clock::now();
+        const float dt = std::chrono::duration<float>(now - _last).count();
 
-        _accumulator += std::chrono::duration<float>(now - _last).count();
         _last = now;
-        while (_accumulator >= rtype::config::FIXED_DT) {
-            _game.update(rtype::config::FIXED_DT);
-            _accumulator -= rtype::config::FIXED_DT;
-        }
+        return dt;
     }
 
     float App::elapsed() const

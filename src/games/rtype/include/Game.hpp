@@ -4,13 +4,18 @@
 
 #pragma once
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <random>
+#include <utility>
+#include <vector>
 #include "Components.hpp"
 #include "Config.hpp"
+#include "Events.hpp"
 #include "Factories.hpp"
 #include "Monsters.hpp"
 #include "Queries.hpp"
+#include "Replication.hpp"
 #include "Systems.hpp"
 #include "engine/core/Registry.hpp"
 
@@ -83,6 +88,23 @@ namespace rtype {
             contactSystem(_reg);
             deleteUnitsOutOfBounds(_reg);
             deathSystem(_reg);
+            trackDestroys();
+            trackSpawns();
+        }
+
+        std::vector<GameEvent> takeEvents()
+        {
+            return std::exchange(_events, {});
+        }
+
+        [[nodiscard]] std::vector<EntitySpawned> spawns() const
+        {
+            return collectSpawns(_reg, _tracked);
+        }
+
+        [[nodiscard]] std::vector<EntityState> states() const
+        {
+            return collectStates(_reg, _tracked);
         }
 
         Engine::Registry &registry()
@@ -108,9 +130,37 @@ namespace rtype {
             _spawnTimer = config::MONSTER_SPAWN_INTERVAL;
         }
 
+        void trackSpawns()
+        {
+            for (const Engine::Entity e : collectUntracked(_reg)) {
+                _reg.add(e, NetId{_nextNetId});
+                _tracked[_nextNetId] = e;
+                ++_nextNetId;
+                if (const std::optional<EntitySpawned> spawn =
+                    describeSpawn(_reg, e)) {
+                    _events.emplace_back(*spawn);
+                }
+            }
+        }
+
+        void trackDestroys()
+        {
+            for (auto it = _tracked.begin(); it != _tracked.end();) {
+                if (_reg.alive(it->second)) {
+                    ++it;
+                    continue;
+                }
+                _events.emplace_back(EntityDestroyed{it->first});
+                it = _tracked.erase(it);
+            }
+        }
+
         Engine::Registry _reg;
         SlotTable _usedSlots{};
         float _spawnTimer = 0.f;
+        TrackedTable _tracked;
+        std::vector<GameEvent> _events;
+        std::uint32_t _nextNetId = 1;
         std::mt19937 _rng;
         std::uniform_real_distribution<float> _spawnY{config::MAP_ORIGIN,
             config::MONSTER_MAX_SPAWN_Y};
