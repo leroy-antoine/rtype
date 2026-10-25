@@ -3,8 +3,8 @@
 #include "engine/window/Renderer.hpp"
 #include "engine/window/TextureManager.hpp"
 #include "rtype/ReturnCodes.hpp"
-#include "App.hpp"
-#include "SpriteBank.hpp"
+#include "client/App.hpp"
+#include "client/SpriteBank.hpp"
 
 namespace client {
     App::App(std::filesystem::path assets, const std::string &host, const std::uint16_t port)

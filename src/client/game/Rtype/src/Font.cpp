@@ -1,7 +1,7 @@
 #include <array>
 #include <cctype>
 #include <cstddef>
-#include "Font.hpp"
+#include "client/Font.hpp"
 
 namespace client {
     namespace {

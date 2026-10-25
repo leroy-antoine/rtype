@@ -5,8 +5,8 @@
 #include <string>
 #include "engine/network/Client.hpp"
 #include "engine/network/Event.hpp"
-#include "Components.hpp"
-#include "game/Replica.hpp"
+#include "logic/Components.hpp"
+#include "client/Replica.hpp"
 
 namespace client {
     class Network {

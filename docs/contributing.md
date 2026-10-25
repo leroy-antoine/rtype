@@ -41,7 +41,7 @@ Written for the game logic and recommended for new code elsewhere:
 - private members prefixed with `_`.
 
 More details and the reasoning:
-[game logic conventions](../src/games/rtype/doc/README.md#coding-conventions).
+[game logic conventions](../src/client/game/Rtype/doc/README.md#coding-conventions).
 
 ## Documentation
 

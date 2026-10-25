@@ -33,7 +33,7 @@ The subject asks for visible and decoupled layers for **rendering**,
 | `engine::network` | `engine/network` | UDP transport: sessions, ping, reliability, binary reader and writer (wraps Asio) |
 | `rtype::common` | `src/include` | shared headers: vectors (`utils/Vectors.hpp`), return codes |
 | `rtype::protocol` | `src/include/rtype/Protocol.hpp` | the encoding of the R-Type messages, shared by the server and the client |
-| `rtype::game` | `src/games/rtype` | the game logic, header-only |
+| `rtype::game` | `src/client/game/Rtype` | the game logic, header-only |
 | `r-type_server` | `src/server` | the authoritative server |
 | `r-type_client` | `src/client` | the display |
 
@@ -75,7 +75,7 @@ be run and tested without a window or a socket.
 
 ## Where to read more
 
-- Game logic: [src/games/rtype/doc](../src/games/rtype/doc/README.md)
+- Game logic: [src/client/game/Rtype/doc](../src/client/game/Rtype/doc/README.md)
 - Server: [src/server/doc](../src/server/doc/README.md)
 - Network module: [engine/docs/network.md](../engine/docs/network.md)
 - Client: [src/client/doc](../src/client/doc/README.md)

@@ -2,7 +2,7 @@
 
 #include "engine/core/Registry.hpp"
 #include "engine/window/Renderer.hpp"
-#include "Components.hpp"
+#include "logic/Components.hpp"
 #include "Background.hpp"
 #include "Hud.hpp"
 #include "Replica.hpp"

@@ -5,8 +5,8 @@
 #include <unordered_map>
 #include <vector>
 #include "engine/core/Registry.hpp"
-#include "Events.hpp"
-#include "Status.hpp"
+#include "logic/Events.hpp"
+#include "logic/Status.hpp"
 
 namespace client {
     // Ce qui vient de se passer dans le monde et qui merite un son.

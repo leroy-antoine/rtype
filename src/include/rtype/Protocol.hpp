@@ -11,10 +11,10 @@
 #include "engine/network/BinaryWriter.hpp"
 #include "engine/network/Protocol.hpp"
 #include "utils/Vectors.hpp"
-#include "Components.hpp"
-#include "Config.hpp"
-#include "Events.hpp"
-#include "Status.hpp"
+#include "logic/Components.hpp"
+#include "logic/Config.hpp"
+#include "logic/Events.hpp"
+#include "logic/Status.hpp"
 
 namespace rtype::protocol {
     using Payload = std::vector<std::uint8_t>;

@@ -5,7 +5,7 @@
 #include <filesystem>
 #include "engine/window/Sprite.hpp"
 #include "engine/window/TextureManager.hpp"
-#include "Components.hpp"
+#include "logic/Components.hpp"
 
 namespace client {
     class SpriteBank {

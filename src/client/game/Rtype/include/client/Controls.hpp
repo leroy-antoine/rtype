@@ -2,7 +2,7 @@
 
 #include "engine/window/Event.hpp"
 #include "engine/window/Window.hpp"
-#include "Components.hpp"
+#include "logic/Components.hpp"
 
 namespace client {
     class Controls {

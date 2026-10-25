@@ -7,7 +7,7 @@ own documentation next to its code.
 
 | Part | Documentation |
 |---|---|
-| Game logic | [src/games/rtype/doc](../src/games/rtype/doc/README.md) |
+| Game logic | [src/client/game/Rtype/doc](../src/client/game/Rtype/doc/README.md) |
 | Server | [src/server/doc](../src/server/doc/README.md) |
 | Client | [src/client/doc](../src/client/doc/README.md) |
 

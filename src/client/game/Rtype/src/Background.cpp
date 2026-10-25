@@ -3,8 +3,8 @@
 #include <cmath>
 #include <cstdint>
 #include <random>
-#include "Config.hpp"
-#include "Background.hpp"
+#include "logic/Config.hpp"
+#include "client/Background.hpp"
 
 namespace client {
     namespace {

@@ -14,4 +14,3 @@ target_link_libraries(rtype_protocol INTERFACE rtype::common rtype::game engine:
 
 add_subdirectory(server)
 add_subdirectory(client)
-add_subdirectory(games)

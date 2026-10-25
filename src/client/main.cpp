@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <string>
 #include "rtype/ReturnCodes.hpp"
-#include "game/App.hpp"
+#include "client/App.hpp"
 
 static std::uint16_t parsePort(const std::string &text)
 {

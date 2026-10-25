@@ -1,4 +1,4 @@
-#include "GameView.hpp"
+#include "client/GameView.hpp"
 
 namespace client {
     GameView::GameView(Engine::Renderer &renderer, const SpriteBank &sprites, const float worldToScreen,

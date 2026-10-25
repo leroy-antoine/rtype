@@ -1,4 +1,4 @@
-#include "SpriteBank.hpp"
+#include "client/SpriteBank.hpp"
 
 namespace client {
     SpriteBank::SpriteBank(Engine::TextureManager &textures, const std::filesystem::path &assets)

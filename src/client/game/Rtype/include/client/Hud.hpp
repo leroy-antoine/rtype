@@ -4,7 +4,7 @@
 #include "engine/window/Renderer.hpp"
 #include "Font.hpp"
 #include "Replica.hpp"
-#include "Status.hpp"
+#include "logic/Status.hpp"
 
 namespace client {
     // Interface minimale dessinee par-dessus le jeu : une barre de vie par

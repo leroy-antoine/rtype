@@ -1,6 +1,6 @@
 #include <optional>
 #include <variant>
-#include "Controls.hpp"
+#include "client/Controls.hpp"
 
 namespace client {
     void Controls::poll(Engine::Window &window)

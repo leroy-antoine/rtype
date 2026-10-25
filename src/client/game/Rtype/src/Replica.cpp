@@ -1,6 +1,6 @@
 #include <utility>
-#include "Config.hpp"
-#include "Replica.hpp"
+#include "logic/Config.hpp"
+#include "client/Replica.hpp"
 
 namespace client {
     namespace {

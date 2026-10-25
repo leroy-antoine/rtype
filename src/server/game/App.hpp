@@ -8,8 +8,8 @@
 #include "engine/core/FixedTimestep.hpp"
 #include "engine/network/Event.hpp"
 #include "engine/network/Server.hpp"
-#include "Config.hpp"
-#include "Game.hpp"
+#include "logic/Config.hpp"
+#include "logic/Game.hpp"
 
 namespace server {
     class App {

@@ -55,7 +55,7 @@ back after a death, Escape to quit.
 | `engine/network` | UDP transport: sessions, ping, reliability |
 | `engine/audio` | sounds and music |
 | `src/include` | headers shared by all parts |
-| `src/games/rtype` | the game logic (and the sprites in `assets/`) |
+| `src/client/game/Rtype` | the game logic and the client game code (and the sprites in `assets/`) |
 | `src/server` | the authoritative server |
 | `src/client` | the display |
 | `docs` | documentation that concerns the whole project |
@@ -67,7 +67,7 @@ Each part keeps its documentation next to its code:
 
 | Part | Documentation |
 |---|---|
-| Game logic | [src/games/rtype/doc](src/games/rtype/doc/README.md): rules, architecture, systems, the `Game` API, how-to guides |
+| Game logic | [src/client/game/Rtype/doc](src/client/game/Rtype/doc/README.md): rules, architecture, systems, the `Game` API, how-to guides |
 | Server | [src/server/doc](src/server/doc/README.md): role, loop, how it plugs the game in |
 | Client | [src/client/doc](src/client/doc/README.md): rendering, input, planned architecture |
 

@@ -1,6 +1,6 @@
 # R-Type game logic
 
-Technical documentation of the **game logic** (`src/games/rtype`).
+Technical documentation of the **game logic** (`src/client/game/Rtype`).
 
 This part decides *what happens in the game*: where entities are, who shoots,
 who gets hit, who dies. It knows nothing about the network, the window, the
@@ -98,7 +98,7 @@ Headers only include the layers below them, which avoids circular includes.
 | `Game.hpp` | the `Game` class, entry point of the library |
 
 The library is header-only: CMake target `rtype::game`
-(`src/games/rtype/CMakeLists.txt`), which links `engine::core`.
+(`src/client/game/Rtype/CMakeLists.txt`), which links `engine::core`.
 
 ### The ECS rules to remember
 
@@ -220,7 +220,7 @@ The server never looks inside the `Registry`. After each `update` it reads:
 - `status()`: what the HUD needs.
 
 These types are in `Events.hpp` and `Status.hpp`, and the byte format is in
-[the protocol](../../../../docs/protocol.md).
+[the protocol](../../../../../docs/protocol.md).
 
 ## Components
 
@@ -370,7 +370,7 @@ Done and working:
 - the events, states and status read by the server
 - the `Game` facade
 - automated tests (`tests/GameTests.cpp`, 20 tests), see
-  [Build and run](../../../../docs/build.md#tests)
+  [Build and run](../../../../../docs/build.md#tests)
 
 Not done:
 

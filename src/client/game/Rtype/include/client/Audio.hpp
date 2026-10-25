@@ -7,7 +7,7 @@
 #include "engine/audio/AudioPlayer.hpp"
 #include "engine/audio/SoundManager.hpp"
 #include "Replica.hpp"
-#include "Status.hpp"
+#include "logic/Status.hpp"
 
 namespace client {
     // Sons et musique. Si les fichiers ou la carte son manquent, le jeu

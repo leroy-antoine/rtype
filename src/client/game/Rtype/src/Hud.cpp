@@ -3,8 +3,8 @@
 #include <cmath>
 #include <cstddef>
 #include <string>
-#include "Config.hpp"
-#include "Hud.hpp"
+#include "logic/Config.hpp"
+#include "client/Hud.hpp"
 
 namespace client {
     namespace {

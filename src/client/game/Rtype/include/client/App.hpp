@@ -8,7 +8,7 @@
 #include "engine/window/Window.hpp"
 #include "network/Network.hpp"
 #include "Audio.hpp"
-#include "Config.hpp"
+#include "logic/Config.hpp"
 #include "Controls.hpp"
 #include "GameView.hpp"
 #include "Replica.hpp"

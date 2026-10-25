@@ -1,6 +1,6 @@
 #include <variant>
 #include <vector>
-#include "Game.hpp"
+#include "logic/Game.hpp"
 #include "TestHarness.hpp"
 
 using namespace rtype;
