@@ -11,3 +11,6 @@ rtype-project(sans appendix).pdf
 cmake-build-*/
 .idea/
 a.out
+
+# Local Claude Code settings
+/.claude/

@@ -90,6 +90,11 @@ Headers only include the layers below them, which avoids circular includes.
 | `Queries.hpp` | read-only searches in the world (`collectWith<Tag>`, `findFreeSlot`, ...) |
 | `Systems.hpp` | the systems (see below) |
 | `Monsters.hpp` | monster spawning |
+| `Boss.hpp` | the boss behaviour (`bossSystem`) and its fan of bullets |
+| `Waves.hpp` | the table of waves of monsters (`WAVES`) |
+| `Events.hpp` | `EntitySpawned`, `EntityDestroyed`, `EntityState`: what is told to the clients |
+| `Status.hpp` | `GameStatus` and `Phase`: what the HUD shows |
+| `Replication.hpp` | helpers that describe the entities to replicate (`NetId`, spawns, states) |
 | `Game.hpp` | the `Game` class, entry point of the library |
 
 The library is header-only: CMake target `rtype::game`
@@ -114,56 +119,88 @@ These come from the engine (`engine/core`, not part of the game logic):
   top-left corner, `x` grows to the right and `y` grows **downwards**.
 - Up to **4 players** (`MAX_PLAYERS`), each one in a *slot* from 0 to 3. A slot
   decides the starting height of the player.
-- The level scrolls from left to right. The scrolling is handled by the
-  display: the logic only moves entities in the fixed map.
+- The level scrolls from left to right. The display draws the scrolling, but
+  the logic counts the distance scrolled (`Game::scroll`) to time the waves and
+  the boss. It only runs while at least one player is connected.
 - **Players** move with the keys, shoot to the right, and die when their
-  centre leaves the map (`PLAYERS_DIE_OUT_OF_MAP`).
-- **Monsters** appear on the right of the map every
-  `MONSTER_SPAWN_INTERVAL` seconds, fly to the left and shoot to the left
-  continuously. They are removed when they are far outside the map.
+  centre leaves the map (`PLAYERS_DIE_OUT_OF_MAP`). A dead player can come back
+  with `respawnPlayer` while the match is running.
+- **Monsters** come in **waves** (`Waves.hpp`): a wave launches several
+  monsters one after the other, at a fixed or random height. They fly to the
+  left and shoot continuously. A monster that touches a player kills him.
+- After `BOSS_SPAWN_SCROLL` (20 s of play) the **boss** enters, stops on the
+  right (`BOSS_STOP_X`), sways vertically and fires a fan of bullets.
 - **Bullets** belong to a team. A bullet only hurts the other team, damages the
   first target it overlaps, then disappears.
 - An entity whose `hp` falls to 0 or below is destroyed.
+- **End of the game**: *victory* when the boss dies, *defeat* when every player
+  is dead. The enemies are removed, and after `RESTART_DELAY` seconds a new
+  match starts. If the last player leaves, the world is reset.
 
 ## The tick: `Game::update`
 
-`Game::update(dt)` runs the systems in this order. **The order matters.**
+`Game::update(dt)` first picks what to do from the phase:
+
+- nobody connected: `idle()`, which resets the world if it has moved;
+- phase `Playing`: `updatePlaying(dt)`;
+- phase `Victory` or `Defeat`: `updateEnded(dt)`, where the players still fly
+  until the restart timer ends.
+
+At the end, in every case, `trackDestroys()` then `trackSpawns()` turn the
+changes of the world into events for the clients.
+
+`updatePlaying` runs the systems in this order. **The order matters.**
 
 | # | Call | Why here |
 |---|---|---|
 | 1 | `updateWeaponTimers(dt)` | cooldowns are up to date before anyone shoots |
-| 2 | `shootingSystem` | bullets are born at the current position of the shooter |
-| 3 | `updateSpawn(dt)` | new monsters enter the world |
-| 4 | `playerControlSystem` | keys become velocities, before they are used |
-| 5 | `movementSystem(dt)` | everybody moves: players, monsters, bullets |
-| 6 | `collisionSystem` | uses the positions *after* the move |
-| 7 | `deleteUnitsOutOfBounds` | sets the hp of players who left the map to 0 and removes far entities |
-| 8 | `deathSystem` | last: destroys everything with `hp <= 0` (hits of step 6, exits of step 7) |
+| 2 | `lifetimeSystem(dt)` | short-lived entities (explosions) expire |
+| 3 | `playerControlSystem` | keys become velocities, before they are used |
+| 4 | `advanceLevel(dt)` | scrolls the level, queues the due waves, spawns monsters and the boss |
+| 5 | `bossSystem(dt)` | moves the boss and makes it shoot |
+| 6 | `shootingSystem` | bullets are born at the current position of the shooter |
+| 7 | `movementSystem(dt)` | everybody moves: players, monsters, bullets |
+| 8 | `collisionSystem` | uses the positions *after* the move |
+| 9 | `contactSystem` | a monster touching a player kills him |
+| 10 | `deleteUnitsOutOfBounds` | sets the hp of players who left the map to 0 and removes far entities |
+| 11 | `deathSystem` | destroys everything with `hp <= 0` (hits of 8 and 9, exits of 10) |
+| 12 | `updatePhase` | boss dead means victory, every player dead means defeat |
 
-If steps 7 and 8 were swapped, a player who left the map would live one more
-tick. If step 4 came after step 5, the keys would take effect one tick late.
+If steps 10 and 11 were swapped, a player who left the map would live one more
+tick. If step 3 came after step 7, the keys would take effect one tick late.
 
 ## Public API: the `Game` class
 
-`Game` is the facade of the library. It owns the `Registry` and the spawn
-timer; nothing else can touch them, so the order of the systems cannot be
-broken from outside.
+`Game` is the facade of the library. It owns the `Registry`, the level state
+and the random generator; nothing else can touch them, so the order of the
+systems cannot be broken from outside.
 
 ```cpp
-rtype::Game game;
+rtype::Game game;                             // or Game(seed) for the tests
 
 std::optional<int> slot = game.addPlayer();   // a client connects
 game.setInput(*slot, input);                  // keys received from a client
 game.update(rtype::config::FIXED_DT);         // one tick, 60 times per second
+for (const auto &event : game.takeEvents()) { /* tell the clients */ }
 game.removePlayer(*slot);                     // a client disconnects
 ```
 
 | Method | Behaviour |
 |---|---|
 | `std::optional<int> addPlayer()` | creates a player in the first free slot and returns the slot. Returns `std::nullopt` when the game is full, so the caller can refuse the connection. |
-| `void removePlayer(int slot)` | destroys the player of this slot. Does nothing if the slot is empty. |
+| `void removePlayer(int slot)` | destroys the player of this slot and frees the slot. Does nothing if the slot is empty. |
+| `bool respawnPlayer(int slot)` | brings a dead player back. Returns `false` if the match is over, the slot is not used or the player is alive. |
+| `bool isPlayerAlive(int slot)` | is there a player entity in this slot? |
 | `void setInput(int slot, const PlayerInput &input)` | stores the **current state of the keys** of a player. It stays in effect until the next call. Does nothing if the slot is empty. |
 | `void update(float dt)` | advances the game by `dt` seconds. |
+| `std::vector<GameEvent> takeEvents()` | the `EntitySpawned` and `EntityDestroyed` since the last call (and empties the list). |
+| `std::vector<EntitySpawned> spawns() const` | the whole world, to send to a client who just connected. |
+| `std::vector<EntityState> states() const` | the position of every moving entity. |
+| `GameStatus status()` | phase, boss health, health of each player. |
+| `Phase phase() const`, `float scroll() const` | the phase of the match, the distance scrolled. |
+
+`Game(unsigned seed)` makes the random heights of the waves reproducible, which
+is what the tests use.
 
 `setInput` is about *state*, not events: the caller sends "right is held, fire
 is held", not "right was pressed". Releasing everything stops the ship at the
@@ -172,6 +209,18 @@ next tick.
 Why `std::optional` and not `-1` for "no slot"? The type tells the truth:
 the compiler forces the caller to handle the empty case, and a forgotten check
 cannot silently turn into an out-of-range index.
+
+### What the server reads
+
+The server never looks inside the `Registry`. After each `update` it reads:
+
+- `takeEvents()`: new and destroyed entities, each with a network id (`NetId`)
+  given by the game;
+- `states()`: `(id, position)` for the entities that move;
+- `status()`: what the HUD needs.
+
+These types are in `Events.hpp` and `Status.hpp`, and the byte format is in
+[the protocol](../../../../docs/protocol.md).
 
 ## Components
 
@@ -192,6 +241,10 @@ All in `Components.hpp`, except the vectors.
 | `Vec2Velocity` | `x`, `y` | units per second |
 | `Vec2Hitbox` | `x`, `y` | width and height of the box |
 | `Vec2Direction` | `x`, `y` | currently unused by the systems |
+| `Renderable` | `id` (`SpriteId`) | tells the client what to draw; marks the entities to replicate |
+| `NetId` | `value` | identifier of the entity on the network, given by `Game` |
+| `Lifetime` | `duration`, `remaining` | explosions, removed when they expire |
+| `BossTag` | (empty) | marks the boss |
 
 Tags (`PlayerTag`, `MonsterTag`, `ProjectileTag`) carry no behaviour. They only
 let a system ask "give me the players" or "give me the bullets".
@@ -207,7 +260,7 @@ let a system ask "give me the players" or "give me the bullets".
 
 ## Systems
 
-All in `Systems.hpp` (spawning is in `Monsters.hpp`).
+All in `Systems.hpp` (spawning is in `Monsters.hpp`, the boss in `Boss.hpp`).
 
 | System | What it does |
 |---|---|
@@ -218,6 +271,9 @@ All in `Systems.hpp` (spawning is in `Monsters.hpp`).
 | `collisionSystem(reg)` | for each bullet, finds the first enemy it overlaps, applies the damage, destroys the bullet |
 | `deleteUnitsOutOfBounds(reg)` | players whose centre left the map lose all their hp, far monsters and bullets are destroyed |
 | `deathSystem(reg)` | destroys every entity with `hp <= 0` |
+| `lifetimeSystem(reg, dt)` | removes the entities whose `Lifetime` ran out (explosions) |
+| `contactSystem(reg)` | a monster that overlaps a player kills him |
+| `bossSystem(reg, dt)` | enters, stops, sways and fires the fan of bullets (`Boss.hpp`) |
 | `spawnMonster(reg, y)` | creates a monster on the right of the map at height `y`, moving left |
 
 ### Shooting
@@ -307,21 +363,16 @@ Applied to all the game logic:
 
 Done and working:
 
-- players (4 slots), movement from keys, shooting
-- monsters (spawn, movement, shooting)
-- bullets, collisions, damages, deaths
-- out-of-bounds rules
+- players (4 slots), movement from keys, shooting, respawn
+- monsters in waves, with random heights
+- the boss, the victory and the defeat, the automatic restart
+- bullets, collisions, damages, deaths, out-of-bounds rules
+- the events, states and status read by the server
 - the `Game` facade
+- automated tests (`tests/GameTests.cpp`, 20 tests), see
+  [Build and run](../../../../docs/build.md#tests)
 
-Not done yet:
+Not done:
 
-- **Boss** at the end of the level and the **end of the game** (victory when
-  the boss dies, defeat when no player is alive). The constants already exist
-  in `Config.hpp` (`BOSS_*`).
-- **Events** (a player died, a monster appeared, game over) so that the server
-  can tell the clients.
-- **Reading the state of the world** to send it to the clients.
-- **Random spawn height**: monsters currently all appear at `y = 0`.
-- **Input source**: `setInput` is ready, but nothing calls it yet; how the
-  inputs travel from the network to the `main` is still to be decided.
-- **Automated tests** in the repository.
+- obstacles, destroyable tiles and power-ups of the original game
+- several kinds of monsters with different behaviours

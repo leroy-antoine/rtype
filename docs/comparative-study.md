@@ -1,8 +1,8 @@
 # Technical and comparative study
 
-> **Status: draft.** The choices below are the ones present in the repository.
-> The alternatives and the reasoning are a first version that the whole team
-> should review and complete. Parts marked **TODO** need the owner of the topic.
+> The choices below are the ones present in the repository, with the
+> alternatives and the reasoning. Parts marked **TODO** still need the owner of
+> the topic.
 
 ## Language and build
 
@@ -38,17 +38,23 @@
 | Player slots | table of 4 booleans, first free slot | counting players | counting gives the wrong slot after someone leaves |
 | "No result" | `std::optional` | magic value `-1`, exceptions | the type states the case, the compiler forces the check |
 | Constants | `constexpr` values in `Config.hpp` | `#define`, runtime config file | typed, scoped, checked at compile time, one place to tune the game |
-| Randomness | injected generator (planned) | global `rand()` | tests stay deterministic |
+| Randomness | generator owned by `Game`, seedable (`Game(seed)`) | global `rand()` | the height of the waves is random in play, and reproducible in the tests |
+| Waves | a constant table of steps (`Waves.hpp`) | spawning from a timer | the level is data, changing it never touches a system; it follows the distance scrolled, not the CPU |
+| Replication | the game gives events (`SPAWN`, `DESTROY`), states and a status; entities get a `NetId` | sending the whole registry | the network layer does not depend on the ECS, and the client rebuilds the world from small messages |
 
 ## Network protocol
 
 | Topic | Choice | Alternatives | Why |
 |---|---|---|---|
 | Transport | **UDP** | TCP | required for in-game traffic; no head-of-line blocking, a late position is useless anyway |
-| Encoding | **binary** | JSON / text | required; smaller, faster to parse |
+| Encoding | **binary**, big-endian, hand-written reader and writer | JSON / text, a serialization library | required; smaller, faster to parse, every read is bounds-checked and returns `std::optional` |
+| Reliability | **per message**: events are reliable (resend until Ack, ordered), positions and inputs are not | everything reliable, everything unreliable | a lost spawn would break the client's world, but a lost position is replaced by the next one |
+| Sessions | handshake with a random token, ping every second, 5 s timeout | stateless packets | a crashed client is detected and removed, and datagrams from other addresses are rejected |
+| State sent | the positions of all moving entities every tick, events on change | deltas only, compression | simple and robust for 4 players and a few dozen entities (at most 98 states per datagram) |
+| Threads | a network thread for the socket, a game thread for everything else | one thread, a thread per client | the game never waits for a client, and the game state needs no lock |
 
-Reliability, packet layout and sequence handling: **TODO**, see
-[the protocol page](protocol.md).
+The packet layout, the sequence numbers and the reliability rules are in
+[the protocol page](protocol.md) and [the network module](../engine/docs/network.md).
 
 ## Storage
 
@@ -68,12 +74,22 @@ match lasts one level and is lost when the server stops.
 |---|---|
 | A client cheats | server authority: clients send keys only, never positions, hits or damage |
 | Malformed or oversized packets | validate every size and field before use; bounded buffers (see [protocol](protocol.md)) |
-| Flooding by a client | rate limiting and timeouts on the server (**TODO**) |
+| Flooding by a client | bounded memory: 1200 bytes per datagram, 4096 datagrams queued, 64 early reliable messages, a client with more than 256 unacknowledged messages is kicked. An `INPUT` only overwrites the previous one. There is no per-client rate limit yet (**TODO**) |
+| Spoofed or replayed datagrams | a random session token and the address of the session are checked, and an old sequence number is dropped |
 | One client crashes the server | the server treats all network input as untrusted, and a failing client is removed without stopping the game |
 | Vulnerable dependencies | dependencies come from a pinned vcpkg baseline (`vcpkg-configuration.json`); update the baseline regularly and watch the security advisories of Asio and SFML (**TODO**: who and how often) |
 
-## Long-term monitoring (TODO)
+## Long-term monitoring
 
-- Update the vcpkg baseline on a schedule and rebuild.
-- Run the test suite and a sanitizer build (address / undefined) in CI.
-- Fuzz the packet decoder once it exists.
+Done:
+
+- the dependencies are pinned by the vcpkg baseline (`vcpkg-configuration.json`);
+- the decoders reject invalid payloads, and the tests check it (truncated or
+  padded messages, out-of-range fields).
+
+To do (**TODO**, decide who and when):
+
+- update the vcpkg baseline regularly, rebuild, and watch the security
+  advisories of Asio and SFML;
+- run the tests and a sanitizer build (address / undefined) in a CI;
+- fuzz the packet parser (`Packet::parse`) and the game decoders.

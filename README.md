@@ -7,9 +7,9 @@ a central server that has the final authority on the game.
 The project is built around a small game engine (an ECS and a window module) and
 three decoupled layers: **rendering**, **networking** and **game logic**.
 
-> Status: Part 1 (architecture and first prototype) is in progress. The game
-> logic is working; the server and the client are still being written. See each
-> part's documentation for the details.
+> Status: Part 1 (architecture and first prototype) is playable. Up to four
+> players, each with their own client, fight waves of monsters and a boss on an
+> authoritative server. See each part's documentation for the details.
 
 ## Requirements
 
@@ -35,18 +35,31 @@ The executables are written to `build/binaries`: `r-type_server` and
 `r-type_client`. On Windows, or for IDE setup and troubleshooting, see
 [Build and run](docs/build.md).
 
+## Play
+
+```
+./build/binaries/r-type_server 4242
+./build/binaries/r-type_client <server ip> 4242
+```
+
+The server uses **UDP**: open the port in UDP in the firewall to play from
+another machine. Controls: arrow keys to move, Space to fire, Enter to come
+back after a death, Escape to quit.
+
 ## Repository layout
 
 | Folder | Content |
 |---|---|
 | `engine/core` | ECS and fixed time step |
 | `engine/window` | window, events, textures, renderer |
+| `engine/network` | UDP transport: sessions, ping, reliability |
+| `engine/audio` | sounds and music |
 | `src/include` | headers shared by all parts |
 | `src/games/rtype` | the game logic (and the sprites in `assets/`) |
 | `src/server` | the authoritative server |
 | `src/client` | the display |
 | `docs` | documentation that concerns the whole project |
-| `tests` | automated tests (empty for now) |
+| `tests` | automated tests of the game logic and of the protocol |
 
 ## Documentation
 

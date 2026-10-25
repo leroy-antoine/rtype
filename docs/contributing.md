@@ -49,3 +49,9 @@ When you add a feature, update the documentation of its part in the same pull
 request: the tick table or status list for the game logic, the open questions
 for the server and the client, the [protocol page](protocol.md) for anything
 that changes what goes on the network.
+
+## Knowledge graph
+
+A graphify graph of the code is kept in `docs/graphify-out/`. Install the git
+hook once so that it follows your commits; see the
+[knowledge graph page](graphify.md).

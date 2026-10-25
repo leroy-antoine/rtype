@@ -51,9 +51,16 @@ The next ones are fast.
 The executables are written to `build/binaries`:
 
 ```
-./build/binaries/r-type_server
-./build/binaries/r-type_client
+./build/binaries/r-type_server <port>
+./build/binaries/r-type_client <host> <port>
 ```
+
+Start the server first, then one client per player (up to four). The server
+listens in **UDP** on every IPv4 interface. To play from another machine, give
+the client the IP address of the server and open the port in UDP in the
+firewall (for example `sudo ufw allow 4242/udp`).
+
+A client needs the `assets` folder that CMake copies next to its executable.
 
 ## IDE setup (CLion)
 
@@ -75,9 +82,20 @@ After changing the profile, reset the CMake cache.
 | `SFML ... version 3 required` / `found 2.x` | the toolchain file is not set, so the system SFML was used; use the preset or the option above |
 | `vcpkg` not found | the bootstrap script was not run, or its name was mistyped |
 | odd errors after changing the profile | reset the CMake cache and reconfigure |
+| `CMake Error: ... Ninja` or an empty `build/binaries` | install Ninja (`sudo apt install ninja-build`), the Linux preset uses it |
+| `Makefile`, `CMakeCache.txt` or `CMakeFiles/` appear at the root | `cmake .` was run in the source tree. Always configure with `cmake --preset linux-debug`, and remove those files |
+| the client prints `server unreachable` | wrong IP or port, the server is not running, or the port is not open in UDP |
 
 ## Tests
 
-There is no automated test suite yet (`tests/` is empty). Adding one is planned;
-see the "Current status" section of the
-[game logic documentation](../src/games/rtype/doc/README.md#current-status).
+The tests cover the game logic (waves, boss, victory and defeat, respawn, the
+events sent to the clients) and the encoding of the protocol messages (round
+trips, truncated or invalid payloads). They are built with the rest of the
+project:
+
+```
+./build/binaries/rtype_tests
+```
+
+or `ctest --test-dir build/linux-debug`. The server loop, the client and the
+transport layer are not covered by automated tests yet.

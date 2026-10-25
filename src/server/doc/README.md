@@ -2,122 +2,152 @@
 
 Documentation of the **server** (`src/server`).
 
-> **Status: skeleton.** The executable only prints a banner for now
-> (`src/server/main.cpp`). This page describes what the subject requires, the
-> architecture the rest of the project is built for, and what remains to be
-> decided. Items marked **TODO** are to be confirmed by the server owner.
+The server is the authority of the game. It runs the simulation, receives the
+keys of the players and tells every client what happens.
 
 - [Role](#role)
-- [Current state](#current-state)
-- [Planned architecture](#planned-architecture)
+- [Usage](#usage)
+- [Architecture](#architecture)
+- [Threads](#threads)
 - [The game loop](#the-game-loop)
-- [Plugging a game in](#plugging-a-game-in)
-- [Robustness requirements](#robustness-requirements)
-- [Open questions](#open-questions)
+- [What is sent, and when](#what-is-sent-and-when)
+- [Clients that join, leave or crash](#clients-that-join-leave-or-crash)
+- [Robustness](#robustness)
+- [Limits and open questions](#limits-and-open-questions)
 
 ## Role
-
-The server is the **authority**. Clients send what the players do (their keys),
-the server runs the game and tells every client what happened. Whatever the
-server decides, the clients comply with.
 
 From the subject, the server MUST:
 
 - notify each client when a monster spawns, moves, is destroyed, fires, kills a
   player, and notify the other clients of a player's actions;
-- be **multithreaded**, so that the game keeps running frame after frame
-  whatever the clients do;
+- not block on the clients: the game runs frame after frame whatever they do;
 - survive a crashing client and tell the other clients of that game;
 - use a **binary protocol over UDP** for all in-game communication (see
   [the protocol](../../../docs/protocol.md)).
 
-## Current state
-
-| Item | State |
-|---|---|
-| Executable `r-type_server` | builds, prints `R-Type server` |
-| CMake | links `rtype::common` only (not `rtype::game`, on purpose, see below) |
-| `src/server/network/`, `src/server/game/` | empty (`.gitkeep`) |
-| Networking library | Asio is declared in `vcpkg.json`, not used yet |
-
-## Planned architecture
-
-The server is **generic**: it knows clients, packets and a tick, but nothing of
-R-Type. The only place that knows both the network and the game is the `main`
-(or a small class next to it), which acts as glue.
+## Usage
 
 ```
- ┌────────────┐   events    ┌──────────────┐  calls   ┌───────────────┐
- │ network    │ ──────────► │ main (glue)  │ ───────► │ rtype::Game   │
- │ (UDP, Asio)│ ◄────────── │              │ ◄─────── │ (game logic)  │
- └────────────┘  state out  └──────────────┘  state   └───────────────┘
+./build/binaries/r-type_server <port>
 ```
 
-| Network event | What the glue does |
-|---|---|
-| a client connects | `game.addPlayer()`; keeps the `client id <-> slot` table; refuses the client if it returns `std::nullopt` (game full) |
-| a client sends its keys | decodes them into a `PlayerInput`, then `game.setInput(slot, input)` |
-| a client disconnects or times out | `game.removePlayer(slot)`, tells the other clients |
+The server listens on every IPv4 interface, in **UDP**. Open the port in UDP
+in the firewall to play from another machine. `Ctrl+C` (SIGINT) or SIGTERM
+stops it cleanly.
 
-The game logic API is documented in
+## Architecture
+
+The code is in `src/server/game`. `main.cpp` parses the port and runs
+`server::App`, which is the glue between the network and the game logic:
+
+```
+ ┌────────────────┐ events  ┌────────────┐  calls  ┌───────────────┐
+ │ Engine::Server │ ──────► │ server::App│ ──────► │ rtype::Game   │
+ │ (UDP, Asio)    │ ◄────── │  (glue)    │ ◄────── │ (game logic)  │
+ └────────────────┘ packets └────────────┘  state  └───────────────┘
+```
+
+`App` is the only place that knows both the network (`engine::network`) and
+the game (`rtype::game`). The network module knows nothing of R-Type and the
+game logic knows nothing of the network.
+
+| Network event | What `App` does |
+|---|---|
+| a client connects | `game.addPlayer()`, remembers `client id -> slot`, sends `YOU` and the whole world (`SPAWN` for each entity). If the game is full, it disconnects the client |
+| `INPUT` | decodes the keys and calls `game.setInput(slot, input)`; an invalid payload is ignored |
+| `RESPAWN` | calls `game.respawnPlayer(slot)` |
+| a client disconnects or times out | `game.removePlayer(slot)`; the ship is destroyed and every client is told by a `DESTROY` |
+| any message from an unknown client | ignored |
+
+The message formats are in [the protocol](../../../docs/protocol.md). The game
+API is in
 [the game logic README](../../games/rtype/doc/README.md#public-api-the-game-class).
 
-Suggested threads (**TODO**, to confirm):
+## Threads
 
-- a **network thread** that receives datagrams and pushes decoded messages in a
-  thread-safe queue, and sends outgoing packets;
-- the **game thread** that owns the `Game` object, empties the queue at the
-  start of each tick and runs `update`.
+| Thread | Does |
+|---|---|
+| **network thread** (inside `Engine::UdpSocket`, Asio) | receives datagrams and queues them (bounded), sends the outgoing ones. It never touches the game |
+| **game thread** (`main`) | owns `Game` and all the sessions: reads the queue in `update()`, simulates, writes the packets in `flush()` |
 
-The `Game` object is only touched by the game thread, so it needs no lock.
+The game thread never waits for a client: it takes what the network thread
+has already received, and goes on. A slow or silent client costs nothing to
+the others. Because `Game` is only touched by the game thread, it needs no lock.
 
 ## The game loop
 
-The engine provides `Engine::FixedTimestep` (`engine/core`). The loop gives it
-the real elapsed time and gets back how many fixed steps to run:
+`App::run` gives the real elapsed time to `Engine::FixedTimestep`
+(`engine/core`), which returns how many fixed steps (1/60 s) to run:
 
 ```
-FixedTimestep timestep(rtype::config::FIXED_DT);
-
 while (running) {
     steps = timestep.advance(elapsedSeconds);
-    repeat steps times:
-        apply the queued inputs   (game.setInput ...)
-        game.update(timestep.step())
-        send the new state to the clients
-    sleep a little
+    repeat steps times: tick()
+    sleep until the next step
 }
 ```
 
-The game never reads a clock itself: it receives `dt`. Time does not depend on
-the speed of the CPU, as the subject requires.
+One `tick()` does:
 
-## Plugging a game in
+1. `receive()`: `server.update()` and handle every network event;
+2. `game.update(dt)`;
+3. `broadcastEvents()`: `SPAWN` and `DESTROY` of this tick (reliable);
+4. `broadcastStates()`: the positions (`STATES`, unreliable);
+5. every 6th tick, `broadcastStatus()`: phase, boss and player health
+   (`STATUS`, about 10 times per second);
+6. `server.flush()`: sends the datagrams.
 
-Two ways were discussed:
+The game never reads a clock itself, it receives `dt`. Time does not depend on
+the speed of the CPU.
 
-1. **The `main` links `rtype::game` and calls `Game` directly** (the current
-   plan). Simple, no extra abstraction. The server library stays free of R-Type
-   code.
-2. **A generic `IGame` interface** that `rtype::Game` implements, so the server
-   library could run any game.
+## What is sent, and when
 
-Option 1 is enough for this project. Option 2 can be added later without
-changing `rtype::Game`.
+| Message | When | Delivery |
+|---|---|---|
+| `YOU`, `SPAWN` (whole world) | a client connects | reliable |
+| `SPAWN`, `DESTROY` | an entity appears or disappears | reliable |
+| `STATES` | every tick | unreliable |
+| `STATUS` | every 6 ticks | unreliable |
 
-## Robustness requirements
+Monster movement and shots reach the clients as positions (`STATES`) and
+spawns of bullets (`SPAWN`). The kill of a player or of a monster is a
+`DESTROY`, and the end of the game is the `phase` of `STATUS`.
 
-From the subject, to keep in mind when writing the network code:
+## Clients that join, leave or crash
 
-- A malformed packet MUST NOT crash the server, use excessive memory or
-  compromise its security. Check every size and every field before using it.
-- Never trust a client: a client sends *keys*, never a position or a hit.
-- A slow or dead client must not block the others.
+- **Join**: a free slot (0 to 3) is given. The client receives `YOU` and the
+  current world, so it can join in the middle of a match.
+- **Leave**: the client sends Disconnect and its ship is destroyed.
+- **Crash or network loss**: the transport sends a Ping every second and times
+  a peer out after 5 seconds of silence. The server then handles it like a
+  departure: `removePlayer`, `DESTROY` for the others. The match goes on.
+- **Nobody connected**: the level does not advance, and starts again from zero
+  when the first player comes back.
+- **End of a match**: after a victory or a defeat, the game restarts by itself
+  after a few seconds (`RESTART_DELAY`), and a dead player can ask to come back
+  with `RESPAWN` while the match is running.
 
-## Open questions
+## Robustness
 
-- How are the inputs encoded on the wire? (decides the shape of `PlayerInput`)
-- Who owns the loop: the `main`, or a server class?
-- How does the glue read the world to send it? (`Game` has no read API yet)
-- How are client disconnections detected over UDP (timeout, heartbeat)?
-- How many games can run at once (one game per server, or lobbies)?
+- A malformed datagram is dropped by the transport; a malformed game payload is
+  ignored by the decoders (exact size, fields in range, finite floats). Nothing
+  malformed reaches the game.
+- A client sends *keys*, never a position or a hit.
+- Memory is bounded: 1200 bytes per datagram, 4096 datagrams queued, and a
+  client that does not acknowledge more than 256 reliable messages is kicked.
+- A message from an address without a session, or with a wrong token, is
+  dropped.
+
+## Limits and open questions
+
+- There is **one game per server**: every client joins the same match, up to
+  4 players. Lobbies are not implemented.
+- There is no per-client rate limit on `INPUT` messages beyond the bounded
+  queue. Each `INPUT` only overwrites the previous one, so flooding does not
+  grow the game state, but a limit could be added.
+- The server sends the same `STATES` to everybody: there is no interest
+  management, which is fine for 4 players and a few dozen entities.
+- The tests cover the game logic and the message encoding (see
+  [Build and run](../../../docs/build.md#tests)). The server loop itself is not
+  tested automatically.
