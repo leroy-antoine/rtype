@@ -48,6 +48,7 @@ namespace server {
         _game.update(_timestep.step());
         broadcastEvents();
         broadcastStates();
+        sendOwnStates();
         if (_ticks++ % STATUS_EVERY_TICKS == 0) {
             broadcastStatus();
         }
@@ -77,6 +78,22 @@ namespace server {
 
         for (const rtype::protocol::Payload &payload : rtype::protocol::encodeStates(tick, _game.states())) {
             _server.broadcast(rtype::protocol::STATES, payload);
+        }
+    }
+
+    void App::sendOwnStates()
+    {
+        for (const auto &[client, slot] : _slots) {
+            const std::optional<Engine::Entity> player = rtype::findPlayerBySlot(_game.registry(), slot);
+            const auto input = _lastInputs.find(client);
+
+            if (!player || input == _lastInputs.end()) {
+                continue;
+            }
+            const rtype::protocol::OwnState state{input->second,
+                _game.registry().get<gameLogic::Vec2Pos>(*player)};
+
+            _server.send(client, rtype::protocol::OWN_STATE, rtype::protocol::encode(state));
         }
     }
 
@@ -133,6 +150,7 @@ namespace server {
         }
         _game.removePlayer(*slot);
         _slots.erase(event.client);
+        _lastInputs.erase(event.client);
         std::cout << "client " << event.client << " left (reason " << static_cast<int>(event.reason) << ")" << std::endl;
     }
 
@@ -144,8 +162,9 @@ namespace server {
             return;
         }
         if (event.type == rtype::protocol::INPUT) {
-            if (const std::optional<rtype::PlayerInput> input = rtype::protocol::decodeInput(event.payload)) {
-                _game.setInput(*slot, *input);
+            if (const std::optional<rtype::protocol::InputMessage> input = rtype::protocol::decodeInput(event.payload)) {
+                _game.setInput(*slot, input->input);
+                _lastInputs[event.client] = input->sequence;
             }
             return;
         }
