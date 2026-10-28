@@ -1,22 +1,24 @@
 #pragma once
 
 #include <cstdint>
+#include <deque>
 #include <optional>
 #include <unordered_map>
 #include <vector>
 #include "engine/core/Registry.hpp"
 #include "logic/Events.hpp"
 #include "logic/Status.hpp"
+#include "rtype/Protocol.hpp"
+#include "utils/Vectors.hpp"
 
 namespace client {
-    // Ce qui vient de se passer dans le monde et qui merite un son.
     enum class Cue { PlayerShot, Hit, Explosion, BossExplosion, BossAppears };
 
     class Replica {
     public:
         void apply(const rtype::EntitySpawned &spawn);
         void apply(const rtype::EntityDestroyed &destroy);
-        void apply(const std::vector<rtype::EntityState> &states);
+        void apply(const rtype::protocol::StatesSnapshot &snapshot);
         void apply(const rtype::GameStatus &status);
         void assignSlot(int slot);
         void update(float dt);
@@ -27,11 +29,26 @@ namespace client {
         std::vector<Cue> takeCues();
 
     private:
-        void apply(const rtype::EntityState &state);
+        static constexpr double INTERPOLATION_DELAY = 3.0;
+        static constexpr double MAX_CLOCK_ERROR = 10.0;
+        static constexpr double CLOCK_CORRECTION_RATE = 5.0;
+        
+        struct Sample {
+            double tick;
+            gameLogic::Vec2Pos pos;
+        };
+
+        void record(double tick, const rtype::EntityState &state);
+        void advanceClock(float dt);
+        void interpolate();
+        void interpolate(Engine::Entity e, std::deque<Sample> &samples);
         void recordSpawnCue(const rtype::EntitySpawned &spawn);
 
         Engine::Registry _reg;
         std::unordered_map<std::uint32_t, Engine::Entity> _entities;
+        std::unordered_map<std::uint32_t, std::deque<Sample>> _samples;
+        std::optional<double> _latestTick;
+        std::optional<double> _renderTick;
         std::optional<rtype::GameStatus> _status;
         std::optional<int> _slot;
         std::vector<Cue> _cues;

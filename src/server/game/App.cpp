@@ -73,7 +73,9 @@ namespace server {
 
     void App::broadcastStates()
     {
-        for (const rtype::protocol::Payload &payload : rtype::protocol::encodeStates(_game.states())) {
+        const auto tick = static_cast<std::uint32_t>(_ticks);
+
+        for (const rtype::protocol::Payload &payload : rtype::protocol::encodeStates(tick, _game.states())) {
             _server.broadcast(rtype::protocol::STATES, payload);
         }
     }
