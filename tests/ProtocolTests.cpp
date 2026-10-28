@@ -115,12 +115,14 @@ TEST(an_unknown_sprite_id_is_rejected)
 TEST(inputs_round_trip)
 {
     const PlayerInput input{true, false, true, false, true};
-    const std::optional<PlayerInput> decoded =
-        protocol::decodeInput(protocol::encode(input));
+    const std::optional<protocol::InputMessage> decoded =
+        protocol::decodeInput(protocol::encodeInput(7, input));
 
     CHECK(decoded.has_value());
-    CHECK(decoded->up && !decoded->down && decoded->left && !decoded->right);
-    CHECK(decoded->fire);
+    CHECK(decoded->sequence == 7);
+    CHECK(decoded->input.up && !decoded->input.down);
+    CHECK(decoded->input.left && !decoded->input.right);
+    CHECK(decoded->input.fire);
     CHECK(!protocol::decodeInput({0xFF}).has_value());
 }
 

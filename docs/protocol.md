@@ -27,7 +27,7 @@ A new client can be written from these two pages alone.
 | Direction | the client sends keys, the server sends the world |
 | Datagram | at most **1200 bytes**, carries one or several messages |
 | Byte order | **big-endian** for every integer and float |
-| Protocol version | `2` (`rtype::protocol::VERSION`), checked at connection |
+| Protocol version | `5` (`rtype::protocol::VERSION`), checked at connection |
 | Tick | the server simulates at 60 Hz and sends the states every tick |
 
 The server is the authority. A client never sends a position, a hit or a
@@ -62,12 +62,13 @@ Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
 
 ```
  client                                   server
-   │ ── Connect(version=2) ─────────────►  │  every 500 ms, 10 tries at most
+   │ ── Connect(version=5) ─────────────►  │  every 500 ms, 10 tries at most
    │ ◄───────────── Accept(token) ──────── │  or Refuse(0 version, 1 full)
    │ ◄───────────────────── YOU(slot) ──── │  reliable
    │ ◄────────────────── SPAWN × n ─────── │  reliable, the whole world
-   │ ── INPUT ──────────────────────────►  │  every frame of the client
+   │ ── INPUT(sequence, keys) ──────────►  │  every frame of the client
    │ ◄─────────────── STATES, STATUS ───── │  every tick / every 6 ticks
+   │ ◄──────────────────── OWN_STATE ───── │  every tick, to this client only
    │ ◄─────────────── SPAWN, DESTROY ───── │  reliable, when something happens
    │ ── Disconnect ─────────────────────►  │
 ```
@@ -89,13 +90,14 @@ Sender: **C** is the client, **S** is the server. Delivery: **R** is reliable
 
 | Type | Name | From | Delivery | Payload size |
 |---|---|---|---|---|
-| `0x10` | `INPUT` | C | U | 1 |
+| `0x10` | `INPUT` | C | U | 5 |
 | `0x11` | `RESPAWN` | C | R | 0 |
 | `0x20` | `SPAWN` | S | R | 22 |
 | `0x21` | `DESTROY` | S | R | 4 |
-| `0x22` | `STATES` | S | U | 1 + 12 × n |
+| `0x22` | `STATES` | S | U | 5 + 12 × n |
 | `0x23` | `STATUS` | S | U | 10 + 4 × n |
 | `0x24` | `YOU` | S | R | 1 |
+| `0x25` | `OWN_STATE` | S | U | 12 |
 
 ### `INPUT` (0x10)
 
@@ -104,9 +106,12 @@ server keeps it until the next one. The client sends it every frame.
 
 | Offset | Field | Type | Meaning |
 |---|---|---|---|
-| 0 | keys | `u8` | bit 0 up, bit 1 down, bit 2 left, bit 3 right, bit 4 fire |
+| 0 | sequence | `u32` | number of this input, grows by one at each frame |
+| 4 | keys | `u8` | bit 0 up, bit 1 down, bit 2 left, bit 3 right, bit 4 fire |
 
-Bits 5 to 7 must be `0`, otherwise the message is ignored.
+Bits 5 to 7 of `keys` must be `0`, otherwise the message is ignored. The
+server remembers the last `sequence` it applied and sends it back in
+`OWN_STATE`, so the client can predict its own ship.
 
 ### `RESPAWN` (0x11)
 
@@ -134,8 +139,9 @@ to a client that has just connected, then one for each new entity.
 | 3 | monster bullet |
 | 4 | explosion |
 | 5 | boss |
+| 6 | coin |
 
-A value of 6 or more is invalid, and so is a player slot of 4 or more.
+A value of 7 or more is invalid, and so is a player slot of 4 or more.
 
 ### `DESTROY` (0x21)
 
@@ -147,13 +153,14 @@ A value of 6 or more is invalid, and so is a player slot of 4 or more.
 
 The positions of the moving entities, sent every tick.
 
-| Offset | Field | Type |
-|---|---|---|
-| 0 | count `n` | `u8` |
-| 1 + 12 × i | id | `u32` |
-| 5 + 12 × i | position | `Vec2` |
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | tick | `u32` | server tick of this snapshot, used by the client to interpolate |
+| 4 | count `n` | `u8` | |
+| 5 + 12 × i | id | `u32` | |
+| 9 + 12 × i | position | `Vec2` | |
 
-The payload size must be exactly `1 + 12 × n`. At most 98 entities fit in one
+The payload size must be exactly `5 + 12 × n`. At most 98 entities fit in one
 message, so the server splits a large world into several `STATES` messages.
 A state for an unknown id is ignored by the client.
 
@@ -180,6 +187,21 @@ What the HUD shows, sent about 10 times per second.
 
 The client uses it to know which ship is its own (HUD, respawn hint).
 
+### `OWN_STATE` (0x25)
+
+The authoritative position of the ship of one client, sent every tick to that
+client only.
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | last input | `u32` | `sequence` of the last `INPUT` the server applied |
+| 4 | position | `Vec2` | top-left corner of the ship |
+
+The client replays the inputs sent after `last input` on top of this position
+(prediction), so its ship answers at once and is corrected if the server
+disagrees. It is only sent once the server has received an `INPUT` from this
+client.
+
 ## Reliability
 
 UDP can lose, duplicate and reorder datagrams. The protocol picks the delivery
@@ -188,7 +210,7 @@ per message:
 - **Reliable** (`SPAWN`, `DESTROY`, `YOU`, `RESPAWN`): a spawn or a death must
   not be missed, or the client would draw a wrong world. The sender resends
   until an Ack comes back, the receiver applies the messages in order.
-- **Unreliable** (`INPUT`, `STATES`, `STATUS`): they are repeated every tick
+- **Unreliable** (`INPUT`, `STATES`, `STATUS`, `OWN_STATE`): they are repeated every tick
   or every frame, so a lost one is replaced by the next. Resending an old
   position would be useless. A datagram that is not newer than the last one
   received is dropped, so a late `STATES` never moves a ship backwards.
@@ -212,14 +234,15 @@ per message:
 
 ## Example
 
-A client holds *right* and *fire* (keys `0b11000` = `0x18`). Inside a
-datagram, the unreliable message `INPUT` is:
+A client holds *right* and *fire* (keys `0b11000` = `0x18`) at its input
+number 42. Inside a datagram, the unreliable message `INPUT` is:
 
 ```
-10 01 18
-│  │  └─ keys: right (bit 3) + fire (bit 4)
-│  └──── payload size: 1 (varint)
-└─────── type 0x10, reliable flag 0
+10 05 00 00 00 2A 18
+│  │  │           └─ keys: right (bit 3) + fire (bit 4)
+│  │  └───────────── sequence 42
+│  └──────────────── payload size: 5 (varint)
+└─────────────────── type 0x10, reliable flag 0
 ```
 
 The server announces a monster (`id 7`, kind 1, slot 0, at x = 2020, y = 300,

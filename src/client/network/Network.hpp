@@ -14,7 +14,7 @@ namespace client {
         Network(const std::string &host, std::uint16_t port);
 
         bool update(Replica &replica);
-        void sendInput(const rtype::PlayerInput &input);
+        void sendInput(std::uint32_t sequence, const rtype::PlayerInput &input);
         void requestRespawn();
         void flush();
         [[nodiscard]] bool connected() const;

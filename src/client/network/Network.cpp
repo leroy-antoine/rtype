@@ -41,10 +41,10 @@ namespace client {
         return _open;
     }
 
-    void Network::sendInput(const rtype::PlayerInput &input)
+    void Network::sendInput(const std::uint32_t sequence, const rtype::PlayerInput &input)
     {
         if (_client.connected()) {
-            _client.send(rtype::protocol::INPUT, rtype::protocol::encode(input));
+            _client.send(rtype::protocol::INPUT, rtype::protocol::encodeInput(sequence, input));
         }
     }
 
@@ -90,6 +90,7 @@ namespace client {
             case rtype::protocol::DESTROY: applyDecoded(replica, rtype::protocol::decodeDestroy(event.payload)); break;
             case rtype::protocol::STATES: applyDecoded(replica, rtype::protocol::decodeStates(event.payload)); break;
             case rtype::protocol::STATUS: applyDecoded(replica, rtype::protocol::decodeStatus(event.payload)); break;
+            case rtype::protocol::OWN_STATE: applyDecoded(replica, rtype::protocol::decodeOwnState(event.payload)); break;
             case rtype::protocol::YOU: assignSlot(replica, rtype::protocol::decodeYou(event.payload)); break;
             default: break;
         }

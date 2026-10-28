@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_external_vcpkg_scripts_test_ports_try_compile_try_try_compile_c", "label": "try-compile.c", "file_type": "code", "source_file": "external/vcpkg/scripts/test_ports/try-compile/try/try-compile.c", "source_location": "L1"}], "edges": [], "raw_calls": []}

@@ -35,38 +35,57 @@ the game runs without sound.
                               └─► Audio (sounds and music)
 ```
 
-The client does **not** include the game logic. It keeps a *replica* of the
+The client does **not** run the game logic. It keeps a *replica* of the
 world: a small `Engine::Registry` filled from the `SPAWN`, `DESTROY` and
 `STATES` messages, with a position, a size and a sprite kind for each entity.
 The renderer only needs an appearance and a position, so it never learns what
 an entity can do.
 
+Two techniques hide the network delay:
+
+- **Interpolation**: the other entities are not drawn at the last position
+  received, but a few ticks in the past (`INTERPOLATION_DELAY`, 3 ticks, 50 ms),
+  between the two snapshots that surround that moment. Each `STATES` carries
+  the server `tick`, and the replica keeps a render clock that follows it.
+- **Prediction** (`Prediction`): the ship of this player is moved at once with
+  its own keys, with the same movement as the server. Each `INPUT` has a
+  `sequence`. The server answers with `OWN_STATE`, its position and the last
+  `sequence` it applied. The client starts from that position, replays the
+  inputs not yet acknowledged, and smooths the difference over a few frames. A
+  gap above 150 units is corrected at once.
+
 ## Files
 
-All the code is in `src/client`.
+The client is in `src/client`. The game code is in `src/client/game/Rtype`,
+with the headers in `include/client/` and the sources in `src/`. The folder
+`include/logic/` holds the game logic headers shared with the server and the
+tests: the client only uses its types (components, events, status, config).
 
 | File | Role |
 |---|---|
 | `main.cpp` | parses `<host> <port>`, runs `client::App` |
-| `game/App` | the main loop: poll the input, send it, receive, draw |
 | `network/Network` | wraps `Engine::Client`: connection events, sending the keys, decoding the messages into the replica |
-| `game/Replica` | the local copy of the world, the last `STATUS`, the slot of this player, the sound cues |
-| `game/Controls` | turns window events into the five keys of a `PlayerInput` |
-| `game/GameView` | draws the entities of the replica |
-| `game/SpriteBank` | maps each kind of entity to a texture and a source rectangle |
-| `game/Background` | the star-field |
-| `game/Hud` | health bars, boss bar, respawn hint, end screens |
-| `game/Font` | small bitmap font for the HUD, drawn with rectangles |
-| `game/Audio` | sounds and music |
+| `App` | the main loop: receive, poll the input, send it, draw |
+| `Replica` | the local copy of the world, the interpolation, the last `STATUS`, the slot of this player, the sound cues |
+| `Prediction` | the predicted position of this player's ship and its reconciliation with `OWN_STATE` |
+| `Controls` | turns window events into the five keys of a `PlayerInput` |
+| `GameView` | draws the entities of the replica |
+| `SpriteBank` | maps each kind of entity to a texture and a source rectangle |
+| `Background` | the star-field |
+| `Hud` | health bars, boss bar, coin counter, respawn hint, end screens |
+| `Font` | small bitmap font for the HUD, drawn with rectangles |
+| `Audio` | sounds and music |
 
 ## A frame
 
 `App::loop` does, for each frame (60 FPS):
 
-1. `Controls::poll`: handle window events (keys, close);
-2. `sendControls`: send `RESPAWN` if requested, send `INPUT`, flush;
-3. `Network::update`: receive messages and apply them to the replica;
-4. `Replica::update(dt)`: advance local effects such as explosions;
+1. `Network::update`: receive messages and apply them to the replica;
+2. `Controls::poll`: handle window events (keys, close);
+3. `sendControls(dt)`: send `RESPAWN` if requested, predict the movement of
+   this ship (which gives the `sequence`), send `INPUT`, flush;
+4. `Replica::update(dt)`: advance the render clock, interpolate the entities,
+   apply the prediction to this ship, advance effects such as explosions;
 5. play the sounds, then draw the background, the entities and the HUD.
 
 `dt` is measured with a steady clock. The scrolling of the star-field and the
@@ -81,7 +100,8 @@ animations use this time, never the speed of the CPU.
 | Enter | come back after being killed (while the match is running) |
 | Escape | quit |
 
-The client sends the **state** of the keys every frame (see `INPUT` in
+The client sends the **state** of the keys every frame, with a sequence number
+(see `INPUT` in
 [the protocol](../../../docs/protocol.md#input-0x10)).
 
 ## Rendering module
@@ -93,7 +113,7 @@ hides SFML behind a small interface:
 |---|---|
 | `Engine::Window` | opens a window, polls events, clears and displays, limits the frame rate |
 | `Engine::TextureManager` | loads textures and returns a `TextureID` |
-| `Engine::Renderer` | `draw(textureId, position, sourceRect, scale)` and `drawRect` for the HUD |
+| `Engine::Renderer` | `draw(textureId, position, sourceRect, scale)`, `drawResized` to a given size, and `drawRect` for the HUD |
 | `Engine::Event` | a variant: closed, resized, focus, `KeyPressed` / `KeyReleased` |
 
 The window is 1280 x 720. The world is 1920 x 1080, so everything is scaled by
@@ -104,14 +124,21 @@ The window is 1280 x 720. The world is 1920 x 1080, so everything is scaled by
 - **Players**: the four players are told apart by their slot (a different
   sprite row for each one).
 - **HUD**: one health bar per player, a boss bar while the boss is there, a
-  hint to respawn, and a message on victory or defeat.
+  hint to respawn, and a message on victory or defeat. The top right corner
+  shows the shared purse: the spinning coin and the number of coins in yellow.
+- **Coins**: dropped by monsters, drawn from a sprite sheet of 6 frames
+  (`coin_spin_sheet.png`). The animated GIF is not used directly, because SFML
+  only reads its first image.
 
 ## Sound
 
 `Audio` plays sounds (`shoot`, `hit`, `explosion`, `boss_alert`, `victory`,
-`defeat`) and two music tracks (level, boss). The replica turns what it sees
-into *cues* (a player bullet appeared, an entity exploded, the boss appeared),
-and `Audio` plays them. The sounds of the world received at connection are
+`defeat`, `coin_pickup`) and two music tracks (level, boss). The replica turns
+what it sees into *cues* (a player bullet appeared, an entity exploded, the
+boss appeared, the purse grew), and `Audio` plays them. The coin sound is
+played when the number of coins of a `STATUS` is higher than the previous one,
+so it is heard up to about 100 ms late, and only once if several coins are
+picked up in that time. The sounds of the world received at connection are
 skipped for half a second so they are not replayed. The music follows the
 phase of the game.
 
@@ -128,9 +155,13 @@ From the subject, on the client side:
 
 ## Limits
 
-- The client does no prediction: it draws the last positions received from the
-  server. Over a good connection the movement is smooth, over a bad one it can
-  look jerky.
+- Only the ship of this player is predicted. The other entities are shown
+  about 50 ms in the past, because of the interpolation, so what the player
+  sees is slightly older than the server state.
+- The prediction moves the ship with the same speed as the server
+  (`PLAYER_SPEED`). If the server ever changes the speed of a ship (a bonus),
+  the client must do the same, or it will be corrected at every `OWN_STATE`.
+- A lost `STATUS` can make the coin sound late or missing.
 - If the server cannot be reached, the client closes with an error message.
   There is no menu and no reconnection.
 - Keys cannot be remapped yet.
