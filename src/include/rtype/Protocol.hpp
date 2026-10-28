@@ -23,7 +23,17 @@ namespace rtype::protocol {
         std::vector<EntityState> states;
     };
 
-    constexpr std::uint8_t VERSION = 3;
+    struct InputMessage {
+        std::uint32_t sequence = 0;
+        PlayerInput input;
+    };
+
+    struct OwnState {
+        std::uint32_t lastInput = 0;
+        gameLogic::Vec2Pos pos;
+    };
+
+    constexpr std::uint8_t VERSION = 4;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
@@ -33,6 +43,7 @@ namespace rtype::protocol {
     constexpr Engine::MessageType STATES = 0x22;
     constexpr Engine::MessageType STATUS = 0x23;
     constexpr Engine::MessageType YOU = 0x24;
+    constexpr Engine::MessageType OWN_STATE = 0x25;
 
     constexpr std::uint8_t KEY_UP = 1 << 0;
     constexpr std::uint8_t KEY_DOWN = 1 << 1;
@@ -41,6 +52,8 @@ namespace rtype::protocol {
     constexpr std::uint8_t KEY_FIRE = 1 << 4;
     constexpr std::uint8_t KEYS_MASK = 0x1F;
 
+    constexpr std::size_t INPUT_SIZE = 5;
+    constexpr std::size_t OWN_STATE_SIZE = 12;
     constexpr std::size_t SPAWN_SIZE = 22;
     constexpr std::size_t STATE_SIZE = 12;
     constexpr std::size_t STATES_HEADER_SIZE = 5;
@@ -76,7 +89,7 @@ namespace rtype::protocol {
         return (keys & key) != 0;
     }
 
-    inline Payload encode(const PlayerInput &input)
+    inline std::uint8_t encodeKeys(const PlayerInput &input)
     {
         std::uint8_t keys = 0;
 
@@ -90,19 +103,53 @@ namespace rtype::protocol {
             keys |= KEY_RIGHT;
         if (input.fire)
             keys |= KEY_FIRE;
-        return {keys};
+        return keys;
     }
 
-    inline std::optional<PlayerInput> decodeInput(const Payload &payload)
+    inline Payload encodeInput(const std::uint32_t sequence,
+        const PlayerInput &input)
     {
-        if (payload.size() != 1 || (payload[0] & ~KEYS_MASK) != 0) {
+        Engine::BinaryWriter writer;
+
+        writer.writeU32(sequence);
+        writer.writeU8(encodeKeys(input));
+        return writer.data();
+    }
+
+    inline std::optional<InputMessage> decodeInput(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+        const std::optional<std::uint32_t> sequence = reader.readU32();
+        const std::optional<std::uint8_t> keys = reader.readU8();
+
+        if (payload.size() != INPUT_SIZE || !sequence || !keys
+            || (*keys & ~KEYS_MASK) != 0) {
             return std::nullopt;
         }
-        const std::uint8_t keys = payload[0];
+        return InputMessage{*sequence, PlayerInput{hasKey(*keys, KEY_UP),
+            hasKey(*keys, KEY_DOWN), hasKey(*keys, KEY_LEFT),
+            hasKey(*keys, KEY_RIGHT), hasKey(*keys, KEY_FIRE)}};
+    }
 
-        return PlayerInput{hasKey(keys, KEY_UP), hasKey(keys, KEY_DOWN),
-            hasKey(keys, KEY_LEFT), hasKey(keys, KEY_RIGHT),
-            hasKey(keys, KEY_FIRE)};
+    inline Payload encode(const OwnState &state)
+    {
+        Engine::BinaryWriter writer;
+
+        writer.writeU32(state.lastInput);
+        writeVec2(writer, state.pos);
+        return writer.data();
+    }
+
+    inline std::optional<OwnState> decodeOwnState(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+        const std::optional<std::uint32_t> lastInput = reader.readU32();
+        const std::optional<gameLogic::Vec2> pos = readVec2(reader);
+
+        if (payload.size() != OWN_STATE_SIZE || !lastInput || !pos) {
+            return std::nullopt;
+        }
+        return OwnState{*lastInput, gameLogic::Vec2Pos{*pos}};
     }
 
     inline Engine::MessageType typeOf(const EntitySpawned &)
