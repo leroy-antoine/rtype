@@ -18,8 +18,22 @@
 
 namespace rtype::protocol {
     using Payload = std::vector<std::uint8_t>;
+    struct StatesSnapshot {
+        std::uint32_t tick = 0;
+        std::vector<EntityState> states;
+    };
 
-    constexpr std::uint8_t VERSION = 2;
+    struct InputMessage {
+        std::uint32_t sequence = 0;
+        PlayerInput input;
+    };
+
+    struct OwnState {
+        std::uint32_t lastInput = 0;
+        gameLogic::Vec2Pos pos;
+    };
+
+    constexpr std::uint8_t VERSION = 4;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
@@ -29,6 +43,7 @@ namespace rtype::protocol {
     constexpr Engine::MessageType STATES = 0x22;
     constexpr Engine::MessageType STATUS = 0x23;
     constexpr Engine::MessageType YOU = 0x24;
+    constexpr Engine::MessageType OWN_STATE = 0x25;
 
     constexpr std::uint8_t KEY_UP = 1 << 0;
     constexpr std::uint8_t KEY_DOWN = 1 << 1;
@@ -37,10 +52,13 @@ namespace rtype::protocol {
     constexpr std::uint8_t KEY_FIRE = 1 << 4;
     constexpr std::uint8_t KEYS_MASK = 0x1F;
 
+    constexpr std::size_t INPUT_SIZE = 5;
+    constexpr std::size_t OWN_STATE_SIZE = 12;
     constexpr std::size_t SPAWN_SIZE = 22;
     constexpr std::size_t STATE_SIZE = 12;
+    constexpr std::size_t STATES_HEADER_SIZE = 5;
     constexpr std::size_t MAX_STATES_PER_MESSAGE =
-        (Engine::Protocol::MAX_PAYLOAD_SIZE - 1) / STATE_SIZE;
+        (Engine::Protocol::MAX_PAYLOAD_SIZE - STATES_HEADER_SIZE) / STATE_SIZE;
 
     // STATUS : phase (1), boss hp (2), boss max hp (2), nombre de joueurs (1),
     // puis par joueur : slot (1), hp (2), vivant (1).
@@ -71,7 +89,7 @@ namespace rtype::protocol {
         return (keys & key) != 0;
     }
 
-    inline Payload encode(const PlayerInput &input)
+    inline std::uint8_t encodeKeys(const PlayerInput &input)
     {
         std::uint8_t keys = 0;
 
@@ -85,19 +103,53 @@ namespace rtype::protocol {
             keys |= KEY_RIGHT;
         if (input.fire)
             keys |= KEY_FIRE;
-        return {keys};
+        return keys;
     }
 
-    inline std::optional<PlayerInput> decodeInput(const Payload &payload)
+    inline Payload encodeInput(const std::uint32_t sequence,
+        const PlayerInput &input)
     {
-        if (payload.size() != 1 || (payload[0] & ~KEYS_MASK) != 0) {
+        Engine::BinaryWriter writer;
+
+        writer.writeU32(sequence);
+        writer.writeU8(encodeKeys(input));
+        return writer.data();
+    }
+
+    inline std::optional<InputMessage> decodeInput(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+        const std::optional<std::uint32_t> sequence = reader.readU32();
+        const std::optional<std::uint8_t> keys = reader.readU8();
+
+        if (payload.size() != INPUT_SIZE || !sequence || !keys
+            || (*keys & ~KEYS_MASK) != 0) {
             return std::nullopt;
         }
-        const std::uint8_t keys = payload[0];
+        return InputMessage{*sequence, PlayerInput{hasKey(*keys, KEY_UP),
+            hasKey(*keys, KEY_DOWN), hasKey(*keys, KEY_LEFT),
+            hasKey(*keys, KEY_RIGHT), hasKey(*keys, KEY_FIRE)}};
+    }
 
-        return PlayerInput{hasKey(keys, KEY_UP), hasKey(keys, KEY_DOWN),
-            hasKey(keys, KEY_LEFT), hasKey(keys, KEY_RIGHT),
-            hasKey(keys, KEY_FIRE)};
+    inline Payload encode(const OwnState &state)
+    {
+        Engine::BinaryWriter writer;
+
+        writer.writeU32(state.lastInput);
+        writeVec2(writer, state.pos);
+        return writer.data();
+    }
+
+    inline std::optional<OwnState> decodeOwnState(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+        const std::optional<std::uint32_t> lastInput = reader.readU32();
+        const std::optional<gameLogic::Vec2> pos = readVec2(reader);
+
+        if (payload.size() != OWN_STATE_SIZE || !lastInput || !pos) {
+            return std::nullopt;
+        }
+        return OwnState{*lastInput, gameLogic::Vec2Pos{*pos}};
     }
 
     inline Engine::MessageType typeOf(const EntitySpawned &)
@@ -169,10 +221,12 @@ namespace rtype::protocol {
         return EntityDestroyed{*id};
     }
 
-    inline Payload encodeStateChunk(const std::span<const EntityState> chunk)
+    inline Payload encodeStateChunk(const std::uint32_t tick,
+          const std::span<const EntityState> chunk)
     {
         Engine::BinaryWriter writer;
 
+        writer.writeU32(tick);
         writer.writeU8(static_cast<std::uint8_t>(chunk.size()));
         for (const EntityState &state : chunk) {
             writer.writeU32(state.id);
@@ -181,7 +235,7 @@ namespace rtype::protocol {
         return writer.data();
     }
 
-    inline std::vector<Payload> encodeStates(
+    inline std::vector<Payload> encodeStates(const std::uint32_t tick,
         const std::vector<EntityState> &states)
     {
         const std::span<const EntityState> all(states);
@@ -192,8 +246,8 @@ namespace rtype::protocol {
             const std::size_t count =
                 std::min(MAX_STATES_PER_MESSAGE, all.size() - first);
 
-            payloads.push_back(encodeStateChunk(all.subspan(first, count)));
-        }
+            payloads.push_back(encodeStateChunk(tick, all.subspan(first, count)));
+            }
         return payloads;
     }
 
@@ -208,25 +262,26 @@ namespace rtype::protocol {
         return EntityState{*id, gameLogic::Vec2Pos{*pos}};
     }
 
-    inline std::optional<std::vector<EntityState>> decodeStates(
-        const Payload &payload)
+    inline std::optional<StatesSnapshot> decodeStates(const Payload &payload)
     {
         Engine::BinaryReader reader(payload);
+        const std::optional<std::uint32_t> tick = reader.readU32();
         const std::optional<std::uint8_t> count = reader.readU8();
-        std::vector<EntityState> states;
+        StatesSnapshot snapshot;
 
-        if (!count || reader.remaining() != *count * STATE_SIZE) {
+        if (!tick || !count || reader.remaining() != *count * STATE_SIZE) {
             return std::nullopt;
         }
+        snapshot.tick = *tick;
         for (std::size_t i = 0; i < *count; ++i) {
             const std::optional<EntityState> state = readState(reader);
 
             if (!state) {
                 return std::nullopt;
             }
-            states.push_back(*state);
+            snapshot.states.push_back(*state);
         }
-        return states;
+        return snapshot;
     }
 
     // YOU : le slot que le serveur a attribue au client qui vient de se connecter.

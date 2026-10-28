@@ -9,6 +9,7 @@ add_executable(r-type_client
         game/Rtype/src/Hud.cpp
         game/Rtype/src/Controls.cpp
         game/Rtype/src/GameView.cpp
+        game/Rtype/src/Prediction.cpp
         game/Rtype/src/Replica.cpp
         game/Rtype/src/SpriteBank.cpp
         network/Network.cpp)

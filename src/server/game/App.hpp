@@ -29,6 +29,7 @@ namespace server {
         void broadcastEvents();
         void broadcastStates();
         void broadcastStatus();
+        void sendOwnStates();
         void sendWorld(Engine::ClientId client);
         void sleep() const;
         [[nodiscard]] std::optional<int> slotOf(Engine::ClientId client) const;
@@ -41,6 +42,7 @@ namespace server {
         rtype::Game _game;
         Engine::FixedTimestep _timestep{rtype::config::FIXED_DT};
         std::unordered_map<Engine::ClientId, int> _slots;
+        std::unordered_map<Engine::ClientId, std::uint32_t> _lastInputs;
         std::size_t _ticks = 0;
     };
 }

@@ -28,6 +28,9 @@ namespace client {
         _reg.add(e, rtype::Renderable{spawn.sprite});
         if (spawn.sprite == rtype::SpriteId::Player) {
             _reg.add(e, rtype::PlayerTag{spawn.slot});
+            if (_slot && spawn.slot == *_slot) {
+                _prediction.reset();
+            }
         }
         if (spawn.sprite == rtype::SpriteId::Explosion) {
             _reg.add(e, rtype::Lifetime{});
@@ -40,6 +43,7 @@ namespace client {
     {
         const auto found = _entities.find(destroy.id);
 
+        _samples.erase(destroy.id);
         if (found == _entities.end()) {
             return;
         }
@@ -47,35 +51,127 @@ namespace client {
         _entities.erase(found);
     }
 
-    void Replica::apply(const std::vector<rtype::EntityState> &states)
+    void Replica::apply(const rtype::protocol::StatesSnapshot &snapshot)
     {
-        for (const rtype::EntityState &state : states) {
-            apply(state);
+        const auto tick = static_cast<double>(snapshot.tick);
+
+        if (!_latestTick || tick > *_latestTick) {
+            _latestTick = tick;
+        }
+        for (const rtype::EntityState &state : snapshot.states) {
+            record(tick, state);
         }
     }
 
-    void Replica::apply(const rtype::EntityState &state)
+    void Replica::record(const double tick, const rtype::EntityState &state)
     {
-        const auto found = _entities.find(state.id);
-
-        if (found == _entities.end()) {
+        if (!_entities.contains(state.id)) {
             return;
         }
-        gameLogic::Vec2Pos &pos = _reg.get<gameLogic::Vec2Pos>(found->second);
+        std::deque<Sample> &samples = _samples[state.id];
 
-        _reg.get<gameLogic::Vec2Velocity>(found->second) =
-            gameLogic::Vec2Velocity{{state.pos.x - pos.x, state.pos.y - pos.y}};
-        pos = state.pos;
+        if (samples.empty() || tick > samples.back().tick) {
+            samples.push_back({tick, state.pos});
+        }
     }
 
     void Replica::update(const float dt)
     {
+        advanceClock(dt);
+        interpolate();
+        _prediction.update(dt);
+        applyPrediction();
         _reg.each<rtype::Lifetime>([dt](Engine::Entity, rtype::Lifetime &lifetime) {
             lifetime.remaining -= dt;
             if (lifetime.remaining < 0.f) {
                 lifetime.remaining = 0.f;
             }
         });
+    }
+
+    void Replica::advanceClock(const float dt)
+    {
+        if (!_latestTick) {
+            return;
+        }
+        const double target = *_latestTick - INTERPOLATION_DELAY;
+
+        if (!_renderTick || std::abs(target - *_renderTick) > MAX_CLOCK_ERROR) {
+            _renderTick = target;
+            return;
+        }
+        *_renderTick += static_cast<double>(dt) * rtype::config::TICK_RATE;
+        *_renderTick += (target - *_renderTick) * std::min(1.0, CLOCK_CORRECTION_RATE * dt);
+    }
+
+    void Replica::interpolate()
+    {
+        if (!_renderTick) {
+            return;
+        }
+        for (auto &[id, samples] : _samples) {
+            const auto found = _entities.find(id);
+
+            if (found != _entities.end() && !samples.empty()) {
+                interpolate(found->second, samples);
+            }
+        }
+    }
+
+    void Replica::interpolate(const Engine::Entity e, std::deque<Sample> &samples)
+    {
+        const double now = *_renderTick;
+
+        while (samples.size() > 2 && samples[1].tick <= now) {
+            samples.pop_front();
+        }
+        const Sample &from = samples.front();
+        const Sample &to = samples.size() > 1 ? samples[1] : samples.front();
+        const double span = to.tick - from.tick;
+        const auto t = static_cast<float>(span > 0.0 ? std::clamp((now - from.tick) / span, 0.0, 1.0) : 1.0);
+
+        _reg.get<gameLogic::Vec2Pos>(e) = gameLogic::Vec2Pos{{
+            from.pos.x + (to.pos.x - from.pos.x) * t,
+            from.pos.y + (to.pos.y - from.pos.y) * t}};
+        _reg.get<gameLogic::Vec2Velocity>(e) =
+            gameLogic::Vec2Velocity{{to.pos.x - from.pos.x, to.pos.y - from.pos.y}};
+    }
+
+    void Replica::apply(const rtype::protocol::OwnState &state)
+    {
+        _prediction.reconcile(state);
+    }
+
+    std::uint32_t Replica::predict(const rtype::PlayerInput &input, const float dt)
+    {
+        return _prediction.record(input, dt);
+    }
+
+    void Replica::applyPrediction()
+    {
+        const std::optional<gameLogic::Vec2Pos> predicted = _prediction.position();
+        const std::optional<Engine::Entity> player = localPlayer();
+
+        if (!predicted || !player) {
+            return;
+        }
+        _reg.get<gameLogic::Vec2Pos>(*player) = *predicted;
+        _reg.get<gameLogic::Vec2Velocity>(*player) = _prediction.velocity();
+    }
+
+    std::optional<Engine::Entity> Replica::localPlayer()
+    {
+        std::optional<Engine::Entity> found;
+
+        if (!_slot) {
+            return std::nullopt;
+        }
+        _reg.each<rtype::PlayerTag>([this, &found](const Engine::Entity e, const rtype::PlayerTag &tag) {
+            if (tag.slot == *_slot) {
+                found = e;
+            }
+        });
+        return found;
     }
 
     void Replica::apply(const rtype::GameStatus &status)
