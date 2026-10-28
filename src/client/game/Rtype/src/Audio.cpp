@@ -8,9 +8,9 @@ namespace client {
         constexpr float MUSIC_VOLUME = 0.35f;
         constexpr float SHOT_VOLUME = 0.25f;
 
-        constexpr std::array<const char *, 6> FILES = {
+        constexpr std::array<const char *, 7> FILES = {
             "shoot.wav", "hit.wav", "explosion.wav", "boss_alert.wav",
-            "victory.wav", "defeat.wav"};
+            "victory.wav", "defeat.wav", "coin_pickup.mp3"};
     }
 
     Audio::Audio(const std::filesystem::path &assets) : _dir(assets / "sounds")
@@ -82,6 +82,7 @@ namespace client {
             case Cue::Hit: playSound(Sound::Hit, 0.35f); break;
             case Cue::Explosion: playSound(Sound::Explosion, 0.7f); break;
             case Cue::BossExplosion: playSound(Sound::Explosion, 1.f); break;
+            case Cue::CoinPickup: playSound(Sound::Coin, 0.6f); break;
             case Cue::BossAppears:
                 playSound(Sound::BossAlert, 0.9f);
                 playMusic(Track::Boss);

@@ -196,7 +196,7 @@ game.removePlayer(*slot);                     // a client disconnects
 | `std::vector<GameEvent> takeEvents()` | the `EntitySpawned` and `EntityDestroyed` since the last call (and empties the list). |
 | `std::vector<EntitySpawned> spawns() const` | the whole world, to send to a client who just connected. |
 | `std::vector<EntityState> states() const` | the position of every moving entity. |
-| `GameStatus status()` | phase, boss health, health of each player. |
+| `GameStatus status()` | phase, boss health, health of each player, coins of the shared purse. |
 | `Phase phase() const`, `float scroll() const` | the phase of the match, the distance scrolled. |
 
 `Game(unsigned seed)` makes the random heights of the waves reproducible, which
@@ -287,9 +287,10 @@ Shooting is split in small pieces so each rule can be read (and tested) alone:
 - `shoot(e)`: creates the bullet with `createBullet` and sets
   `timer = cooldown`.
 
-`createBullet(reg, shooter)` copies the shooter's `Team` and `Damage` into the
-bullet, places it just in front of the shooter and gives it a velocity
-(`BULLET_SPEED`) to the right for the player team, to the left otherwise.
+`createBullet(reg, shooter, velocity)` copies the shooter's `Team` and `Damage` into the
+bullet, places it just in front of the shooter and gives it the velocity it
+receives (`shotVelocities` gives `BULLET_SPEED` to the right for the player
+team, to the left otherwise).
 
 ### Collisions
 

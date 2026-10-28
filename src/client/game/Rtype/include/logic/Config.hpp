@@ -67,4 +67,9 @@ namespace rtype::config {
 
     constexpr float SCROLL_SPEED = 120.f; //-> Vitesse de défilement de la carte
     constexpr float BOSS_SPAWN_SCROLL = 2400.f;  // -> Distance defilee (2400 / 120 = 20 s de jeu) a laquelle le boss arrive.
+
+    constexpr std::size_t COIN_MIN_VALUE = 1;
+    constexpr std::size_t COIN_MAX_VALUE = 15;
+    constexpr float COIN_WIDTH = 32.f;
+    constexpr float COIN_HEIGHT = 32.f;
 }

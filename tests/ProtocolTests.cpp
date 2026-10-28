@@ -14,6 +14,7 @@ namespace {
         status.phase = Phase::Victory;
         status.bossHp = 640;
         status.bossMaxHp = 1000;
+        status.coins = 42;
         status.players.push_back({0, 100, true});
         status.players.push_back({3, 0, false});
         return status;
@@ -30,6 +31,7 @@ TEST(a_status_survives_an_encode_decode_round_trip)
     CHECK(decoded->phase == Phase::Victory);
     CHECK(decoded->bossHp == 640);
     CHECK(decoded->bossMaxHp == 1000);
+    CHECK(decoded->coins == 42);
     CHECK(decoded->players.size() == 2);
     CHECK(decoded->players[0].slot == 0);
     CHECK(decoded->players[0].hp == 100);
@@ -66,7 +68,7 @@ TEST(a_status_with_invalid_fields_is_rejected)
     payload[0] = 9;
     CHECK(!protocol::decodeStatus(payload).has_value());
     payload = protocol::encode(sampleStatus());
-    payload[5] = 5;
+    payload[9] = 5;
     CHECK(!protocol::decodeStatus(payload).has_value());
     payload = protocol::encode(sampleStatus());
     payload[protocol::STATUS_HEADER_SIZE] = 7;

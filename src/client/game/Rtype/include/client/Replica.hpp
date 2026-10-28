@@ -10,7 +10,8 @@
 
 namespace client {
     // Ce qui vient de se passer dans le monde et qui merite un son.
-    enum class Cue { PlayerShot, Hit, Explosion, BossExplosion, BossAppears };
+    enum class Cue { PlayerShot, Hit, Explosion, BossExplosion, BossAppears,
+        CoinPickup };
 
     class Replica {
     public:

@@ -32,6 +32,11 @@ namespace rtype {
         int slot = 0;
     };
 
+    // Le boss : il entre, s'arrete, puis fait des va-et-vient.
+    struct BossTag {
+        float age = 0.f;
+    };
+
     struct MonsterTag {
         int slot = 0;
     };
@@ -46,8 +51,9 @@ namespace rtype {
     };
 
     // Les valeurs sont envoyees sur le reseau : ajouter a la fin, avant Count.
+
     enum class SpriteId {
-        Player, Monster, PlayerBullet, MonsterBullet, Explosion, Boss, Count
+        Player, Monster, PlayerBullet, MonsterBullet, Explosion, Boss, Coin, Count
     };
 
     struct Renderable {
@@ -63,8 +69,15 @@ namespace rtype {
         std::uint32_t value = 0;
     };
 
-    // Le boss : il entre, s'arrete, puis fait des va-et-vient.
-    struct BossTag {
-        float age = 0.f;
+    struct coins {
+        std::size_t value = 1;
+    };
+
+    struct CoinCounter {
+        std::size_t total = 0;
+    };
+
+    struct coinCounter {
+        long int quantity = 0;
     };
 }

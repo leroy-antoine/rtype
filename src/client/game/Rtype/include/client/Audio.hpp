@@ -21,7 +21,8 @@ namespace client {
         void follow(const Replica &replica);
 
     private:
-        enum class Sound { Shoot, Hit, Explosion, BossAlert, Victory, Defeat, Count };
+        enum class Sound { Shoot, Hit, Explosion, BossAlert, Victory, Defeat,
+            Coin, Count };
         enum class Track { None, Level, Boss };
 
         static constexpr std::size_t SOUND_COUNT =

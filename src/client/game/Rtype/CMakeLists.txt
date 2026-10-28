@@ -14,7 +14,8 @@ add_library(rtype_game INTERFACE
         include/logic/Monsters.hpp
         include/logic/Events.hpp
         include/logic/Replication.hpp
-        include/logic/Game.hpp)
+        include/logic/Game.hpp
+        include/logic/Collectibles.hpp)
 add_library(rtype::game ALIAS rtype_game)
 target_include_directories(rtype_game INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 

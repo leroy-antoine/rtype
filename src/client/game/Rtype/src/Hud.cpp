@@ -14,6 +14,7 @@ namespace client {
         constexpr Color DARK{20, 20, 30, 255};
         constexpr Color GREEN{90, 220, 90, 255};
         constexpr Color RED{235, 70, 60, 255};
+        constexpr Color YELLOW{255, 220, 40, 255};
 
         // Une couleur par slot, comme les vaisseaux.
         constexpr std::array<Color, 4> SLOT_COLORS = {{
@@ -21,9 +22,9 @@ namespace client {
             {110, 230, 110, 255}, {255, 220, 80, 255}}};
     }
 
-    Hud::Hud(Engine::Renderer &renderer, const float screenWidth,
-        const float screenHeight)
-        : _renderer(renderer), _font(renderer), _width(screenWidth),
+    Hud::Hud(Engine::Renderer &renderer, const SpriteBank &sprites,
+        const float screenWidth, const float screenHeight)
+        : _renderer(renderer), _sprites(sprites), _font(renderer), _width(screenWidth),
         _height(screenHeight)
     {
     }
@@ -39,6 +40,7 @@ namespace client {
         }
         trackPhase(status->phase, elapsed);
         drawPlayers(*status);
+        drawCoins(*status, elapsed);
         drawBossBar(*status);
         if (status->phase == rtype::Phase::Playing) {
             drawRespawnHint(*status, replica.slot(), elapsed);
@@ -71,6 +73,22 @@ namespace client {
             drawBar({BAR_X, top}, {BAR_WIDTH, BAR_HEIGHT}, ratio, GREEN);
             top += ROW_STEP;
         }
+    }
+
+    void Hud::drawCoins(const rtype::GameStatus &status, const float elapsed)
+    {
+        const std::string text = std::to_string(status.coins);
+        const float textWidth = Font::width(text, COIN_TEXT_SCALE);
+        const float textX = _width - COIN_MARGIN - textWidth;
+        const float iconX = textX - COIN_ICON_GAP - COIN_ICON_SIZE;
+        const float textY = COIN_MARGIN
+            + (COIN_ICON_SIZE - Font::height(COIN_TEXT_SCALE)) / 2.f;
+        const Engine::Sprite &sprite = _sprites.get(rtype::SpriteId::Coin);
+
+        _renderer.drawResized(sprite.texture, {iconX, COIN_MARGIN},
+            sprite.animation.frameAt(elapsed),
+            {COIN_ICON_SIZE, COIN_ICON_SIZE});
+        _font.draw(text, {textX, textY}, COIN_TEXT_SCALE, YELLOW);
     }
 
     void Hud::drawBar(const Engine::Vector2f position,

@@ -8,6 +8,7 @@
 #include "Components.hpp"
 #include "Colisions.hpp"
 #include "Factories.hpp"
+#include "Collectibles.hpp"
 #include "Movements.hpp"
 #include "Queries.hpp"
 #include "Boss.hpp"
@@ -25,6 +26,7 @@ namespace rtype {
         });
         for (const Engine::Entity e : dead) {
             createExplosionOn(reg, e, explosionSize(reg, e));
+            spawnCoin(reg, e);
             reg.destroy(e);
         }
     }

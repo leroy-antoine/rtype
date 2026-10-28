@@ -94,7 +94,7 @@ Sender: **C** is the client, **S** is the server. Delivery: **R** is reliable
 | `0x20` | `SPAWN` | S | R | 22 |
 | `0x21` | `DESTROY` | S | R | 4 |
 | `0x22` | `STATES` | S | U | 1 + 12 × n |
-| `0x23` | `STATUS` | S | U | 6 + 4 × n |
+| `0x23` | `STATUS` | S | U | 10 + 4 × n |
 | `0x24` | `YOU` | S | R | 1 |
 
 ### `INPUT` (0x10)
@@ -166,10 +166,11 @@ What the HUD shows, sent about 10 times per second.
 | 0 | phase | `u8` | 0 playing, 1 victory, 2 defeat |
 | 1 | boss hp | `u16` | `0` when there is no boss |
 | 3 | boss max hp | `u16` | the boss hp cannot exceed it |
-| 5 | count `n` | `u8` | number of players, at most 4 |
-| 6 + 4 × i | slot | `u8` | 0 to 3 |
-| 7 + 4 × i | hp | `u16` | |
-| 9 + 4 × i | alive | `u8` | `0` or `1` |
+| 5 | coins | `u32` | the shared purse of the players |
+| 9 | count `n` | `u8` | number of players, at most 4 |
+| 10 + 4 × i | slot | `u8` | 0 to 3 |
+| 11 + 4 × i | hp | `u16` | |
+| 13 + 4 × i | alive | `u8` | `0` or `1` |
 
 ### `YOU` (0x24)
 

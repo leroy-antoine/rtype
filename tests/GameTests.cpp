@@ -84,7 +84,8 @@ TEST(a_player_bullet_hurts_a_monster)
     Engine::Registry reg;
     const Engine::Entity player = createPlayer(reg, 0);
     const Engine::Entity monster = spawnMonster(reg, 300.f);
-    const Engine::Entity bullet = createBullet(reg, player);
+    const Engine::Entity bullet = createBullet(reg, player,
+        {config::BULLET_SPEED, 0.f});
 
     reg.get<gameLogic::Vec2Pos>(monster) = reg.get<gameLogic::Vec2Pos>(bullet);
     collisionSystem(reg);

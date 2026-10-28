@@ -42,9 +42,9 @@ namespace rtype::protocol {
     constexpr std::size_t MAX_STATES_PER_MESSAGE =
         (Engine::Protocol::MAX_PAYLOAD_SIZE - 1) / STATE_SIZE;
 
-    // STATUS : phase (1), boss hp (2), boss max hp (2), nombre de joueurs (1),
-    // puis par joueur : slot (1), hp (2), vivant (1).
-    constexpr std::size_t STATUS_HEADER_SIZE = 6;
+    // STATUS : phase (1), boss hp (2), boss max hp (2), pieces (4), nombre de
+    // joueurs (1), puis par joueur : slot (1), hp (2), vivant (1).
+    constexpr std::size_t STATUS_HEADER_SIZE = 10;
     constexpr std::size_t PLAYER_STATUS_SIZE = 4;
 
     inline void writeVec2(Engine::BinaryWriter &writer,
@@ -250,6 +250,7 @@ namespace rtype::protocol {
         writer.writeU8(static_cast<std::uint8_t>(status.phase));
         writer.writeU16(static_cast<std::uint16_t>(status.bossHp));
         writer.writeU16(static_cast<std::uint16_t>(status.bossMaxHp));
+        writer.writeU32(status.coins);
         writer.writeU8(static_cast<std::uint8_t>(status.players.size()));
         for (const PlayerStatus &player : status.players) {
             writer.writeU8(static_cast<std::uint8_t>(player.slot));
@@ -279,10 +280,11 @@ namespace rtype::protocol {
         const std::optional<std::uint8_t> phase = reader.readU8();
         const std::optional<std::uint16_t> bossHp = reader.readU16();
         const std::optional<std::uint16_t> bossMaxHp = reader.readU16();
+        const std::optional<std::uint32_t> coins = reader.readU32();
         const std::optional<std::uint8_t> count = reader.readU8();
         GameStatus status;
 
-        if (!phase || !bossHp || !bossMaxHp || !count
+        if (!phase || !bossHp || !bossMaxHp || !coins || !count
             || *phase > static_cast<std::uint8_t>(Phase::Defeat)
             || *count > config::MAX_PLAYERS || *bossHp > *bossMaxHp
             || reader.remaining() != *count * PLAYER_STATUS_SIZE) {
@@ -291,6 +293,7 @@ namespace rtype::protocol {
         status.phase = static_cast<Phase>(*phase);
         status.bossHp = *bossHp;
         status.bossMaxHp = *bossMaxHp;
+        status.coins = *coins;
         for (std::size_t i = 0; i < *count; ++i) {
             const std::optional<PlayerStatus> player = readPlayerStatus(reader);
 
