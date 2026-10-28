@@ -1,1 +1,0 @@
-{"nodes": [{"id": "$graphify-root$_external_vcpkg_scripts_test_ports_vcpkg_ci_vcpkg_make_test_cl_cpp_wrapper_source_c", "label": "source.c", "file_type": "code", "source_file": "external/vcpkg/scripts/test_ports/vcpkg-ci-vcpkg-make/test-cl_cpp_wrapper/source.c", "source_location": "L1"}], "edges": [], "raw_calls": []}
