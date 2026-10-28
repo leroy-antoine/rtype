@@ -37,8 +37,9 @@ namespace client {
                 return false;
             }
             _controls.poll(window);
-            sendControls();
-            _replica.update(advance());
+            const float dt = advance();
+            sendControls(dt);
+            _replica.update(dt);
             playSounds(audio);
             window.clear(4, 4, 18);
             view.draw(_replica, elapsed());
@@ -69,12 +70,12 @@ namespace client {
         return elapsed() - *_connectedSince >= LISTEN_DELAY;
     }
 
-    void App::sendControls()
+    void App::sendControls(const float dt)
     {
         if (_controls.respawnRequested()) {
             _network.requestRespawn();
         }
-        _network.sendInput(_controls.input());
+        _network.sendInput(_replica.predict(_controls.input(), dt), _controls.input());
         _network.flush();
     }
 

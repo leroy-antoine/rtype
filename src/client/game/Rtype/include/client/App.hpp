@@ -34,7 +34,7 @@ namespace client {
         bool loop(Engine::Window &window, GameView &view, Audio &audio);
         void playSounds(Audio &audio);
         bool listening();
-        void sendControls();
+        void sendControls(float dt);
         float advance();
         [[nodiscard]] float elapsed() const;
 

@@ -28,6 +28,9 @@ namespace client {
         _reg.add(e, rtype::Renderable{spawn.sprite});
         if (spawn.sprite == rtype::SpriteId::Player) {
             _reg.add(e, rtype::PlayerTag{spawn.slot});
+            if (_slot && spawn.slot == *_slot) {
+                _prediction.reset();
+            }
         }
         if (spawn.sprite == rtype::SpriteId::Explosion) {
             _reg.add(e, rtype::Lifetime{});
@@ -76,6 +79,8 @@ namespace client {
     {
         advanceClock(dt);
         interpolate();
+        _prediction.update(dt);
+        applyPrediction();
         _reg.each<rtype::Lifetime>([dt](Engine::Entity, rtype::Lifetime &lifetime) {
             lifetime.remaining -= dt;
             if (lifetime.remaining < 0.f) {
@@ -130,6 +135,43 @@ namespace client {
             from.pos.y + (to.pos.y - from.pos.y) * t}};
         _reg.get<gameLogic::Vec2Velocity>(e) =
             gameLogic::Vec2Velocity{{to.pos.x - from.pos.x, to.pos.y - from.pos.y}};
+    }
+
+    void Replica::apply(const rtype::protocol::OwnState &state)
+    {
+        _prediction.reconcile(state);
+    }
+
+    std::uint32_t Replica::predict(const rtype::PlayerInput &input, const float dt)
+    {
+        return _prediction.record(input, dt);
+    }
+
+    void Replica::applyPrediction()
+    {
+        const std::optional<gameLogic::Vec2Pos> predicted = _prediction.position();
+        const std::optional<Engine::Entity> player = localPlayer();
+
+        if (!predicted || !player) {
+            return;
+        }
+        _reg.get<gameLogic::Vec2Pos>(*player) = *predicted;
+        _reg.get<gameLogic::Vec2Velocity>(*player) = _prediction.velocity();
+    }
+
+    std::optional<Engine::Entity> Replica::localPlayer()
+    {
+        std::optional<Engine::Entity> found;
+
+        if (!_slot) {
+            return std::nullopt;
+        }
+        _reg.each<rtype::PlayerTag>([this, &found](const Engine::Entity e, const rtype::PlayerTag &tag) {
+            if (tag.slot == *_slot) {
+                found = e;
+            }
+        });
+        return found;
     }
 
     void Replica::apply(const rtype::GameStatus &status)
