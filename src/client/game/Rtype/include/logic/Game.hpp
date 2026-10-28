@@ -27,9 +27,15 @@
 namespace rtype {
     class Game {
     public:
-        Game() : _rng(std::random_device{}()) {}
+        Game() : _rng(std::random_device{}())
+        {
+            _coinCounter = createCoinCounter(_reg);
+        }
 
-        explicit Game(const unsigned int seed) : _rng(seed) {}
+        explicit Game(const unsigned int seed) : _rng(seed)
+        {
+            _coinCounter = createCoinCounter(_reg);
+        }
 
         std::optional<int> addPlayer()
         {
@@ -117,6 +123,8 @@ namespace rtype {
             GameStatus status;
 
             status.phase = _phase;
+            status.coins = static_cast<std::uint32_t>(
+                _reg.get<CoinCounter>(_coinCounter).total);
             for (const Engine::Entity boss : collectWith<BossTag>(_reg)) {
                 status.bossHp = std::max(0, _reg.get<Health>(boss).hp);
                 status.bossMaxHp = config::BOSS_HP;
@@ -200,8 +208,9 @@ namespace rtype {
             movementSystem(_reg, dt);
             collisionSystem(_reg);
             contactSystem(_reg);
+            coinPickupSystem(_reg);
             deleteUnitsOutOfBounds(_reg);
-            deathSystem(_reg);
+            deathSystem(_reg, _rng);
             updatePhase();
         }
 
@@ -316,6 +325,7 @@ namespace rtype {
             _bossSpawned = false;
             _phase = Phase::Playing;
             _phaseTimer = 0.f;
+            _reg.get<CoinCounter>(_coinCounter).total = 0;
             for (int slot = 0; slot < SLOTS; ++slot) {
                 if (isUsedSlot(slot)) {
                     createPlayer(_reg, slot);
@@ -360,5 +370,6 @@ namespace rtype {
         std::vector<GameEvent> _events;
         std::uint32_t _nextNetId = 1;
         std::mt19937 _rng;
+        Engine::Entity _coinCounter;
     };
 }

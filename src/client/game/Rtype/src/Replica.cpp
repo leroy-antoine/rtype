@@ -176,6 +176,9 @@ namespace client {
 
     void Replica::apply(const rtype::GameStatus &status)
     {
+        if (_status && status.coins > _status->coins) {
+            _cues.push_back(Cue::CoinPickup);
+        }
         _status = status;
     }
 

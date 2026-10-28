@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_external_vcpkg_ports_shaderc_build_version_inc", "label": "build-version.inc", "file_type": "code", "source_file": "external/vcpkg/ports/shaderc/build-version.inc", "source_location": "L1"}], "edges": [], "input_tokens": 0, "output_tokens": 0, "raw_calls": []}

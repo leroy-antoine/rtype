@@ -196,7 +196,7 @@ game.removePlayer(*slot);                     // a client disconnects
 | `std::vector<GameEvent> takeEvents()` | the `EntitySpawned` and `EntityDestroyed` since the last call (and empties the list). |
 | `std::vector<EntitySpawned> spawns() const` | the whole world, to send to a client who just connected. |
 | `std::vector<EntityState> states() const` | the position of every moving entity. |
-| `GameStatus status()` | phase, boss health, health of each player. |
+| `GameStatus status()` | phase, boss health, health of each player, coins of the shared purse. |
 | `Phase phase() const`, `float scroll() const` | the phase of the match, the distance scrolled. |
 
 `Game(unsigned seed)` makes the random heights of the waves reproducible, which
@@ -270,7 +270,7 @@ All in `Systems.hpp` (spawning is in `Monsters.hpp`, the boss in `Boss.hpp`).
 | `movementSystem(reg, dt)` | applies `Vec2Velocity` to `Vec2Pos` |
 | `collisionSystem(reg)` | for each bullet, finds the first enemy it overlaps, applies the damage, destroys the bullet |
 | `deleteUnitsOutOfBounds(reg)` | players whose centre left the map lose all their hp, far monsters and bullets are destroyed |
-| `deathSystem(reg)` | destroys every entity with `hp <= 0` |
+| `deathSystem(reg, rng)` | destroys every entity with `hp <= 0`; monsters leave a coin whose value is drawn with the game's `rng` |
 | `lifetimeSystem(reg, dt)` | removes the entities whose `Lifetime` ran out (explosions) |
 | `contactSystem(reg)` | a monster that overlaps a player kills him |
 | `bossSystem(reg, dt)` | enters, stops, sways and fires the fan of bullets (`Boss.hpp`) |
@@ -287,9 +287,10 @@ Shooting is split in small pieces so each rule can be read (and tested) alone:
 - `shoot(e)`: creates the bullet with `createBullet` and sets
   `timer = cooldown`.
 
-`createBullet(reg, shooter)` copies the shooter's `Team` and `Damage` into the
-bullet, places it just in front of the shooter and gives it a velocity
-(`BULLET_SPEED`) to the right for the player team, to the left otherwise.
+`createBullet(reg, shooter, velocity)` copies the shooter's `Team` and `Damage` into the
+bullet, places it just in front of the shooter and gives it the velocity it
+receives (`shotVelocities` gives `BULLET_SPEED` to the right for the player
+team, to the left otherwise).
 
 ### Collisions
 

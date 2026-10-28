@@ -13,7 +13,8 @@
 #include "utils/Vectors.hpp"
 
 namespace client {
-    enum class Cue { PlayerShot, Hit, Explosion, BossExplosion, BossAppears };
+    enum class Cue { PlayerShot, Hit, Explosion, BossExplosion, BossAppears,
+        CoinPickup };
 
     class Replica {
     public:

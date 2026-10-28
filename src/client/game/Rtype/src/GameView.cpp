@@ -5,7 +5,7 @@ namespace client {
         const float screenWidth, const float screenHeight)
         : _renderer(renderer), _sprites(sprites), _worldToScreen(worldToScreen),
         _background(screenWidth, screenHeight, worldToScreen),
-        _hud(renderer, screenWidth, screenHeight)
+        _hud(renderer, sprites, screenWidth, screenHeight)
     {
     }
 

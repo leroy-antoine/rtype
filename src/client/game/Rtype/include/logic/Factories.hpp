@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <random>
 #include "engine/core/Registry.hpp"
 #include "utils/Vectors.hpp"
 #include "Components.hpp"
@@ -102,18 +103,6 @@ namespace rtype {
         return e;
     }
 
-    inline Engine::Entity createBullet(Engine::Registry &reg,
-        const Engine::Entity shooter)
-    {
-        if (!reg.has<Team>(shooter)) {
-            return Engine::Entity{};
-        }
-        const float direction = bulletDirection(reg.get<Team>(shooter));
-
-        return createBullet(reg, shooter,
-            gameLogic::Vec2{direction * config::BULLET_SPEED, 0.f});
-    }
-
     inline Engine::Entity createExplosion(Engine::Registry &reg,
         const gameLogic::Vec2 &center, const float size)
     {
@@ -148,5 +137,26 @@ namespace rtype {
         const gameLogic::Vec2Hitbox box = reg.get<gameLogic::Vec2Hitbox>(target);
 
         return createExplosion(reg, {pos.x + box.x / 2.f, pos.y + box.y / 2.f}, size);
+    }
+
+    inline Engine::Entity createCoin(Engine::Registry &reg, std::mt19937 &rng)
+    {
+        std::uniform_int_distribution<std::size_t> dist(config::COIN_MIN_VALUE,
+                                                        config::COIN_MAX_VALUE);
+        const Engine::Entity e = reg.create();
+
+        reg.add(e, coins{dist(rng)});
+        reg.add(e, gameLogic::Vec2Hitbox{{config::COIN_WIDTH,
+            config::COIN_HEIGHT}});
+        reg.add(e, Renderable{SpriteId::Coin});
+        return e;
+    }
+
+    inline Engine::Entity createCoinCounter(Engine::Registry &reg)
+    {
+        const Engine::Entity e = reg.create();
+
+        reg.add(e, CoinCounter{});
+        return e;
     }
 }

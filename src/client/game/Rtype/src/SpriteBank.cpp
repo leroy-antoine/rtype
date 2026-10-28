@@ -20,6 +20,8 @@ namespace client {
         set(rtype::SpriteId::Boss, {load("r-typesheet32.gif"),
             {.firstFrame = {0, 430, 260, 143}, .frameCount = 2, .step = 260,
                 .frameDuration = 0.35f}});
+        set(rtype::SpriteId::Coin, {load("coin_spin_sheet.png"),
+            {.firstFrame = {0, 0, 128, 128}, .frameCount = 6}});
     }
 
     void SpriteBank::set(const rtype::SpriteId id, const Engine::Sprite &sprite)
