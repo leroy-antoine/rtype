@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <optional>
+#include <random>
 #include <vector>
 #include "engine/core/Registry.hpp"
 #include "utils/Vectors.hpp"
@@ -15,7 +16,7 @@
 
 
 namespace rtype {
-    inline void deathSystem(Engine::Registry &reg)
+    inline void deathSystem(Engine::Registry &reg, std::mt19937 &rng)
     {
         std::vector<Engine::Entity> dead;
 
@@ -26,7 +27,7 @@ namespace rtype {
         });
         for (const Engine::Entity e : dead) {
             createExplosionOn(reg, e, explosionSize(reg, e));
-            spawnCoin(reg, e);
+            spawnCoin(reg, e, rng);
             reg.destroy(e);
         }
     }

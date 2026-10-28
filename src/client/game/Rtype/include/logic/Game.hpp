@@ -210,7 +210,7 @@ namespace rtype {
             contactSystem(_reg);
             coinPickupSystem(_reg);
             deleteUnitsOutOfBounds(_reg);
-            deathSystem(_reg);
+            deathSystem(_reg, _rng);
             updatePhase();
         }
 

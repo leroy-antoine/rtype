@@ -270,7 +270,7 @@ All in `Systems.hpp` (spawning is in `Monsters.hpp`, the boss in `Boss.hpp`).
 | `movementSystem(reg, dt)` | applies `Vec2Velocity` to `Vec2Pos` |
 | `collisionSystem(reg)` | for each bullet, finds the first enemy it overlaps, applies the damage, destroys the bullet |
 | `deleteUnitsOutOfBounds(reg)` | players whose centre left the map lose all their hp, far monsters and bullets are destroyed |
-| `deathSystem(reg)` | destroys every entity with `hp <= 0` |
+| `deathSystem(reg, rng)` | destroys every entity with `hp <= 0`; monsters leave a coin whose value is drawn with the game's `rng` |
 | `lifetimeSystem(reg, dt)` | removes the entities whose `Lifetime` ran out (explosions) |
 | `contactSystem(reg)` | a monster that overlaps a player kills him |
 | `bossSystem(reg, dt)` | enters, stops, sways and fires the fan of bullets (`Boss.hpp`) |

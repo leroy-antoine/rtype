@@ -139,9 +139,8 @@ namespace rtype {
         return createExplosion(reg, {pos.x + box.x / 2.f, pos.y + box.y / 2.f}, size);
     }
 
-    inline Engine::Entity createCoin(Engine::Registry &reg)
+    inline Engine::Entity createCoin(Engine::Registry &reg, std::mt19937 &rng)
     {
-        static thread_local std::mt19937 rng{std::random_device{}()};
         std::uniform_int_distribution<std::size_t> dist(config::COIN_MIN_VALUE,
                                                         config::COIN_MAX_VALUE);
         const Engine::Entity e = reg.create();

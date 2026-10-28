@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <random>
 #include <vector>
 #include "engine/core/Registry.hpp"
 #include "utils/Vectors.hpp"
@@ -17,7 +18,7 @@
 
 namespace rtype {
     inline Engine::Entity spawnCoin(Engine::Registry &reg,
-        const Engine::Entity dead)
+        const Engine::Entity dead, std::mt19937 &rng)
     {
         if (!reg.has<MonsterTag>(dead) || !reg.has<gameLogic::Vec2Pos>(dead)
             || !reg.has<gameLogic::Vec2Hitbox>(dead)) {
@@ -25,7 +26,7 @@ namespace rtype {
         }
         const gameLogic::Vec2Pos pos = reg.get<gameLogic::Vec2Pos>(dead);
         const gameLogic::Vec2Hitbox box = reg.get<gameLogic::Vec2Hitbox>(dead);
-        const Engine::Entity coin = createCoin(reg);
+        const Engine::Entity coin = createCoin(reg, rng);
 
         reg.add(coin, gameLogic::Vec2Pos{{
             pos.x + box.x / 2.f - config::COIN_WIDTH / 2.f,
