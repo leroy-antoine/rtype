@@ -65,6 +65,16 @@ namespace rtype::config {
     constexpr float WAVE_MIN_Y = 100.f;
     constexpr float WAVE_MAX_Y = MAP_HEIGHT - 300.f;
 
+    constexpr int AUGMENT_DAMAGE_BONUS = 5;
+    constexpr float AUGMENT_FIRE_COOLDOWN_FACTOR = 0.8f;
+    constexpr float AUGMENT_SPEED_BONUS = 75.f;
+    constexpr int AUGMENT_HP_BONUS = 25;
+
+    constexpr int AUGMENT_DAMAGE_PRICE = 50;
+    constexpr int AUGMENT_SPEED_PRICE = 50;
+    constexpr int AUGMENT_HP_PRICE = 100;
+    constexpr int AUGMENT_FIRE_RATE_PRICE = 200;
+
     constexpr float SCROLL_SPEED = 120.f; //-> Vitesse de défilement de la carte
     constexpr float BOSS_SPAWN_SCROLL = 2400.f;  // -> Distance defilee (2400 / 120 = 20 s de jeu) a laquelle le boss arrive.
 

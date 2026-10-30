@@ -289,3 +289,92 @@ TEST(every_spawned_entity_is_announced_to_the_clients)
     CHECK(spawned >= 5);
     CHECK(game.spawns().size() >= 5);
 }
+
+TEST(an_augment_is_applied_at_once_to_a_living_player)
+{
+    Game game(1);
+
+    game.addPlayer();
+    CHECK(game.addAugment(0, AugmentId::DamageUp));
+    CHECK(game.registry().get<Damage>(playerOf(game, 0)).value
+        == config::PLAYER_DAMAGE + config::AUGMENT_DAMAGE_BONUS);
+}
+
+TEST(an_augment_survives_a_respawn)
+{
+    Game game(1);
+
+    game.addPlayer();
+    game.addPlayer();
+    game.addAugment(0, AugmentId::DamageUp);
+    kill(game, 0);
+    game.update(config::FIXED_DT);
+    CHECK(game.respawnPlayer(0));
+    CHECK(game.registry().get<Damage>(playerOf(game, 0)).value
+        == config::PLAYER_DAMAGE + config::AUGMENT_DAMAGE_BONUS);
+}
+
+TEST(an_augment_bought_while_dead_is_applied_on_respawn)
+{
+    Game game(1);
+
+    game.addPlayer();
+    game.addPlayer();
+    kill(game, 0);
+    game.update(config::FIXED_DT);
+    CHECK(game.addAugment(0, AugmentId::SpeedUp));
+    game.respawnPlayer(0);
+    CHECK(game.registry().get<Speed>(playerOf(game, 0)).value
+        == config::PLAYER_SPEED + config::AUGMENT_SPEED_BONUS);
+}
+
+TEST(augments_are_reapplied_when_the_game_restarts)
+{
+    Game game(1);
+
+    game.addPlayer();
+    game.addAugment(0, AugmentId::SpeedUp);
+    kill(game, 0);
+    run(game, config::RESTART_DELAY + 1.f);
+    CHECK(game.phase() == Phase::Playing);
+    CHECK(game.registry().get<Speed>(playerOf(game, 0)).value
+        == config::PLAYER_SPEED + config::AUGMENT_SPEED_BONUS);
+}
+
+TEST(augments_are_kept_per_player)
+{
+    Game game(1);
+
+    game.addPlayer();
+    game.addPlayer();
+    game.addAugment(0, AugmentId::DamageUp);
+    game.addAugment(0, AugmentId::DamageUp);
+    game.addAugment(1, AugmentId::MaxHpUp);
+    CHECK(game.ownedAugments(0).size() == 2);
+    CHECK(game.ownedAugments(1).size() == 1);
+    CHECK(game.registry().get<Damage>(playerOf(game, 1)).value
+        == config::PLAYER_DAMAGE);
+}
+
+TEST(a_player_who_leaves_loses_the_augments)
+{
+    Game game(1);
+
+    game.addPlayer();
+    game.addAugment(0, AugmentId::DamageUp);
+    game.removePlayer(0);
+    CHECK(game.ownedAugments(0).empty());
+    game.addPlayer();
+    CHECK(game.registry().get<Damage>(playerOf(game, 0)).value
+        == config::PLAYER_DAMAGE);
+}
+
+TEST(an_augment_needs_a_connected_player_and_a_valid_id)
+{
+    Game game(1);
+
+    game.addPlayer();
+    CHECK(!game.addAugment(1, AugmentId::DamageUp));
+    CHECK(!game.addAugment(0, AugmentId::Count));
+    CHECK(game.ownedAugments(0).empty());
+}
