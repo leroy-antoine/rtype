@@ -28,7 +28,6 @@
   "51": "Keys",
   "60": "Audio Impl",
   "62": "Message Types",
-  "63": "Session Admission",
   "70": "Session Info",
   "71": "Renderer Draw",
   "73": "Texture Manager Impl",
@@ -36,7 +35,6 @@
   "80": "Test Harness",
   "82": "Sound Manager Impl",
   "83": "Entity Manager",
-  "84": "Entity Records",
   "85": "Flush and Serialize",
   "86": "Connection Send"
 }
