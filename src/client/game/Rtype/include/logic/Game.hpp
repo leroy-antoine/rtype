@@ -7,10 +7,12 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <optional>
 #include <random>
 #include <utility>
 #include <vector>
+#include "Augments.hpp"
 #include "Boss.hpp"
 #include "Components.hpp"
 #include "Config.hpp"
@@ -38,7 +40,7 @@ namespace rtype {
             if (!slot) {
                 return std::nullopt;
             }
-            createPlayer(_reg, *slot);
+            spawnPlayer(*slot);
             _usedSlots[static_cast<std::size_t>(*slot)] = true;
             return slot;
         }
@@ -54,6 +56,7 @@ namespace rtype {
             if (isUsedSlot(slot)) {
                 _usedSlots[static_cast<std::size_t>(slot)] = false;
             }
+            _augments.erase(slot);
         }
 
         // Un joueur mort peut revenir tant que la partie n'est pas finie.
@@ -63,13 +66,38 @@ namespace rtype {
                 || isPlayerAlive(slot)) {
                 return false;
             }
-            createPlayer(_reg, slot);
+            spawnPlayer(slot);
             return true;
         }
 
         bool isPlayerAlive(const int slot)
         {
             return findPlayerBySlot(_reg, slot).has_value();
+        }
+
+        bool addAugment(const int slot, const AugmentId id)
+        {
+            if (!isUsedSlot(slot) || !findAugment(id)) {
+                return false;
+            }
+            const std::optional<Engine::Entity> player =
+                findPlayerBySlot(_reg, slot);
+
+            _augments[slot].push_back(id);
+            if (player) {
+                applyAugment(_reg, *player, id);
+            }
+            return true;
+        }
+
+        [[nodiscard]] std::vector<AugmentId> ownedAugments(const int slot) const
+        {
+            const auto owned = _augments.find(slot);
+
+            if (owned == _augments.end()) {
+                return {};
+            }
+            return owned->second;
         }
 
         void setInput(const int slot, const PlayerInput &input)
@@ -318,8 +346,17 @@ namespace rtype {
             _phaseTimer = 0.f;
             for (int slot = 0; slot < SLOTS; ++slot) {
                 if (isUsedSlot(slot)) {
-                    createPlayer(_reg, slot);
+                    spawnPlayer(slot);
                 }
+            }
+        }
+
+        void spawnPlayer(const int slot)
+        {
+            const Engine::Entity player = createPlayer(_reg, slot);
+
+            for (const AugmentId id : ownedAugments(slot)) {
+                applyAugment(_reg, player, id);
             }
         }
 
@@ -350,6 +387,7 @@ namespace rtype {
 
         Engine::Registry _reg;
         SlotTable _usedSlots{};
+        std::map<int, std::vector<AugmentId>> _augments;
         Phase _phase = Phase::Playing;
         float _phaseTimer = 0.f;
         float _scroll = 0.f;
