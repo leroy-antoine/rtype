@@ -196,7 +196,7 @@ game.removePlayer(*slot);                     // a client disconnects
 | `std::vector<GameEvent> takeEvents()` | the `EntitySpawned` and `EntityDestroyed` since the last call (and empties the list). |
 | `std::vector<EntitySpawned> spawns() const` | the whole world, to send to a client who just connected. |
 | `std::vector<EntityState> states() const` | the position of every moving entity. |
-| `GameStatus status()` | phase, boss health, health of each player, coins of the shared purse. |
+| `GameStatus status()` | phase, boss health, health of each player, coins of the shared purse, time elapsed since the start of the match. |
 | `Phase phase() const`, `float scroll() const` | the phase of the match, the distance scrolled. |
 
 `Game(unsigned seed)` makes the random heights of the waves reproducible, which

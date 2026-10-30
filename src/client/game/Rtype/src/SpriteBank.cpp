@@ -20,8 +20,20 @@ namespace client {
         set(rtype::SpriteId::Boss, {load("r-typesheet32.gif"),
             {.firstFrame = {0, 430, 260, 143}, .frameCount = 2, .step = 260,
                 .frameDuration = 0.35f}});
+        loadIcons(textures, assets);
+    }
+
+    void SpriteBank::loadIcons(Engine::TextureManager &textures,
+        const std::filesystem::path &assets)
+    {
+        const auto load = [&](const char *file) {
+            return textures.load((assets / file).string());
+        };
+
         set(rtype::SpriteId::Coin, {load("coin_spin_sheet.png"),
             {.firstFrame = {0, 0, 128, 128}, .frameCount = 6}});
+        _clock = {load("stopwatch_sheet.png"),
+            {.firstFrame = {0, 0, 32, 32}, .frameCount = 16}};
     }
 
     void SpriteBank::set(const rtype::SpriteId id, const Engine::Sprite &sprite)
@@ -32,5 +44,10 @@ namespace client {
     const Engine::Sprite &SpriteBank::get(const rtype::SpriteId id) const
     {
         return _sprites.at(static_cast<std::size_t>(id));
+    }
+
+    const Engine::Sprite &SpriteBank::clock() const
+    {
+        return _clock;
     }
 }
