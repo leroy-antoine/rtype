@@ -2,17 +2,20 @@
 
 #include <array>
 #include "Config.hpp"
+#include "Kinds.hpp"
 
 namespace rtype {
     // Une vague : `count` monstres lances quand le niveau a defile de `at`.
     // Le i-eme monstre apparait `i * interval` secondes apres le premier, a la
     // hauteur `y + i * dy`. Si y < 0, la hauteur de depart est tiree au hasard.
+    // Tous les monstres de la vague sont du type `kind`.
     struct WaveStep {
         float at;
         int count;
         float y;
         float dy;
         float interval;
+        MonsterKind kind = MonsterKind::Basic;
     };
 
     // Instant (en secondes de jeu) converti en distance defilee.

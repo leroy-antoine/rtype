@@ -91,6 +91,7 @@ Headers only include the layers below them, which avoids circular includes.
 | `Systems.hpp` | the systems (see below) |
 | `Monsters.hpp` | monster spawning |
 | `Kinds.hpp` | `MonsterKind` and `BossKind`, the kinds of monsters and bosses |
+| `BossDefs.hpp` | the table of definitions of the bosses, indexed by `BossKind` (it reuses `MonsterDef`) |
 | `MonsterDefs.hpp` | `MonsterDef` and the table of definitions indexed by `MonsterKind` (stats, size, sprite) |
 | `Boss.hpp` | the boss behaviour (`bossSystem`) and its fan of bullets |
 | `Waves.hpp` | the first table of waves of monsters (`WAVES`) |

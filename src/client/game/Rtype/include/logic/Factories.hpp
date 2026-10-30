@@ -7,6 +7,7 @@
 #include "utils/Vectors.hpp"
 #include "Components.hpp"
 #include "Config.hpp"
+#include "BossDefs.hpp"
 #include "MonsterDefs.hpp"
 #include "Bullet.hpp"
 
@@ -64,19 +65,26 @@ namespace rtype {
     }
 
     // Le boss est un monstre plus gros, avec BossTag pour le reconnaitre.
-    inline Engine::Entity createBoss(Engine::Registry &reg)
+    inline void setBossStats(Engine::Registry &reg, const Engine::Entity e,
+        const MonsterDef &def)
+    {
+        reg.get<gameLogic::Vec2Hitbox>(e) =
+            gameLogic::Vec2Hitbox{{def.width, def.height}};
+        reg.get<Speed>(e) = Speed{def.speed};
+        reg.get<Health>(e) = Health{def.hp};
+        reg.get<Weapon>(e) = Weapon{def.fireCooldown, def.fireCooldown};
+        reg.get<Damage>(e) = Damage{def.damage};
+        reg.get<Renderable>(e) = Renderable{def.sprite};
+    }
+
+    inline Engine::Entity createBoss(Engine::Registry &reg,
+        const BossKind kind = BossKind::Standard)
     {
         const Engine::Entity e = createMonster(reg);
 
         reg.add(e, BossTag{});
-        reg.get<gameLogic::Vec2Hitbox>(e) = gameLogic::Vec2Hitbox{{
-            config::BOSS_WIDTH, config::BOSS_HEIGHT}};
-        reg.get<Speed>(e) = Speed{config::BOSS_SPEED};
-        reg.get<Health>(e) = Health{config::BOSS_HP};
-        reg.get<Weapon>(e) = Weapon{config::BOSS_FIRE_COOLDOWN,
-            config::BOSS_FIRE_COOLDOWN};
-        reg.get<Damage>(e) = Damage{config::BOSS_DAMAGE};
-        reg.get<Renderable>(e) = Renderable{SpriteId::Boss};
+        reg.add(e, BossType{kind});
+        setBossStats(reg, e, bossDef(kind));
         return e;
     }
 

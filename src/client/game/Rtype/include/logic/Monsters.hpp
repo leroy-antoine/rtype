@@ -24,15 +24,17 @@ namespace rtype {
     }
 
     // Le boss entre par la droite, centre sur la hauteur de la carte.
-    inline Engine::Entity spawnBoss(Engine::Registry &reg)
+    inline Engine::Entity spawnBoss(Engine::Registry &reg,
+        const BossKind kind = BossKind::Standard)
     {
-        const Engine::Entity e = createBoss(reg);
+        const Engine::Entity e = createBoss(reg, kind);
         constexpr float x = config::MAP_WIDTH + config::SPAWN_MARGIN;
+        const float height = reg.get<gameLogic::Vec2Hitbox>(e).y;
 
         reg.get<gameLogic::Vec2Pos>(e) = gameLogic::Vec2Pos{{x,
-            (config::MAP_HEIGHT - config::BOSS_HEIGHT) / 2.f}};
+            (config::MAP_HEIGHT - height) / 2.f}};
         reg.get<gameLogic::Vec2Velocity>(e) =
-            gameLogic::Vec2Velocity{{-config::BOSS_SPEED, 0.f}};
+            gameLogic::Vec2Velocity{{-reg.get<Speed>(e).value, 0.f}};
         return e;
     }
 }

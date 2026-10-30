@@ -34,6 +34,10 @@ namespace rtype {
     };
 
     // Le boss : il entre, s'arrete, puis fait des va-et-vient.
+    struct BossType {
+        BossKind kind = BossKind::Standard;
+    };
+
     struct BossTag {
         float age = 0.f;
     };

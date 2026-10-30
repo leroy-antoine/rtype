@@ -8,12 +8,13 @@
 #include <vector>
 
 #include "Config.hpp"
+#include "Kinds.hpp"
 #include "Waves.hpp"
 
 namespace rtype {
     struct Segments {
         std::vector<WaveStep> waves;
-        std::vector<std::pair<std::size_t, float>> bossSpawn; //where size_t is the id of a boss inside an array of bosses
+        std::vector<std::pair<BossKind, float>> bossSpawn;
         std::vector<std::pair<std::size_t, float>> levels; //where size_t is the id of the level
     };
 
@@ -21,7 +22,7 @@ namespace rtype {
     {
         return Segments{
             std::vector<WaveStep>(WAVES.begin(), WAVES.end()),
-            {{0, config::BOSS_SPAWN_SCROLL}},
+            {{BossKind::Standard, config::BOSS_SPAWN_SCROLL}},
             {{1, 0.f}}};
     }
 

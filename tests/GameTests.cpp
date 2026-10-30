@@ -257,6 +257,29 @@ TEST(a_monster_remembers_the_kind_it_was_created_with)
     CHECK(reg.has<MonsterTag>(tank));
 }
 
+TEST(every_boss_kind_follows_its_definition)
+{
+    for (std::size_t i = 0; i < static_cast<std::size_t>(BossKind::Count); ++i) {
+        const auto kind = static_cast<BossKind>(i);
+        Engine::Registry reg;
+        const Engine::Entity boss = createBoss(reg, kind);
+
+        CHECK(reg.get<BossType>(boss).kind == kind);
+        CHECK(reg.get<Health>(boss).hp == bossDef(kind).hp);
+        CHECK(reg.get<gameLogic::Vec2Hitbox>(boss).x == bossDef(kind).width);
+    }
+}
+
+TEST(the_status_uses_the_health_of_the_kind_of_boss)
+{
+    Game game(1);
+
+    game.addPlayer();
+    spawnBoss(game.registry(), BossKind::Fortress);
+    CHECK(game.status().bossHp == bossDef(BossKind::Fortress).hp);
+    CHECK(game.status().bossMaxHp == bossDef(BossKind::Fortress).hp);
+}
+
 TEST(a_game_starts_at_the_first_level)
 {
     Game game(1);

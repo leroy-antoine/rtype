@@ -156,7 +156,8 @@ namespace rtype {
                 _reg.get<CoinCounter>(_coinCounter).total);
             for (const Engine::Entity boss : collectWith<BossTag>(_reg)) {
                 status.bossHp = std::max(0, _reg.get<Health>(boss).hp);
-                status.bossMaxHp = config::BOSS_HP;
+                status.bossMaxHp =
+                    bossDef(_reg.get<BossType>(boss).kind).hp;
             }
             for (int slot = 0; slot < SLOTS; ++slot) {
                 if (isUsedSlot(slot)) {
@@ -193,6 +194,7 @@ namespace rtype {
         struct PendingSpawn {
             float delay;
             float y;
+            MonsterKind kind;
         };
 
         [[nodiscard]] bool isUsedSlot(const int slot) const
@@ -276,7 +278,7 @@ namespace rtype {
 
             while (_nextBoss < bosses.size()
                 && bosses[_nextBoss].second <= _scroll) {
-                spawnBoss(_reg);
+                spawnBoss(_reg, bosses[_nextBoss].first);
                 ++_nextBoss;
             }
         }
@@ -308,7 +310,8 @@ namespace rtype {
             for (int i = 0; i < wave.count; ++i) {
                 const auto n = static_cast<float>(i);
 
-                _pending.push_back({n * wave.interval, y + n * wave.dy});
+                _pending.push_back(
+                    {n * wave.interval, y + n * wave.dy, wave.kind});
             }
         }
 
@@ -320,7 +323,7 @@ namespace rtype {
             for (PendingSpawn &spawn : _pending) {
                 spawn.delay -= dt;
                 if (spawn.delay <= 0.f) {
-                    spawnMonster(_reg, spawn.y);
+                    spawnMonster(_reg, spawn.y, spawn.kind);
                 } else {
                     waiting.push_back(spawn);
                 }
