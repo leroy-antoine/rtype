@@ -18,6 +18,7 @@
 #include "Config.hpp"
 #include "Events.hpp"
 #include "Factories.hpp"
+#include "Levels.hpp"
 #include "Monsters.hpp"
 #include "Queries.hpp"
 #include "Replication.hpp"
@@ -176,6 +177,11 @@ namespace rtype {
             return _scroll;
         }
 
+        [[nodiscard]] std::size_t level() const
+        {
+            return levelAt(_segments, _scroll);
+        }
+
         Engine::Registry &registry()
         {
             return _reg;
@@ -219,7 +225,7 @@ namespace rtype {
         // Personne n'est connecte : le niveau n'avance pas, et repart de zero.
         void idle()
         {
-            if (_scroll > 0.f || _bossSpawned || _phase != Phase::Playing
+            if (_scroll > 0.f || _nextBoss > 0 || _phase != Phase::Playing
                 || !_pending.empty()) {
                 reset();
             }
@@ -256,21 +262,36 @@ namespace rtype {
 
         void advanceLevel(const float dt)
         {
-            if (!_bossSpawned) {
+            if (collectWith<BossTag>(_reg).empty()) {
                 _scroll += config::SCROLL_SPEED * dt;
                 queueDueWaves();
-                if (_scroll >= config::BOSS_SPAWN_SCROLL) {
-                    spawnBoss(_reg);
-                    _bossSpawned = true;
-                }
+                spawnDueBosses();
             }
             spawnPending(dt);
         }
 
+        void spawnDueBosses()
+        {
+            const auto &bosses = _segments.bossSpawn;
+
+            while (_nextBoss < bosses.size()
+                && bosses[_nextBoss].second <= _scroll) {
+                spawnBoss(_reg);
+                ++_nextBoss;
+            }
+        }
+
+        [[nodiscard]] bool allBossesSpawned() const
+        {
+            return _nextBoss >= _segments.bossSpawn.size();
+        }
+
         void queueDueWaves()
         {
-            while (_nextWave < WAVES.size() && WAVES[_nextWave].at <= _scroll) {
-                queueWave(WAVES[_nextWave]);
+            const auto &waves = _segments.waves;
+
+            while (_nextWave < waves.size() && waves[_nextWave].at <= _scroll) {
+                queueWave(waves[_nextWave]);
                 ++_nextWave;
             }
         }
@@ -309,7 +330,7 @@ namespace rtype {
 
         void updatePhase()
         {
-            if (_bossSpawned && collectWith<BossTag>(_reg).empty()) {
+            if (allBossesSpawned() && collectWith<BossTag>(_reg).empty()) {
                 endGame(Phase::Victory);
             } else if (allPlayersDead()) {
                 endGame(Phase::Defeat);
@@ -350,7 +371,7 @@ namespace rtype {
             _pending.clear();
             _scroll = 0.f;
             _nextWave = 0;
-            _bossSpawned = false;
+            _nextBoss = 0;
             _phase = Phase::Playing;
             _phaseTimer = 0.f;
             _reg.get<CoinCounter>(_coinCounter).total = 0;
@@ -402,7 +423,8 @@ namespace rtype {
         float _phaseTimer = 0.f;
         float _scroll = 0.f;
         std::size_t _nextWave = 0;
-        bool _bossSpawned = false;
+        std::size_t _nextBoss = 0;
+        Segments _segments = firstLevel();
         std::vector<PendingSpawn> _pending;
         TrackedTable _tracked;
         std::vector<GameEvent> _events;

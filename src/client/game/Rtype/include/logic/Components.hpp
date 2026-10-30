@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include "Config.hpp"
+#include "Kinds.hpp"
 
 namespace rtype {
     struct PlayerInput {
@@ -39,6 +40,10 @@ namespace rtype {
 
     struct MonsterTag {
         int slot = 0;
+    };
+
+    struct MonsterType {
+        MonsterKind kind = MonsterKind::Basic;
     };
 
     struct ProjectileTag {

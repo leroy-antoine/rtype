@@ -237,6 +237,58 @@ TEST(the_game_is_not_lost_while_a_teammate_is_alive)
     CHECK(game.phase() == Phase::Playing);
 }
 
+TEST(a_basic_monster_follows_the_basic_definition)
+{
+    Engine::Registry reg;
+    const Engine::Entity monster = spawnMonster(reg, 300.f);
+
+    CHECK(reg.get<MonsterType>(monster).kind == MonsterKind::Basic);
+    CHECK(reg.get<Health>(monster).hp == config::MONSTER_HP);
+    CHECK(reg.get<Speed>(monster).value == config::MONSTER_SPEED);
+    CHECK(reg.get<Renderable>(monster).id == SpriteId::Monster);
+}
+
+TEST(a_monster_remembers_the_kind_it_was_created_with)
+{
+    Engine::Registry reg;
+    const Engine::Entity tank = createMonster(reg, MonsterKind::Tank);
+
+    CHECK(reg.get<MonsterType>(tank).kind == MonsterKind::Tank);
+    CHECK(reg.has<MonsterTag>(tank));
+}
+
+TEST(a_game_starts_at_the_first_level)
+{
+    Game game(1);
+
+    CHECK(game.level() == 1);
+}
+
+TEST(the_level_number_follows_the_distance_scrolled)
+{
+    Segments segments;
+
+    segments.levels = {{1, 0.f}, {2, 1000.f}, {3, 2500.f}};
+    CHECK(levelAt(segments, 0.f) == 1);
+    CHECK(levelAt(segments, 999.f) == 1);
+    CHECK(levelAt(segments, 1000.f) == 2);
+    CHECK(levelAt(segments, 3000.f) == 3);
+}
+
+TEST(the_distance_stops_while_a_boss_is_alive)
+{
+    Game game(1);
+
+    game.addPlayer();
+    skipToBoss(game);
+    const float stopped = game.scroll();
+
+    CHECK(!collectWith<BossTag>(game.registry()).empty());
+    run(game, 0.5f);
+    CHECK(game.phase() == Phase::Playing);
+    CHECK(game.scroll() == stopped);
+}
+
 TEST(a_finished_game_restarts_after_the_delay)
 {
     Game game(1);

@@ -90,8 +90,11 @@ Headers only include the layers below them, which avoids circular includes.
 | `Queries.hpp` | read-only searches in the world (`collectWith<Tag>`, `findFreeSlot`, ...) |
 | `Systems.hpp` | the systems (see below) |
 | `Monsters.hpp` | monster spawning |
+| `Kinds.hpp` | `MonsterKind` and `BossKind`, the kinds of monsters and bosses |
+| `MonsterDefs.hpp` | `MonsterDef` and the table of definitions indexed by `MonsterKind` (stats, size, sprite) |
 | `Boss.hpp` | the boss behaviour (`bossSystem`) and its fan of bullets |
-| `Waves.hpp` | the table of waves of monsters (`WAVES`) |
+| `Waves.hpp` | the first table of waves of monsters (`WAVES`) |
+| `Levels.hpp` | `Segments`: the waves, the boss and the level numbers of the whole run, each with its distance |
 | `Events.hpp` | `EntitySpawned`, `EntityDestroyed`, `EntityState`: what is told to the clients |
 | `Status.hpp` | `GameStatus` and `Phase`: what the HUD shows |
 | `Replication.hpp` | helpers that describe the entities to replicate (`NetId`, spawns, states) |
@@ -128,8 +131,11 @@ These come from the engine (`engine/core`, not part of the game logic):
 - **Monsters** come in **waves** (`Waves.hpp`): a wave launches several
   monsters one after the other, at a fixed or random height. They fly to the
   left and shoot continuously. A monster that touches a player kills him.
-- After `BOSS_SPAWN_SCROLL` (20 s of play) the **boss** enters, stops on the
-  right (`BOSS_STOP_X`), sways vertically and fires a fan of bullets.
+- The level is described by `Segments` (`Levels.hpp`): waves, bosses and level
+  numbers, each with the distance at which it starts. The first level has the
+  boss at `BOSS_SPAWN_SCROLL` (20 s of play): it enters, stops on the right
+  (`BOSS_STOP_X`), sways vertically and fires a fan of bullets. The distance
+  does not advance while a boss is alive.
 - **Bullets** belong to a team. A bullet only hurts the other team, damages the
   first target it overlaps, then disappears.
 - An entity whose `hp` falls to 0 or below is destroyed.

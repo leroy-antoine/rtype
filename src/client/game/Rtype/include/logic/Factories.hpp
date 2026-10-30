@@ -7,6 +7,7 @@
 #include "utils/Vectors.hpp"
 #include "Components.hpp"
 #include "Config.hpp"
+#include "MonsterDefs.hpp"
 #include "Bullet.hpp"
 
 namespace rtype {
@@ -36,24 +37,29 @@ namespace rtype {
         return e;
     }
 
+    inline void addMonsterStats(Engine::Registry &reg, const Engine::Entity e,
+        const MonsterDef &def)
+    {
+        reg.add(e, gameLogic::Vec2Hitbox{{def.width, def.height}});
+        reg.add(e, Speed{def.speed});
+        reg.add(e, Health{def.hp});
+        reg.add(e, Weapon{def.fireCooldown, def.fireCooldown});
+        reg.add(e, Damage{def.damage});
+        reg.add(e, Renderable{def.sprite});
+    }
+
     inline Engine::Entity createMonster(Engine::Registry &reg,
-        const int slot = 0)
+        const MonsterKind kind = MonsterKind::Basic, const int slot = 0)
     {
         const Engine::Entity e = reg.create();
 
         reg.add(e, MonsterTag{slot});
+        reg.add(e, MonsterType{kind});
         reg.add(e, gameLogic::Vec2Pos{});
         reg.add(e, gameLogic::Vec2Direction{});
         reg.add(e, gameLogic::Vec2Velocity{});
-        reg.add(e, gameLogic::Vec2Hitbox{{config::MONSTER_WIDTH,
-            config::MONSTER_HEIGHT}});
-        reg.add(e, Speed{config::MONSTER_SPEED});
-        reg.add(e, Health{config::MONSTER_HP});
-        reg.add(e, Weapon{config::MONSTER_FIRE_COOLDOWN,
-            config::MONSTER_FIRE_COOLDOWN});
-        reg.add(e, Damage{config::MONSTER_DAMAGE});
         reg.add(e, Team{TeamId::Monster});
-        reg.add(e, Renderable{SpriteId::Monster});
+        addMonsterStats(reg, e, monsterDef(kind));
         return e;
     }
 
