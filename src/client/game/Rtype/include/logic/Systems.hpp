@@ -139,6 +139,27 @@ namespace rtype {
         });
     }
 
+    inline void updateShieldTimers(Engine::Registry &reg, const float dt)
+    {
+        reg.each<Shield>([dt](const Engine::Entity, Shield &shield) {
+            shield.timer = std::max(0.f, shield.timer - dt);
+        });
+    }
+
+    inline void regenerationSystem(Engine::Registry &reg, const float dt)
+    {
+        reg.each<Regeneration, Health, MaxHealth>(
+            [dt](const Engine::Entity, Regeneration &regeneration,
+                Health &health, const MaxHealth &max) {
+                regeneration.timer -= dt;
+                if (regeneration.timer > 0.f) {
+                    return;
+                }
+                regeneration.timer = regeneration.interval;
+                health.hp = std::min(max.hp, health.hp + regeneration.hp);
+            });
+    }
+
     inline bool isReadyToShoot(const Engine::Registry &reg,
         const Engine::Entity e)
     {
@@ -148,8 +169,8 @@ namespace rtype {
         return reg.get<Weapon>(e).timer <= 0.f;
     }
 
-    // Vitesses des balles d'un tir : un eventail pour le boss, sinon une
-    // seule balle droit devant (vers la droite pour les joueurs).
+    // Vitesses des balles d'un tir : un eventail pour le boss et MultiShot,
+    // sinon une seule balle droit devant (vers la droite pour les joueurs).
     inline std::vector<gameLogic::Vec2> shotVelocities(
         const Engine::Registry &reg, const Engine::Entity shooter)
     {
@@ -158,6 +179,10 @@ namespace rtype {
         }
         const float direction = bulletDirection(reg.get<Team>(shooter));
 
+        if (reg.has<MultiShot>(shooter)) {
+            return fan(reg.get<MultiShot>(shooter).bullets,
+                config::MULTISHOT_SPREAD, config::BULLET_SPEED, direction);
+        }
         return {{direction * config::BULLET_SPEED, 0.f}};
     }
 

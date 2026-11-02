@@ -19,8 +19,27 @@ namespace rtype {
         int hp = config::PLAYER_HP;
     };
 
+    struct MaxHealth {
+        int hp = config::PLAYER_HP;
+    };
+
     struct Damage {
         int value = config::PLAYER_DAMAGE;
+    };
+
+    struct MultiShot {
+        int bullets = config::MULTISHOT_BULLETS;
+    };
+
+    struct Shield {
+        float cooldown = config::SHIELD_COOLDOWN;
+        float timer = 0.f;
+    };
+
+    struct Regeneration {
+        int hp = config::REGENERATION_HP;
+        float interval = config::REGENERATION_INTERVAL;
+        float timer = config::REGENERATION_INTERVAL;
     };
 
     struct Weapon {

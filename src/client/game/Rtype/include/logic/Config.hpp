@@ -74,6 +74,17 @@ namespace rtype::config {
     constexpr std::size_t AUGMENT_SPEED_PRICE = 50;
     constexpr std::size_t AUGMENT_HP_PRICE = 100;
     constexpr std::size_t AUGMENT_FIRE_RATE_PRICE = 200;
+    constexpr std::size_t AUGMENT_REGENERATION_PRICE = 150;
+    constexpr std::size_t AUGMENT_SHIELD_PRICE = 250;
+    constexpr std::size_t AUGMENT_MULTISHOT_PRICE = 400;
+
+    constexpr int MULTISHOT_BULLETS = 3;
+    constexpr int MULTISHOT_EXTRA_BULLETS = 2;
+    constexpr float MULTISHOT_SPREAD = 0.15f;
+    constexpr float SHIELD_COOLDOWN = 8.f;
+    constexpr float SHIELD_COOLDOWN_FACTOR = 0.75f;
+    constexpr int REGENERATION_HP = 5;
+    constexpr float REGENERATION_INTERVAL = 2.f;
 
     constexpr int COMMON_WEIGHT = 60;
     constexpr int COMMON_WEIGHT_PER_LEVEL = -2;

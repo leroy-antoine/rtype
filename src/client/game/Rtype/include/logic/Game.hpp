@@ -260,6 +260,8 @@ namespace rtype {
         void updatePlaying(const float dt)
         {
             updateWeaponTimers(_reg, dt);
+            updateShieldTimers(_reg, dt);
+            regenerationSystem(_reg, dt);
             lifetimeSystem(_reg, dt);
             playerControlSystem(_reg);
             advanceLevel(dt);
