@@ -6,13 +6,16 @@
 #include <vector>
 #include "LevelBuilder.hpp"
 #include "Levels.hpp"
+#include "MapList.hpp"
 
 namespace rtype {
     using MapFn = std::vector<LevelDef> (*)();
 
     std::vector<LevelDef> map1();
+    std::vector<LevelDef> map2();
+    std::vector<LevelDef> map3();
 
-    inline constexpr std::array<MapFn, 1> MAPS = {map1};
+    inline constexpr std::array<MapFn, MAP_COUNT> MAPS = {map1, map2, map3};
 
     inline void appendLevel(Segments &segments, const LevelDef &level,
         const std::size_t number, const float offset)
@@ -22,6 +25,9 @@ namespace rtype {
         }
         for (const BossSpawn &boss : level.bosses) {
             segments.bossSpawn.push_back(shifted(boss, offset));
+        }
+        for (const ObstacleStep &step : level.obstacles) {
+            segments.obstacles.push_back(shifted(step, offset));
         }
         segments.levels.emplace_back(number, offset);
     }

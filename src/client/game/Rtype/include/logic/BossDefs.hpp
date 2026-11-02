@@ -13,19 +13,25 @@ namespace rtype {
         .damage = config::BOSS_DAMAGE,
         .fireCooldown = config::BOSS_FIRE_COOLDOWN,
         .width = config::BOSS_WIDTH, .height = config::BOSS_HEIGHT,
-        .sprite = SpriteId::Boss};
+        .sprite = SpriteId::Boss,
+        .projectile = {SpriteId::MonsterBullet, config::BOSS_BULLET_SIZE,
+            config::BOSS_BULLET_SIZE, config::BOSS_BULLET_SPEED,
+            config::BOSS_FAN_BULLETS, config::BOSS_FAN_ANGLE}};
 
     inline constexpr MonsterDef DASHER_BOSS{
-        .hp = 400, .speed = 400.f, .damage = 20, .fireCooldown = 0.5f,
-        .width = 120.f, .height = 80.f, .sprite = SpriteId::Boss};
+        .hp = 280, .speed = 400.f, .damage = 4, .fireCooldown = 1.4f,
+        .width = 143.f, .height = 110.f, .sprite = SpriteId::DasherBoss,
+        .projectile = {SpriteId::AlienShard, 30.f, 10.f, 520.f, 9, 0.16f}};
 
     inline constexpr MonsterDef SUMMONER_BOSS{
-        .hp = 500, .speed = 100.f, .damage = 15, .fireCooldown = 1.2f,
-        .width = 300.f, .height = 200.f, .sprite = SpriteId::Boss};
+        .hp = 500, .speed = 100.f, .damage = 10, .fireCooldown = 1.2f,
+        .width = 264.f, .height = 240.f, .sprite = SpriteId::SummonerBoss,
+        .projectile = {SpriteId::MonsterBullet, 32.f, 32.f, 420.f, 3, 0.25f}};
 
     inline constexpr MonsterDef FORTRESS_BOSS{
-        .hp = 1200, .speed = 60.f, .damage = 25, .fireCooldown = 1.5f,
-        .width = 600.f, .height = 360.f, .sprite = SpriteId::Boss};
+        .hp = 1200, .speed = 60.f, .damage = 12, .fireCooldown = 1.6f,
+        .width = 700.f, .height = 210.f, .sprite = SpriteId::FortressBoss,
+        .projectile = {SpriteId::MonsterBullet, 36.f, 36.f, 380.f, 9, 0.18f}};
 
     inline constexpr std::array<MonsterDef,
         static_cast<std::size_t>(BossKind::Count)> BOSSES = {{

@@ -3,6 +3,9 @@
 //
 
 #pragma once
+#include <cmath>
+#include <vector>
+#include "BossDefs.hpp"
 #include "Components.hpp"
 #include "Config.hpp"
 #include "engine/core/Entity.hpp"
@@ -25,28 +28,45 @@ namespace rtype {
             && reg.has<Damage>(e);
     }
 
-    inline float bulletDirection(const Team &team)
+    inline const ProjectileDef &projectileOf(const Engine::Registry &reg,
+        const Engine::Entity shooter)
     {
-        if (team.id == TeamId::Player) {
-            return 1.f;
+        if (reg.has<BossTag>(shooter)) {
+            return bossDef(reg.get<BossType>(shooter).kind).projectile;
         }
-        return -1.f;
+        if (reg.has<MonsterType>(shooter)) {
+            return monsterDef(reg.get<MonsterType>(shooter).kind).projectile;
+        }
+        return BASIC.projectile;
     }
 
-    // Les balles du boss sont plus grosses que les autres.
+    // Chaque type de monstre tire son propre projectile.
     inline BulletLook bulletLook(const Engine::Registry &reg,
         const Engine::Entity shooter, const Team &team)
     {
-        if (reg.has<BossTag>(shooter)) {
-            return {SpriteId::MonsterBullet, config::BOSS_BULLET_SIZE,
-                config::BOSS_BULLET_SIZE};
-        }
         if (team.id == TeamId::Player) {
             return {SpriteId::PlayerBullet, config::BULLET_WIDTH,
                 config::BULLET_HEIGHT};
         }
-        return {SpriteId::MonsterBullet, config::BULLET_WIDTH,
-            config::BULLET_HEIGHT};
+        const ProjectileDef &projectile = projectileOf(reg, shooter);
+
+        return {projectile.sprite, projectile.width, projectile.height};
+    }
+
+    // Une salve vers la gauche : `shots` balles reparties en eventail.
+    inline std::vector<gameLogic::Vec2> volley(const ProjectileDef &projectile)
+    {
+        std::vector<gameLogic::Vec2> shots;
+        const float middle = static_cast<float>(projectile.shots - 1) / 2.f;
+
+        for (int i = 0; i < projectile.shots; ++i) {
+            const float angle = (static_cast<float>(i) - middle)
+                * projectile.spread;
+
+            shots.push_back({-std::cos(angle) * projectile.speed,
+                std::sin(angle) * projectile.speed});
+        }
+        return shots;
     }
 
     // La balle part du bord du tireur, centree sur sa hauteur.

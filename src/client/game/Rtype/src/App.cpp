@@ -72,11 +72,28 @@ namespace client {
 
     void App::sendControls(const float dt)
     {
-        if (_controls.respawnRequested()) {
+        if (inLobby()) {
+            useMenu();
+        } else if (_controls.respawnRequested()) {
             _network.requestRespawn();
         }
         _network.sendInput(_replica.predict(_controls.input(), dt), _controls.input());
         _network.flush();
+    }
+
+    bool App::inLobby() const
+    {
+        const auto &status = _replica.status();
+
+        return status && status->phase == rtype::Phase::Lobby;
+    }
+
+    void App::useMenu()
+    {
+        _replica.moveMapCursor(_controls.menuMove());
+        if (_controls.respawnRequested() && _replica.isHost()) {
+            _network.selectMap(_replica.mapCursor());
+        }
     }
 
     float App::advance()

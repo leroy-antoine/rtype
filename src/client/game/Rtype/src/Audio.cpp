@@ -117,6 +117,9 @@ namespace client {
             return;
         }
         playMusic(Track::None);
+        if (phase == rtype::Phase::Lobby) {
+            return;
+        }
         if (phase == rtype::Phase::Victory) {
             playSound(Sound::Victory, 0.9f);
         } else {

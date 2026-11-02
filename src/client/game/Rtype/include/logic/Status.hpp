@@ -4,7 +4,7 @@
 #include <vector>
 
 namespace rtype {
-    enum class Phase : std::uint8_t { Playing, Victory, Defeat };
+    enum class Phase : std::uint8_t { Playing, Victory, Defeat, Lobby };
 
     // Ce que le HUD d'un joueur affiche.
     struct PlayerStatus {
@@ -19,6 +19,8 @@ namespace rtype {
         int bossMaxHp = 0;
         std::uint32_t coins = 0;
         std::uint32_t elapsedMs = 0;
+        std::uint8_t level = 0;
+        std::uint8_t map = 0;
         std::vector<PlayerStatus> players;
     };
 }

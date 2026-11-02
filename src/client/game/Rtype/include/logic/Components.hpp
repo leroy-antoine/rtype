@@ -34,12 +34,17 @@ namespace rtype {
     };
 
     // Le boss : il entre, s'arrete, puis fait des va-et-vient.
+    struct ObstacleTag {
+        ObstacleKind kind = ObstacleKind::Rock;
+    };
+
     struct BossType {
         BossKind kind = BossKind::Standard;
     };
 
     struct BossTag {
         float age = 0.f;
+        float summonTimer = 0.f;
     };
 
     struct MonsterTag {
@@ -48,6 +53,12 @@ namespace rtype {
 
     struct MonsterType {
         MonsterKind kind = MonsterKind::Basic;
+    };
+
+    struct MonsterState {
+        float age = 0.f;
+        bool locked = false;
+        bool summoned = false;
     };
 
     struct ProjectileTag {
@@ -62,7 +73,10 @@ namespace rtype {
     // Les valeurs sont envoyees sur le reseau : ajouter a la fin, avant Count.
 
     enum class SpriteId {
-        Player, Monster, PlayerBullet, MonsterBullet, Explosion, Boss, Coin, Count
+        Player, Monster, PlayerBullet, MonsterBullet, Explosion, Boss, Coin,
+        Tank, Kamikaze, Elite, Rocket, Bomber,
+        DasherBoss, SummonerBoss, FortressBoss,
+        RocketMissile, Bomb, AlienShard, RockWall, HazardWall, Count
     };
 
     struct Renderable {

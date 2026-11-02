@@ -5,6 +5,8 @@
 #include "Font.hpp"
 #include "Replica.hpp"
 #include "SpriteBank.hpp"
+#include "logic/Leaderboard.hpp"
+#include "logic/MapList.hpp"
 #include "logic/Status.hpp"
 
 namespace client {
@@ -34,6 +36,7 @@ namespace client {
 
         void drawPlayers(const rtype::GameStatus &status);
         void drawTimer(const rtype::GameStatus &status, float elapsed);
+        void drawLevel(const rtype::GameStatus &status);
         void drawIcon(const Engine::Sprite &sprite,
             Engine::Vector2f position, float elapsed);
         void drawCoins(const rtype::GameStatus &status, float elapsed);
@@ -43,6 +46,9 @@ namespace client {
         void drawRespawnHint(const rtype::GameStatus &status,
             std::optional<int> self, float elapsed);
         void drawEndScreen(const rtype::GameStatus &status, float elapsed);
+        void drawLobby(const Replica &replica);
+        void drawMapList(rtype::MapId cursor);
+        void drawRecords(const rtype::MapRecords &records);
         void trackPhase(rtype::Phase phase, float elapsed);
 
         Engine::Renderer &_renderer;

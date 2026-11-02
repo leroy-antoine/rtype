@@ -10,6 +10,11 @@ sprites or the sound. It is a plain C++ library built on top of the ECS of
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Game rules](#game-rules)
+- [Kinds of monsters and bosses](#kinds-of-monsters-and-bosses)
+- [Obstacles](#obstacles)
+- [Maps and lobby](#maps-and-lobby)
+- [The first map: 20 levels](#the-first-map-20-levels)
+- [Level skip](#level-skip)
 - [The tick: `Game::update`](#the-tick-gameupdate)
 - [Public API: the `Game` class](#public-api-the-game-class)
 - [Components](#components)
@@ -83,7 +88,7 @@ Headers only include the layers below them, which avoids circular includes.
 | `Components.hpp` | the component structs |
 | `utils/Vectors.hpp` (`src/include`) | `Vec2` and its typed variants, `length`, `normalize` |
 | `Movements.hpp` | `inputDirection` (keys to direction), `calculatePos` |
-| `Bullet.hpp` | helpers for bullets: `isShooter`, `bulletDirection`, `bulletStartPos` |
+| `Bullet.hpp` | helpers for bullets: `isShooter`, `projectileOf`, `bulletStartPos` |
 | `Factories.hpp` | `createPlayer`, `createMonster`, `createBullet` |
 | `Damages.hpp` | `applyDamages` |
 | `Colisions.hpp` | `Collider`, `overlaps`, `canHit`, bounds tests |
@@ -94,9 +99,15 @@ Headers only include the layers below them, which avoids circular includes.
 | `BossDefs.hpp` | the table of definitions of the bosses, indexed by `BossKind` (it reuses `MonsterDef`) |
 | `MonsterDefs.hpp` | `MonsterDef` and the table of definitions indexed by `MonsterKind` (stats, size, sprite) |
 | `Boss.hpp` | the boss behaviour (`bossSystem`) and its fan of bullets |
+| `MonsterBehavior.hpp` | one movement function per `MonsterKind` (`MONSTER_BEHAVIORS`) and `monsterSystem` |
+| `Collectibles.hpp` | coins: `spawnCoin`, `coinPickupSystem` |
+| `LevelSkip.hpp` | `SkipBank` and `grantSkip`: the scrolling won by killing monsters |
 | `Waves.hpp` | the first table of waves of monsters (`WAVES`) |
 | `LevelBuilder.hpp` | `LevelDef` (one level, distances relative to its start), `wave()` and `shifted()`, the bricks used to write the levels of a map |
-| `builder.hpp` | `buildRun` (puts the levels of a map one after another), `MAPS` (one function per map id) and `buildMap(id)`; the maps themselves are in `src/maps` |
+| `MapList.hpp` | the number and the names of the maps (`MAP_COUNT`, `MAP_NAMES`), shared with the client |
+| `MapHelpers.hpp` | `addGates` and `addCave`, to write walls in a map |
+| `Leaderboard.hpp` | `Leaderboard`: best times of each map, sorted, 5 per map, saved in a text file |
+| `builder.hpp` | `buildRun` (puts the levels of a map one after another), `MAPS` (one function per map id) and `buildMap(id)`; the maps themselves are in `src/maps/` of this folder (library `rtype_maps`) |
 | `Levels.hpp` | `Segments`: the waves, the boss and the level numbers of the whole run, each with its distance |
 | `Events.hpp` | `EntitySpawned`, `EntityDestroyed`, `EntityState`: what is told to the clients |
 | `Status.hpp` | `GameStatus` and `Phase`: what the HUD shows |
@@ -137,15 +148,160 @@ These come from the engine (`engine/core`, not part of the game logic):
   left and shoot continuously. A monster that touches a player kills him.
 - The level is described by `Segments` (`Levels.hpp`): waves, bosses and level
   numbers, each with the distance at which it starts. The first level has the
-  boss at `BOSS_SPAWN_SCROLL` (20 s of play): it enters, stops on the right
-  (`BOSS_STOP_X`), sways vertically and fires a fan of bullets. The distance
+  boss at `BOSS_SPAWN_SCROLL` (20 s of play): it enters, stops against the
+  right edge (`MAP_WIDTH` minus its width and `BOSS_RIGHT_MARGIN`;
+  `BOSS_STOP_X` is that point for the Standard boss), sways vertically and
+  fires a fan of bullets. The distance
   does not advance while a boss is alive.
 - **Bullets** belong to a team. A bullet only hurts the other team, damages the
   first target it overlaps, then disappears.
 - An entity whose `hp` falls to 0 or below is destroyed.
-- **End of the game**: *victory* when the boss dies, *defeat* when every player
-  is dead. The enemies are removed, and after `RESTART_DELAY` seconds a new
-  match starts. If the last player leaves, the world is reset.
+- **End of the game**: *victory* when every boss of the map has been beaten, *defeat* when every player
+  is dead. The enemies and the walls are removed, the end screen stays for
+  `RESTART_DELAY` seconds, then the game goes back to the lobby (see
+  [Maps and lobby](#maps-and-lobby)). If the last player leaves, the world is
+  reset.
+- **Coins**: a monster that dies drops a coin; touching it adds to the purse
+  shared by the players (`CoinCounter`, reset with each match).
+
+## Kinds of monsters and bosses
+
+Each kind has a definition (`MonsterDefs.hpp`, `BossDefs.hpp`): health, speed,
+damage, fire cooldown, hit box and sprite. The hit box has the same proportions
+as one frame of the sprite, because the client stretches the frame to the hit
+box. Only the stats and the look exist so far: the special behaviours (dive,
+zigzag, bombs, summoning...) are not coded yet.
+
+| Kind | Sprite sheet | Hit box | HP | Speed | Damage |
+|---|---|---|---|---|---|
+| Basic | `r-typesheet5.gif` | 80 x 80 | 30 | 250 | 10 |
+| Tank | `r-typesheet26.gif` (armoured block) | 169 x 130 | 120 | 120 | 20 |
+| Kamikaze | `r-typesheet16.gif` (small pod) | 64 x 40 | 15 | 450 | 30 |
+| Elite | `r-typesheet19.gif` (red drone) | 100 x 100 | 60 | 280 | 15 |
+| Rocket | `r-typesheet11.gif` (missile launcher) | 105 x 108 | 45 | 140 | 35 |
+| Bomber | `r-typesheet17.gif` (armoured giant) | 96 x 195 | 150 | 90 | 25 |
+| Standard boss | `r-typesheet32.gif` | 480 x 264 | 600 | 120 | 20 |
+| Dasher boss | `r-typesheet21.gif` (clawed alien) | 143 x 110 | 280 | 400 | 4 |
+| Summoner boss | `r-typesheet40.gif` (dome turret) | 264 x 240 | 500 | 100 | 10 |
+| Fortress boss | `r-typesheet37.gif` (battleship) | 700 x 210 | 1200 | 60 | 12 |
+
+All the sheets are the official R-Type sprites of the `assets` folder. A boss
+stops against the right edge of the map whatever its width.
+
+Each kind also fires its own projectile (`ProjectileDef`: sprite, size, speed,
+number of bullets per volley and angle between them):
+
+| Kind | Projectile | Volley |
+|---|---|---|
+| Basic | orange fireball | 1 fast bullet |
+| Tank | large orange shell | 1 slow bullet |
+| Elite | small fast bolts | 2 bullets |
+| Rocket | rocket missile (`r-typesheet10.gif`) | 1 fast rocket |
+| Bomber | grey bomb (`r-typesheet3.gif`) | 1 slow bomb |
+
+### Behaviours
+
+`MonsterBehavior.hpp` holds one movement function per `MonsterKind`, in the
+table `MONSTER_BEHAVIORS`. `monsterSystem` calls it every tick for each
+monster that has entered the map (bosses are skipped). The per-monster state
+is `MonsterState` (`age`, `locked`).
+
+| Kind | Behaviour |
+|---|---|
+| Basic, Tank | straight line to the left |
+| Kamikaze | flies straight until a player is closer than `DIVE_DISTANCE` on its left, then locks on this player and dives at full speed (the aim is not corrected after) |
+| Elite | zigzags vertically (`ZIGZAG_AMPLITUDE`, `ZIGZAG_FREQUENCY`), never leaves the map |
+| Rocket | stops during the last `ROCKET_CHARGE_TIME` seconds before it fires, then flies on |
+| Bomber | straight line; its bomb (`ProjectileDef::drop`) falls up or down, on the side of the nearest player |
+
+Bosses have their own table, `BOSS_BEHAVIORS` (`Boss.hpp`):
+
+| Boss | Behaviour |
+|---|---|
+| Standard | vertical sway against the right edge |
+| Dasher | roams the right side of the map on a Lissajous curve |
+| Summoner | sways like the Standard boss and, every `SUMMON_INTERVAL` seconds, calls `SUMMON_COUNT` Kamikazes at its own position, spread vertically. Nothing is summoned while the minions alive would exceed `SUMMON_MAX_ALIVE`. Summoned monsters (`MonsterState::summoned`) drop no coin, so they cannot be farmed |
+| Fortress | slow, wide sway; during the last `FORTRESS_BURST_DURATION` seconds of every `FORTRESS_BURST_PERIOD` it fires every `FORTRESS_BURST_COOLDOWN` seconds instead of its normal cooldown |
+| Standard boss | orange fireballs | fan of 5 |
+| Dasher boss | small blue alien shards (`r-typesheet9.gif`) | fan of 9 |
+| Summoner boss | orange fireballs | fan of 3 |
+| Fortress boss | orange fireballs | fan of 9 |
+
+The Dasher does not sway like the other bosses: after its entrance it follows a
+fast Lissajous curve over the whole right side of the map (`roamBoss`). Each
+boss kind has its behaviour in the `BOSS_BEHAVIORS` table (`Boss.hpp`); the
+Summoner and the Fortress still use the standard sway.
+
+## Obstacles
+
+A level can contain walls (`ObstacleStep`: distance, height on the map, size,
+kind). A wall appears at the right edge when the level reaches its distance and
+then moves left at the speed of the scrolling, so it stays still against the
+background. The rules:
+
+- a player who touches a wall **dies** (his health falls to 0);
+- a wall **absorbs** every bullet that touches it, from both teams, and cannot
+  be destroyed;
+- monsters and bosses fly through walls;
+- a wall that has left the map is removed.
+
+There are two kinds, `Rock` (stone blocks, used for cover, caves and pillars)
+and `Hazard` (red and black plates, used in the death runs). Both behave the
+same. The client draws a wall by repeating a 32 x 32 tile (`obstacle_rock.png`,
+`obstacle_hazard.png`) every `OBSTACLE_TILE` units, so a wall of any size keeps
+the proportions of the tile. In `LevelBuilder.hpp`, `wall()` writes one wall and
+`addGate()` writes a top and a bottom wall around a gap.
+
+## Maps and lobby
+
+There are three maps (`MAPS` in `Builder.hpp`, names in `MapList.hpp`):
+
+| Id | Name | Content |
+|---|---|---|
+| 0 | CAMPAIGN | the 20 levels described below |
+| 1 | BOSS RUSH | 5 short levels, one to three bosses each, ending with the Fortress, the Summoner and the Dasher |
+| 2 | DEATH RUNS | 4 levels of hazard gates (the same gates as levels 10 and 15 of the campaign, the last one reversed), then a level with the Fortress and the Dasher |
+
+`Game` has a `Lobby` phase, entered with `openLobby()` (the server does it at
+startup). In the lobby nothing is simulated except the movement of the ships.
+`startMap(segments, id)` is accepted only in the lobby; it resets the world
+and starts the match. After a match the game goes back to the lobby, which is
+also where it rests when nobody is connected. `host()` gives the slot allowed
+to choose. `Game(seed)` keeps starting in `Playing`, which is what the tests
+use.
+
+## The first map: 20 levels
+
+`map1()` (`src/maps/map1.cpp`) chains these levels. The bosses come one after
+the other in the same level (the next one appears when the previous one is
+dead).
+
+| # | Level | What it is about |
+|---|---|---|
+| 1 | The original level | basic waves, Standard boss |
+| 2 | Swarm | big swarms of Basic, first Tank |
+| 3 | Kamikaze rush | fast small ships in groups |
+| 4 | Asteroid field | scattered rocks to hide behind |
+| 5 | Dasher | the alien boss |
+| 6 | Elite squadron | diagonal formations |
+| 7 | Cave | a tunnel of rocks above and below |
+| 8 | Rocket battery | columns of rocket launchers |
+| 9 | Summoner | Tanks, then the Summoner boss |
+| 10 | **Death run I** | hazard gates only, no enemy, never touch a wall |
+| 11 | Bomber raid | slow bombers and fast Kamikazes |
+| 12 | Crossfire | pillars and a mix of every enemy |
+| 13 | Boss rush | Standard, then Dasher |
+| 14 | Tank wall | lines of Tanks and Bombers, rocks as cover |
+| 15 | **Death run II** | 16 narrower gates, faster rhythm |
+| 16 | Escorted bosses | Summoner, then Standard |
+| 17 | Gauntlet | rock gates to cross while enemies attack |
+| 18 | Rocket storm | a narrow cave full of rockets and Kamikazes |
+| 19 | Last stand | every enemy, then Standard and Summoner |
+| 20 | Finale | a hazard gauntlet, then Summoner, Dasher and Fortress |
+
+Every wall pattern was checked with a reachability analysis (a ship moving at
+500 units per second): the death runs can still be crossed by a ship moving at
+about 60 % of that speed, so they are hard but not impossible.
 
 ## The tick: `Game::update`
 
@@ -153,8 +309,9 @@ These come from the engine (`engine/core`, not part of the game logic):
 
 - nobody connected: `idle()`, which resets the world if it has moved;
 - phase `Playing`: `updatePlaying(dt)`;
+- phase `Lobby`: `flyPlayers(dt)`, the ships move but nothing else happens;
 - phase `Victory` or `Defeat`: `updateEnded(dt)`, where the players still fly
-  until the restart timer ends.
+  until the end screen timer ends, then the game goes back to the lobby.
 
 At the end, in every case, `trackDestroys()` then `trackSpawns()` turn the
 changes of the world into events for the clients.
@@ -166,17 +323,21 @@ changes of the world into events for the clients.
 | 1 | `updateWeaponTimers(dt)` | cooldowns are up to date before anyone shoots |
 | 2 | `lifetimeSystem(dt)` | short-lived entities (explosions) expire |
 | 3 | `playerControlSystem` | keys become velocities, before they are used |
-| 4 | `advanceLevel(dt)` | scrolls the level, queues the due waves, spawns monsters and the boss |
-| 5 | `bossSystem(dt)` | moves the boss and makes it shoot |
-| 6 | `shootingSystem` | bullets are born at the current position of the shooter |
-| 7 | `movementSystem(dt)` | everybody moves: players, monsters, bullets |
-| 8 | `collisionSystem` | uses the positions *after* the move |
-| 9 | `contactSystem` | a monster touching a player kills him |
-| 10 | `deleteUnitsOutOfBounds` | sets the hp of players who left the map to 0 and removes far entities |
-| 11 | `deathSystem` | destroys everything with `hp <= 0` (hits of 8 and 9, exits of 10) |
-| 12 | `updatePhase` | boss dead means victory, every player dead means defeat |
+| 4 | `advanceLevel(dt)` | scrolls the level, queues the due waves, spawns monsters, walls and bosses |
+| 5 | `monsterSystem(dt)` | the movement of each kind of monster (dive, zigzag, charge) |
+| 6 | `bossSystem(dt)` | moves the boss, makes it summon or fire a barrage |
+| 7 | `shootingSystem` | bullets are born at the current position of the shooter |
+| 8 | `movementSystem(dt)` | everybody moves: players, monsters, bullets, walls |
+| 9 | `collisionSystem` | bullets hit their targets, using the positions *after* the move |
+| 10 | `contactSystem` | a monster touching a player kills him |
+| 11 | `obstacleSystem` | a wall kills the player it touches and absorbs the bullets |
+| 12 | `coinPickupSystem` | players pick up the coins they touch |
+| 13 | `deleteUnitsOutOfBounds` | sets the hp of players who left the map to 0 and removes far entities and walls |
+| 14 | `deathSystem` | destroys everything with `hp <= 0`, drops the coins, returns the kills |
+| 15 | `skipLevel(kills)` | the kills move the scrolling forward (see [Level skip](#level-skip)) |
+| 16 | `updatePhase` | every boss beaten means victory, every player dead means defeat |
 
-If steps 10 and 11 were swapped, a player who left the map would live one more
+If steps 13 and 14 were swapped, a player who left the map would live one more
 tick. If step 3 came after step 7, the keys would take effect one tick late.
 
 ## Public API: the `Game` class
@@ -202,11 +363,14 @@ game.removePlayer(*slot);                     // a client disconnects
 | `bool respawnPlayer(int slot)` | brings a dead player back. Returns `false` if the match is over, the slot is not used or the player is alive. |
 | `bool isPlayerAlive(int slot)` | is there a player entity in this slot? |
 | `void setInput(int slot, const PlayerInput &input)` | stores the **current state of the keys** of a player. It stays in effect until the next call. Does nothing if the slot is empty. |
+| `void openLobby()` | the game waits in the `Lobby` phase until `startMap`. The server calls it at startup. |
+| `bool startMap(Segments segments, MapId map)` | starts a match on this map. Accepted only in the lobby, returns `false` otherwise. |
+| `std::optional<int> host() const`, `MapId map() const` | the slot allowed to choose the map (lowest slot connected), the map being played. |
 | `void update(float dt)` | advances the game by `dt` seconds. |
 | `std::vector<GameEvent> takeEvents()` | the `EntitySpawned` and `EntityDestroyed` since the last call (and empties the list). |
 | `std::vector<EntitySpawned> spawns() const` | the whole world, to send to a client who just connected. |
 | `std::vector<EntityState> states() const` | the position of every moving entity. |
-| `GameStatus status()` | phase, boss health, health of each player, coins of the shared purse, time elapsed since the start of the match. |
+| `GameStatus status()` | phase, boss health, health of each player, coins of the shared purse, time elapsed since the start of the match, number of the level, map. |
 | `Phase phase() const`, `float scroll() const` | the phase of the match, the distance scrolled. |
 
 `Game(unsigned seed)` makes the random heights of the waves reproducible, which
@@ -292,15 +456,17 @@ Shooting is split in small pieces so each rule can be read (and tested) alone:
 
 - `isReadyToShoot(e)`: the entity has a `Weapon` whose timer is at 0.
 - `wantsToShoot(e)`: players shoot when `PlayerInput::fire` is held;
-  anything without a `PlayerInput` (monsters, later the boss) shoots whenever
-  it is ready. This is the whole "AI" of the monsters for now.
+  anything without a `PlayerInput` (monsters and bosses) shoots whenever it is
+  ready, once it has entered the map. Their movement is in
+  [Behaviours](#behaviours).
 - `shoot(e)`: creates the bullet with `createBullet` and sets
   `timer = cooldown`.
 
 `createBullet(reg, shooter, velocity)` copies the shooter's `Team` and `Damage` into the
 bullet, places it just in front of the shooter and gives it the velocity it
 receives (`shotVelocities` gives `BULLET_SPEED` to the right for the player
-team, to the left otherwise).
+team; for the others it uses the volley of their `ProjectileDef`, or a falling
+bomb).
 
 ### Collisions
 
@@ -341,13 +507,25 @@ Examples: `PLAYER_SPEED`, `PLAYER_FIRE_COOLDOWN`, `MONSTER_HP`,
 
 ### Add a new kind of monster
 
-1. Add its constants to `Config.hpp` (hp, speed, size, damage, cooldown).
-2. Write its factory in `Factories.hpp`, building on `createMonster` or
-   starting from a new tag if the systems must tell it apart.
-3. Spawn it from `Monsters.hpp`, with its own position and velocity.
-4. If it needs a specific behaviour (sine wave, aimed shots), add a component
-   that describes the behaviour and a system that reads it. Do not add
-   `if (isThisMonster)` branches to the existing systems.
+1. Add a value to `MonsterKind` in `Kinds.hpp` (before `Count`).
+2. Add its `MonsterDef` (hp, speed, damage, cooldown, size, sprite,
+   projectile) in `MonsterDefs.hpp` and its line in `MONSTERS`.
+3. Add a `SpriteId` in `Components.hpp` and its sprite in `SpriteBank.cpp`
+   (the protocol version changes, see [the protocol](../../../../../docs/protocol.md)).
+4. Write its movement in `MonsterBehavior.hpp` and add it to
+   `MONSTER_BEHAVIORS`, at the position of its kind (`flyStraight` if it only
+   flies to the left).
+5. Use it in the levels with `wave(at, MonsterKind::..., count)`.
+
+### Add a map or a level
+
+- A level: one more `LevelDef` in the list returned by `mapN()`. Distances are
+  relative to the start of the level; everything must happen before
+  `length`, and no wall may still be on screen when a boss appears.
+- A map: a new file `src/maps/mapN.cpp` returning the list of levels, added to
+  `rtype_maps` in `CMakeLists.txt`, declared and added to `MAPS` in
+  `Builder.hpp`, with its name in `MAP_NAMES` (`MapList.hpp`). The tests in
+  `MapTests.cpp` check every map of `MAPS`.
 
 ### Add a player action (a new key)
 
@@ -360,7 +538,7 @@ Examples: `PLAYER_SPEED`, `PLAYER_FIRE_COOLDOWN`, `MONSTER_HP`,
 Applied to all the game logic:
 
 - Lines of **80 columns** at most.
-- Functions of **25 lines** at most, **5 parameters** at most (lambdas
+- Functions of **20 lines** at most, **5 parameters** at most (lambdas
   included), at most **2 nested conditions**.
 - No ternary operator: use an `if` and an early `return`.
 - Components are `struct`s of pure data; behaviour lives in free functions.
@@ -370,20 +548,42 @@ Applied to all the game logic:
 - One function does one thing: prefer small named predicates
   (`isReadyToShoot`, `canHit`) over long conditions.
 
+## Level skip
+
+Each monster killed moves the scrolling forward by `KILL_SKIP_SECONDS`
+(0.5 s, i.e. `0.5 * SCROLL_SPEED` units), so the waves and the boss come
+sooner. The time shown stays the real time.
+
+- Bosses and summoned monsters do not count (`countsAsKill`), and nothing is
+  gained while a boss is alive, since the scrolling is stopped then.
+- The gain is capped for each level at `KILL_SKIP_MAX_FRACTION` (40 %) of its
+  length (`levelSpan`, the distance to the next level; for the last level, the
+  distance to its last boss or wave). `SkipBank` (`LevelSkip.hpp`) keeps the
+  total of the current level and starts again on the next one.
+- A wall or a wave that becomes due during a jump is placed back by the
+  distance it went past (`createObstacle`'s `overshoot`), so the gaps between
+  the gates of a death run never shrink.
+
 ## Current status
 
 Done and working:
 
 - players (4 slots), movement from keys, shooting, respawn
-- monsters in waves, with random heights
-- the boss, the victory and the defeat, the automatic restart
+- 6 kinds of monsters with their own stats, projectile and movement
+- 4 kinds of bosses (Standard, Dasher, Summoner, Fortress)
+- walls (rock and hazard) that kill on contact and absorb bullets
+- 3 maps (a 20-level campaign, a boss rush, death runs) built from
+  `LevelDef`s, and the lobby to choose one
+- coins, shared purse, match timer, level skip by kills
+- the best times of each map
 - bullets, collisions, damages, deaths, out-of-bounds rules
 - the events, states and status read by the server
 - the `Game` facade
-- automated tests (`tests/GameTests.cpp`, 20 tests), see
+- automated tests (`tests/`), see
   [Build and run](../../../../../docs/build.md#tests)
 
-Not done:
+Ideas for later:
 
-- obstacles, destroyable tiles and power-ups of the original game
-- several kinds of monsters with different behaviours
+- destroyable tiles and power-ups of the original game
+- spending the purse (the augments exist in `Augments.hpp`, without a shop)
+- maps loaded from a data file instead of C++ tables

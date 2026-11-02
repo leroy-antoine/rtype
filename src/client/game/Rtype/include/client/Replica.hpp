@@ -23,6 +23,8 @@ namespace client {
         void apply(const rtype::protocol::StatesSnapshot &snapshot);
         void apply(const rtype::protocol::OwnState &state);
         void apply(const rtype::GameStatus &status);
+        void apply(const rtype::AllRecords &records);
+        void moveMapCursor(int delta);
         void assignSlot(int slot);
         std::uint32_t predict(const rtype::PlayerInput &input, float dt);
         void update(float dt);
@@ -30,6 +32,9 @@ namespace client {
         Engine::Registry &registry();
         [[nodiscard]] const std::optional<rtype::GameStatus> &status() const;
         [[nodiscard]] std::optional<int> slot() const;
+        [[nodiscard]] const rtype::AllRecords &records() const;
+        [[nodiscard]] rtype::MapId mapCursor() const;
+        [[nodiscard]] bool isHost() const;
         std::vector<Cue> takeCues();
 
     private:
@@ -58,6 +63,8 @@ namespace client {
         Prediction _prediction;
         std::optional<rtype::GameStatus> _status;
         std::optional<int> _slot;
+        rtype::AllRecords _records{};
+        rtype::MapId _mapCursor = 0;
         std::vector<Cue> _cues;
     };
 }

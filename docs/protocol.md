@@ -27,7 +27,7 @@ A new client can be written from these two pages alone.
 | Direction | the client sends keys, the server sends the world |
 | Datagram | at most **1200 bytes**, carries one or several messages |
 | Byte order | **big-endian** for every integer and float |
-| Protocol version | `6` (`rtype::protocol::VERSION`), checked at connection |
+| Protocol version | `11` (`rtype::protocol::VERSION`), checked at connection |
 | Tick | the server simulates at 60 Hz and sends the states every tick |
 
 The server is the authority. A client never sends a position, a hit or a
@@ -62,10 +62,12 @@ Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
 
 ```
  client                                   server
-   │ ── Connect(version=6) ─────────────►  │  every 500 ms, 10 tries at most
+   │ ── Connect(version=11) ─────────────►  │  every 500 ms, 10 tries at most
    │ ◄───────────── Accept(token) ──────── │  or Refuse(0 version, 1 full)
    │ ◄───────────────────── YOU(slot) ──── │  reliable
    │ ◄────────────────── SPAWN × n ─────── │  reliable, the whole world
+   │ ◄──────────────────── LEADERBOARD ─── │  reliable, the best times
+   │ ── SELECT_MAP(map) ────────────────►  │  reliable, the host, in the lobby
    │ ── INPUT(sequence, keys) ──────────►  │  every frame of the client
    │ ◄─────────────── STATES, STATUS ───── │  every tick / every 6 ticks
    │ ◄──────────────────── OWN_STATE ───── │  every tick, to this client only
@@ -81,7 +83,7 @@ Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
 - When a client leaves or times out, its ship is destroyed in the game. The
   server announces it to **all the other clients** with a `DESTROY` message,
   so the others see the ship disappear. The server keeps running.
-- When the last client leaves, the level goes back to the start.
+- When the last client leaves, the game goes back to the lobby.
 
 ## Game messages
 
@@ -92,12 +94,14 @@ Sender: **C** is the client, **S** is the server. Delivery: **R** is reliable
 |---|---|---|---|---|
 | `0x10` | `INPUT` | C | U | 5 |
 | `0x11` | `RESPAWN` | C | R | 0 |
+| `0x12` | `SELECT_MAP` | C | R | 1 |
 | `0x20` | `SPAWN` | S | R | 22 |
 | `0x21` | `DESTROY` | S | R | 4 |
 | `0x22` | `STATES` | S | U | 5 + 12 × n |
-| `0x23` | `STATUS` | S | U | 14 + 4 × n |
+| `0x23` | `STATUS` | S | U | 16 + 4 × n |
 | `0x24` | `YOU` | S | R | 1 |
 | `0x25` | `OWN_STATE` | S | U | 12 |
+| `0x26` | `LEADERBOARD` | S | R | 3 to 28 |
 
 ### `INPUT` (0x10)
 
@@ -117,6 +121,17 @@ server remembers the last `sequence` it applied and sends it back in
 
 No payload. Asks the server to bring the player back after its death. The
 server accepts it only while the game is running and the player is dead.
+
+### `SELECT_MAP` (0x12)
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | map | `u8` | index of the map, 0 to 2 |
+
+Sent by the host to leave the lobby and start the match on this map. The
+**host** is the player with the lowest slot among those connected. The server
+ignores the message when the sender is not the host, when the game is not in
+the lobby phase, or when the map is unknown.
 
 ### `SPAWN` (0x20)
 
@@ -140,8 +155,21 @@ to a client that has just connected, then one for each new entity.
 | 4 | explosion |
 | 5 | boss |
 | 6 | coin |
+| 7 | tank |
+| 8 | kamikaze |
+| 9 | elite |
+| 10 | rocket |
+| 11 | bomber |
+| 12 | dasher boss |
+| 13 | summoner boss |
+| 14 | fortress boss |
+| 15 | rocket missile |
+| 16 | bomb |
+| 17 | alien shard |
+| 18 | rock wall |
+| 19 | hazard wall |
 
-A value of 7 or more is invalid, and so is a player slot of 4 or more.
+A value of 20 or more is invalid, and so is a player slot of 4 or more.
 
 ### `DESTROY` (0x21)
 
@@ -170,15 +198,21 @@ What the HUD shows, sent about 10 times per second.
 
 | Offset | Field | Type | Meaning |
 |---|---|---|---|
-| 0 | phase | `u8` | 0 playing, 1 victory, 2 defeat |
+| 0 | phase | `u8` | 0 playing, 1 victory, 2 defeat, 3 lobby |
 | 1 | boss hp | `u16` | `0` when there is no boss |
 | 3 | boss max hp | `u16` | the boss hp cannot exceed it |
 | 5 | coins | `u32` | the shared purse of the players |
 | 9 | elapsed time | `u32` | milliseconds since the start of the match, frozen when it ends |
-| 13 | count `n` | `u8` | number of players, at most 4 |
-| 14 + 4 × i | slot | `u8` | 0 to 3 |
-| 15 + 4 × i | hp | `u16` | |
-| 17 + 4 × i | alive | `u8` | `0` or `1` |
+| 13 | level | `u8` | number of the level being played, starting at 1 |
+| 14 | map | `u8` | index of the map being played (or last played), 0 to 2 |
+| 15 | count `n` | `u8` | number of players, at most 4 |
+| 16 + 4 × i | slot | `u8` | 0 to 3 |
+| 17 + 4 × i | hp | `u16` | |
+| 19 + 4 × i | alive | `u8` | `0` or `1` |
+
+The server is in the **lobby** phase when it starts, and again after the end
+screen of a match (or when every player has left). The players are listed in
+increasing slot order, so the first one is the host.
 
 ### `YOU` (0x24)
 
@@ -203,12 +237,26 @@ The client replays the inputs sent after `last input` on top of this position
 disagrees. It is only sent once the server has received an `INPUT` from this
 client.
 
+### `LEADERBOARD` (0x26)
+
+The best victory times of every map, sent to a client when it connects and to
+everybody after each victory. Three maps, so three blocks one after the other:
+
+| Field | Type | Meaning |
+|---|---|---|
+| count `n` | `u8` | records of this map, at most 5 |
+| time (× n) | `u32` | milliseconds, fastest first |
+| players (× n) | `u8` | number of players of that run, 1 to 4 |
+
+Each record takes 5 bytes (time then players). A payload with trailing bytes,
+a count above 5, or `0` players is rejected.
+
 ## Reliability
 
 UDP can lose, duplicate and reorder datagrams. The protocol picks the delivery
 per message:
 
-- **Reliable** (`SPAWN`, `DESTROY`, `YOU`, `RESPAWN`): a spawn or a death must
+- **Reliable** (`SPAWN`, `DESTROY`, `YOU`, `RESPAWN`, `SELECT_MAP`, `LEADERBOARD`): a spawn or a death must
   not be missed, or the client would draw a wrong world. The sender resends
   until an Ack comes back, the receiver applies the messages in order.
 - **Unreliable** (`INPUT`, `STATES`, `STATUS`, `OWN_STATE`): they are repeated every tick
@@ -224,7 +272,7 @@ per message:
   from the address of the session.
 - Every game payload is decoded with a bounds-checked reader. The size must
   match exactly, a field out of range (`sprite`, `slot`, `alive`, keys bits,
-  a boss hp above its maximum) or a non-finite float makes the message be
+  a boss hp above its maximum, a map that does not exist) or a non-finite float makes the message be
   ignored. A malformed message never reaches the game.
 - Bounds against memory abuse: 1200 bytes per datagram, 4096 datagrams queued
   by the socket, 64 early reliable messages kept, and a client with more than

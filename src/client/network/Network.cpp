@@ -55,6 +55,15 @@ namespace client {
         }
     }
 
+    void Network::selectMap(const rtype::MapId map)
+    {
+        if (_client.connected()) {
+            _client.send(rtype::protocol::SELECT_MAP,
+                rtype::protocol::encodeSelectMap(map),
+                Engine::Delivery::Reliable);
+        }
+    }
+
     void Network::flush()
     {
         _client.flush();
@@ -91,6 +100,7 @@ namespace client {
             case rtype::protocol::STATES: applyDecoded(replica, rtype::protocol::decodeStates(event.payload)); break;
             case rtype::protocol::STATUS: applyDecoded(replica, rtype::protocol::decodeStatus(event.payload)); break;
             case rtype::protocol::OWN_STATE: applyDecoded(replica, rtype::protocol::decodeOwnState(event.payload)); break;
+            case rtype::protocol::LEADERBOARD: applyDecoded(replica, rtype::protocol::decodeLeaderboard(event.payload)); break;
             case rtype::protocol::YOU: assignSlot(replica, rtype::protocol::decodeYou(event.payload)); break;
             default: break;
         }

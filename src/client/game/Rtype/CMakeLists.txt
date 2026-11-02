@@ -22,8 +22,19 @@ add_library(rtype_game INTERFACE
         include/logic/Kinds.hpp
         include/logic/MonsterDefs.hpp
         include/logic/BossDefs.hpp
-        src/maps/map1.cpp)
+        include/logic/MapList.hpp
+        include/logic/MapHelpers.hpp
+        include/logic/Leaderboard.hpp
+        include/logic/MonsterBehavior.hpp
+        include/logic/LevelSkip.hpp)
 add_library(rtype::game ALIAS rtype_game)
 target_include_directories(rtype_game INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_link_libraries(rtype_game INTERFACE engine::core)
+
+add_library(rtype_maps STATIC
+        src/maps/map1.cpp
+        src/maps/map2.cpp
+        src/maps/map3.cpp)
+add_library(rtype::maps ALIAS rtype_maps)
+target_link_libraries(rtype_maps PUBLIC rtype::game)

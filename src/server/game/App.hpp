@@ -10,6 +10,8 @@
 #include "engine/network/Server.hpp"
 #include "logic/Config.hpp"
 #include "logic/Game.hpp"
+#include "logic/Leaderboard.hpp"
+#include "rtype/Protocol.hpp"
 
 namespace server {
     class App {
@@ -23,12 +25,15 @@ namespace server {
 
         // Le statut (HUD) est envoye 10 fois par seconde, pas a chaque tick.
         static constexpr std::size_t STATUS_EVERY_TICKS = 6;
+        static constexpr const char *LEADERBOARD_FILE = "leaderboard.txt";
 
         void tick();
         void receive();
         void broadcastEvents();
         void broadcastStates();
         void broadcastStatus();
+        void recordVictory();
+        void selectMap(int slot, const rtype::protocol::Payload &payload);
         void sendOwnStates();
         void sendWorld(Engine::ClientId client);
         void sleep() const;
@@ -44,5 +49,7 @@ namespace server {
         std::unordered_map<Engine::ClientId, int> _slots;
         std::unordered_map<Engine::ClientId, std::uint32_t> _lastInputs;
         std::size_t _ticks = 0;
+        rtype::Leaderboard _leaderboard;
+        rtype::Phase _lastPhase = rtype::Phase::Lobby;
     };
 }

@@ -6,6 +6,7 @@ namespace client {
     void Controls::poll(Engine::Window &window)
     {
         _respawn = false;
+        _menuMove = 0;
         while (const std::optional event = window.pollEvent()) {
             std::visit([this, &window](const auto &e) { handle(window, e); }, *event);
         }
@@ -21,6 +22,11 @@ namespace client {
         return _respawn;
     }
 
+    int Controls::menuMove() const
+    {
+        return _menuMove;
+    }
+
     void Controls::handle(Engine::Window &window, const Engine::Events::Closed &)
     {
         window.close();
@@ -33,6 +39,12 @@ namespace client {
         }
         if (event.key == Engine::Key::Enter) {
             _respawn = true;
+        }
+        if (event.key == Engine::Key::Up) {
+            --_menuMove;
+        }
+        if (event.key == Engine::Key::Down) {
+            ++_menuMove;
         }
         applyKey(event.key, true);
     }

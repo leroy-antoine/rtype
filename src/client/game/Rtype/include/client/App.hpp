@@ -35,6 +35,8 @@ namespace client {
         void playSounds(Audio &audio);
         bool listening();
         void sendControls(float dt);
+        [[nodiscard]] bool inLobby() const;
+        void useMenu();
         float advance();
         [[nodiscard]] float elapsed() const;
 

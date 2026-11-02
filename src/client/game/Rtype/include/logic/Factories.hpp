@@ -8,6 +8,7 @@
 #include "Components.hpp"
 #include "Config.hpp"
 #include "BossDefs.hpp"
+#include "Waves.hpp"
 #include "MonsterDefs.hpp"
 #include "Bullet.hpp"
 
@@ -56,6 +57,7 @@ namespace rtype {
 
         reg.add(e, MonsterTag{slot});
         reg.add(e, MonsterType{kind});
+        reg.add(e, MonsterState{});
         reg.add(e, gameLogic::Vec2Pos{});
         reg.add(e, gameLogic::Vec2Direction{});
         reg.add(e, gameLogic::Vec2Velocity{});
@@ -137,7 +139,12 @@ namespace rtype {
         }
         const gameLogic::Vec2Hitbox &box = reg.get<gameLogic::Vec2Hitbox>(e);
 
-        return std::max(box.x, box.y);
+        const float size = std::max(box.x, box.y);
+
+        if (reg.has<BossTag>(e)) {
+            return std::max(size, config::BOSS_EXPLOSION_MIN_SIZE);
+        }
+        return size;
     }
 
     inline Engine::Entity createExplosionOn(Engine::Registry &reg,
@@ -163,6 +170,28 @@ namespace rtype {
         reg.add(e, gameLogic::Vec2Hitbox{{config::COIN_WIDTH,
             config::COIN_HEIGHT}});
         reg.add(e, Renderable{SpriteId::Coin});
+        return e;
+    }
+
+    inline SpriteId obstacleSprite(const ObstacleKind kind)
+    {
+        if (kind == ObstacleKind::Hazard) {
+            return SpriteId::HazardWall;
+        }
+        return SpriteId::RockWall;
+    }
+
+    inline Engine::Entity createObstacle(Engine::Registry &reg,
+        const ObstacleStep &step, const float overshoot = 0.f)
+    {
+        const Engine::Entity e = reg.create();
+
+        reg.add(e, ObstacleTag{step.kind});
+        reg.add(e, gameLogic::Vec2Pos{{config::MAP_WIDTH - overshoot,
+            step.y}});
+        reg.add(e, gameLogic::Vec2Hitbox{{step.width, step.height}});
+        reg.add(e, gameLogic::Vec2Velocity{{-config::OBSTACLE_SPEED, 0.f}});
+        reg.add(e, Renderable{obstacleSprite(step.kind)});
         return e;
     }
 

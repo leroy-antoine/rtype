@@ -66,13 +66,13 @@ tests: the client only uses its types (components, events, status, config).
 | `main.cpp` | parses `<host> <port>`, runs `client::App` |
 | `network/Network` | wraps `Engine::Client`: connection events, sending the keys, decoding the messages into the replica |
 | `App` | the main loop: receive, poll the input, send it, draw |
-| `Replica` | the local copy of the world, the interpolation, the last `STATUS`, the slot of this player, the sound cues |
+| `Replica` | the local copy of the world, the interpolation, the last `STATUS`, the slot of this player, the lobby cursor, the leaderboard, the sound cues |
 | `Prediction` | the predicted position of this player's ship and its reconciliation with `OWN_STATE` |
-| `Controls` | turns window events into the five keys of a `PlayerInput` |
+| `Controls` | turns window events into the five keys of a `PlayerInput`, plus the menu actions (cursor up or down, Enter) |
 | `GameView` | draws the entities of the replica |
 | `SpriteBank` | maps each kind of entity to a texture and a source rectangle |
 | `Background` | the star-field |
-| `Hud` | health bars, boss bar, coin counter, respawn hint, end screens |
+| `Hud` | health bars, boss bar, coin counter, timer, level, respawn hint, end screens and the lobby screen (map list, best times) |
 | `Font` | small bitmap font for the HUD, drawn with rectangles |
 | `Audio` | sounds and music |
 
@@ -97,7 +97,8 @@ animations use this time, never the speed of the CPU.
 |---|---|
 | Arrow keys | move the ship |
 | Space | fire (hold to keep firing) |
-| Enter | come back after being killed (while the match is running) |
+| Enter | come back after being killed (while the match is running); in the lobby, start the selected map (host only) |
+| Up / Down | move the ship; in the lobby, move the cursor on the list of maps |
 | Escape | quit |
 
 The client sends the **state** of the keys every frame, with a sequence number
@@ -131,6 +132,16 @@ The window is 1280 x 720. The world is 1920 x 1080, so everything is scaled by
   bars. The time and the coin counter share the same text size. The server counts it, so a player who joins late sees the
   same time as the others. It stops when the match ends and is drawn above the
   end screen, so the final time stays readable.
+  The top centre shows the level being played (`LEVEL 3`), in the same text
+  size. The server sends the number in `STATUS`.
+- **Lobby**: when the phase is `Lobby`, a screen covers the game: the title
+  `SELECT A MAP`, the list of maps with a highlighted cursor (each player moves
+  their own with Up / Down) and the five best times of the map under the
+  cursor (`1. 02:13.4  2P`). The host (the first player of the `STATUS` list)
+  starts the match with Enter; the others see `WAITING FOR P1 TO CHOOSE THE
+  MAP`. The times come from the `LEADERBOARD` message.
+- **Walls**: drawn by repeating a small tile (`obstacle_rock.png`,
+  `obstacle_hazard.png`) over the size of the wall.
 - **Coins**: dropped by monsters, drawn from a sprite sheet of 6 frames
   (`coin_spin_sheet.png`). The animated GIF is not used directly, because SFML
   only reads its first image.
@@ -168,5 +179,5 @@ From the subject, on the client side:
   the client must do the same, or it will be corrected at every `OWN_STATE`.
 - A lost `STATUS` can make the coin sound late or missing.
 - If the server cannot be reached, the client closes with an error message.
-  There is no menu and no reconnection.
+  There is no reconnection, and the lobby is the only menu.
 - Keys cannot be remapped yet.

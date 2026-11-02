@@ -30,11 +30,11 @@
 
 | Solution | State | Notes |
 |---|---|---|
-| Few, simple rules | **done** | one enemy type, one boss, one goal per level |
-| Clear and consistent feedback | **done** | health bars, sounds for hits and explosions, a message on victory or defeat |
+| Few, simple rules | **done** | one goal (reach the end of the map), a handful of enemy types introduced one after the other, the same controls everywhere |
+| Clear and consistent feedback | **done** | health bars, sounds for hits and explosions, a message on victory or defeat; a rocket launcher stops before it fires, which gives a visual warning |
 | Slower game option | proposal | same mechanism as the difficulty settings above |
-| Short levels | **done** | the boss arrives after 20 s of play |
-| Plain language in menus | proposal | there is no menu yet |
+| Short levels | **done** | the first level lasts about 20 s, the *boss rush* map has short levels, and killing monsters shortens a level |
+| Plain language in menus | **done** for the lobby | `SELECT A MAP`, a highlighted cursor and a one-line instruction at the bottom of the screen; there is no other menu |
 
 ## Documentation
 

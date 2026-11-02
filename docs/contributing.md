@@ -33,7 +33,7 @@ the server, the client and the game logic each have an owner.
 Written for the game logic and recommended for new code elsewhere:
 
 - lines of **80 columns** at most;
-- functions of **25 lines** at most, **5 parameters** at most, **2 nested
+- functions of **20 lines** at most, **5 parameters** at most, **2 nested
   conditions** at most;
 - no ternary operator;
 - data in `struct`s, behaviour in functions, constants in a config header;

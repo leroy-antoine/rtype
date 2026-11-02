@@ -10,7 +10,7 @@ namespace client {
             if (size <= rtype::config::HIT_EXPLOSION_SIZE) {
                 return Cue::Hit;
             }
-            if (size >= rtype::config::BOSS_WIDTH * 0.8f) {
+            if (size >= rtype::config::BOSS_EXPLOSION_MIN_SIZE) {
                 return Cue::BossExplosion;
             }
             return Cue::Explosion;
@@ -182,6 +182,37 @@ namespace client {
         _status = status;
     }
 
+    void Replica::apply(const rtype::AllRecords &records)
+    {
+        _records = records;
+    }
+
+    void Replica::moveMapCursor(const int delta)
+    {
+        const int count = static_cast<int>(rtype::MAP_COUNT);
+        const int next = (static_cast<int>(_mapCursor) + delta + count) % count;
+
+        _mapCursor = static_cast<rtype::MapId>(next);
+    }
+
+    const rtype::AllRecords &Replica::records() const
+    {
+        return _records;
+    }
+
+    rtype::MapId Replica::mapCursor() const
+    {
+        return _mapCursor;
+    }
+
+    bool Replica::isHost() const
+    {
+        if (!_status || !_slot || _status->players.empty()) {
+            return false;
+        }
+        return _status->players.front().slot == *_slot;
+    }
+
     void Replica::assignSlot(const int slot)
     {
         _slot = slot;
@@ -214,6 +245,9 @@ namespace client {
                 _cues.push_back(Cue::PlayerShot);
                 break;
             case rtype::SpriteId::Boss:
+            case rtype::SpriteId::DasherBoss:
+            case rtype::SpriteId::SummonerBoss:
+            case rtype::SpriteId::FortressBoss:
                 _cues.push_back(Cue::BossAppears);
                 break;
             case rtype::SpriteId::Explosion:

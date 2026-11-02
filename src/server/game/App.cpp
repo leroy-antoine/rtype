@@ -1,8 +1,11 @@
 #include <csignal>
+#include <cstddef>
 #include <iostream>
+#include <random>
 #include <thread>
 #include <variant>
 #include <vector>
+#include "logic/Builder.hpp"
 #include "rtype/Protocol.hpp"
 #include "rtype/ReturnCodes.hpp"
 #include "App.hpp"
@@ -18,8 +21,11 @@ namespace server {
     }
 
     App::App(const std::uint16_t port)
-        : _server(port, rtype::config::MAX_PLAYERS, rtype::protocol::VERSION)
+        : _server(port, rtype::config::MAX_PLAYERS, rtype::protocol::VERSION),
+        _game(std::random_device{}())
     {
+        _game.openLobby();
+        _leaderboard.load(LEADERBOARD_FILE);
     }
 
     int App::run()
@@ -46,6 +52,7 @@ namespace server {
     {
         receive();
         _game.update(_timestep.step());
+        recordVictory();
         broadcastEvents();
         broadcastStates();
         sendOwnStates();
@@ -53,6 +60,26 @@ namespace server {
             broadcastStatus();
         }
         _server.flush();
+    }
+
+    void App::recordVictory()
+    {
+        const rtype::Phase phase = _game.phase();
+        const bool won = phase == rtype::Phase::Victory
+            && _lastPhase != rtype::Phase::Victory;
+
+        _lastPhase = phase;
+        if (!won) {
+            return;
+        }
+        const rtype::GameStatus status = _game.status();
+
+        _leaderboard.add(_game.map(), {status.elapsedMs,
+            static_cast<std::uint8_t>(status.players.size())});
+        _leaderboard.save(LEADERBOARD_FILE);
+        _server.broadcast(rtype::protocol::LEADERBOARD,
+            rtype::protocol::encode(_leaderboard.all()),
+            Engine::Delivery::Reliable);
     }
 
     void App::receive()
@@ -138,6 +165,9 @@ namespace server {
         _server.send(event.client, rtype::protocol::YOU,
             rtype::protocol::encodeYou(*slot), Engine::Delivery::Reliable);
         sendWorld(event.client);
+        _server.send(event.client, rtype::protocol::LEADERBOARD,
+            rtype::protocol::encode(_leaderboard.all()),
+            Engine::Delivery::Reliable);
         std::cout << "client " << event.client << " joined in slot " << *slot << std::endl;
     }
 
@@ -170,6 +200,23 @@ namespace server {
         }
         if (event.type == rtype::protocol::RESPAWN) {
             _game.respawnPlayer(*slot);
+            return;
+        }
+        if (event.type == rtype::protocol::SELECT_MAP) {
+            selectMap(*slot, event.payload);
+        }
+    }
+
+    void App::selectMap(const int slot, const rtype::protocol::Payload &payload)
+    {
+        const std::optional<rtype::MapId> map =
+            rtype::protocol::decodeSelectMap(payload);
+
+        if (!map || _game.host() != slot) {
+            return;
+        }
+        if (std::optional<rtype::Segments> segments = rtype::buildMap(*map)) {
+            _game.startMap(std::move(*segments), *map);
         }
     }
 }

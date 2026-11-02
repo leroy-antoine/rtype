@@ -15,6 +15,7 @@ own documentation next to its code.
 
 | Page | Content |
 |---|---|
+| [Gameplay](gameplay.md) | the rules as a player sees them: maps, monsters, bosses, walls, scoring, controls |
 | [Architecture](architecture.md) | the layers, who depends on whom, how the pieces are glued |
 | [Build and run](build.md) | requirements, building on Linux and Windows, IDE setup, troubleshooting |
 | [Protocol](protocol.md) | client/server network protocol: messages, lifecycle, reliability, security |

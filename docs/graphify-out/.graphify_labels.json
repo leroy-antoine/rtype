@@ -19,10 +19,8 @@
   "42": "Reliable Channel",
   "47": "Architecture Targets",
   "49": "Status Tests",
-  "61": "Binary Writer Impl",
   "62": "Message Types",
   "70": "Session Info",
-  "73": "Texture Manager Impl",
   "76": "Window Impl Header",
   "82": "Sound Manager Impl",
   "86": "Connection Send"

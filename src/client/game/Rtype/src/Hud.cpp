@@ -64,6 +64,10 @@ namespace client {
             return;
         }
         trackPhase(status->phase, elapsed);
+        if (status->phase == rtype::Phase::Lobby) {
+            drawLobby(replica);
+            return;
+        }
         drawPlayers(*status);
         drawCoins(*status, elapsed);
         drawBossBar(*status);
@@ -73,6 +77,7 @@ namespace client {
             drawEndScreen(*status, elapsed);
         }
         drawTimer(*status, elapsed);
+        drawLevel(*status);
     }
 
     // Retient depuis quand la partie est finie, pour le compte a rebours.
@@ -120,6 +125,12 @@ namespace client {
 
         _font.draw(text, {MARGIN, textTop()}, TEXT_SCALE, WHITE);
         drawIcon(_sprites.clock(), {iconX, MARGIN}, elapsed);
+    }
+
+    void Hud::drawLevel(const rtype::GameStatus &status)
+    {
+        _font.drawCentered("LEVEL " + std::to_string(status.level),
+            _width / 2.f, textTop(), TEXT_SCALE, WHITE);
     }
 
     void Hud::drawCoins(const rtype::GameStatus &status, const float elapsed)
@@ -191,5 +202,60 @@ namespace client {
             color);
         _font.drawCentered("NEW GAME IN " + std::to_string(seconds),
             _width / 2.f, _height / 2.f + 50.f, 3.f, WHITE);
+    }
+
+    void Hud::drawLobby(const Replica &replica)
+    {
+        const rtype::MapId cursor = replica.mapCursor();
+        std::string footer = "WAITING FOR P1 TO CHOOSE THE MAP";
+
+        if (replica.isHost()) {
+            footer = "UP/DOWN: CHOOSE   ENTER: START";
+        }
+        _renderer.drawRect({0.f, 0.f}, {_width, _height}, {0, 0, 0, 210});
+        _font.drawCentered("SELECT A MAP", _width / 2.f, 50.f, 6.f, WHITE);
+        drawMapList(cursor);
+        drawRecords(replica.records()[cursor]);
+        _font.drawCentered(footer, _width / 2.f, _height - 50.f, 3.f, WHITE);
+    }
+
+    void Hud::drawMapList(const rtype::MapId cursor)
+    {
+        constexpr float TOP = 150.f;
+        constexpr float STEP = 52.f;
+        constexpr float STRIP_WIDTH = 520.f;
+
+        for (std::size_t i = 0; i < rtype::MAP_COUNT; ++i) {
+            const float y = TOP + static_cast<float>(i) * STEP;
+            Color color = WHITE;
+
+            if (i == cursor) {
+                _renderer.drawRect({(_width - STRIP_WIDTH) / 2.f, y - 8.f},
+                    {STRIP_WIDTH, STEP - 6.f}, {40, 70, 140, 255});
+                color = YELLOW;
+            }
+            _font.drawCentered(rtype::MAP_NAMES[i], _width / 2.f, y, 4.f,
+                color);
+        }
+    }
+
+    void Hud::drawRecords(const rtype::MapRecords &records)
+    {
+        constexpr float TOP = 360.f;
+        constexpr float STEP = 36.f;
+
+        _font.drawCentered("BEST TIMES", _width / 2.f, TOP, 3.f, WHITE);
+        if (records.empty()) {
+            _font.drawCentered("NO RECORD YET", _width / 2.f, TOP + STEP,
+                3.f, GREEN);
+        }
+        for (std::size_t i = 0; i < records.size(); ++i) {
+            const std::string line = std::to_string(i + 1) + ". "
+                + formatTime(records[i].timeMs) + "  "
+                + std::to_string(records[i].players) + "P";
+
+            _font.drawCentered(line, _width / 2.f,
+                TOP + STEP * static_cast<float>(i + 1), 3.f, GREEN);
+        }
     }
 }

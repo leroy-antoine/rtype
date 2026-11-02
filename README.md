@@ -7,9 +7,23 @@ a central server that has the final authority on the game.
 The project is built around a small game engine (an ECS and a window module) and
 three decoupled layers: **rendering**, **networking** and **game logic**.
 
-> Status: Part 1 (architecture and first prototype) is playable. Up to four
-> players, each with their own client, fight waves of monsters and a boss on an
-> authoritative server. See each part's documentation for the details.
+## Features
+
+- **Up to four players**, each with their own client, on a server that has the
+  final authority. The clients only send their keys.
+- **Three maps**, chosen in a lobby by the host: a 20-level *campaign*, a
+  *boss rush* and *death runs*.
+- **Six kinds of monsters** with their own behaviour (diving kamikazes,
+  zigzagging elites, rockets that charge, bombers that drop bombs) and **four
+  bosses** (a standard boss, a roaming Dasher, a Summoner that calls
+  reinforcements and a Fortress that fires barrages).
+- **Walls**: rocks to hide behind and deadly hazard gates to cross.
+- **Coins** shared by the team, a match **timer**, and a **leaderboard** with
+  the best times of each map.
+- A custom **engine**: ECS, window, audio and a reliable UDP transport,
+  documented and unit tested.
+
+See [Gameplay](docs/gameplay.md) for the rules as a player sees them.
 
 ## Requirements
 
@@ -43,8 +57,17 @@ The executables are written to `build/binaries`: `r-type_server` and
 ```
 
 The server uses **UDP**: open the port in UDP in the firewall to play from
-another machine. Controls: arrow keys to move, Space to fire, Enter to come
-back after a death, Escape to quit.
+another machine.
+
+| Key | Action |
+|---|---|
+| Arrow keys | move the ship (in the lobby, Up and Down choose a map) |
+| Space | fire (hold to keep firing) |
+| Enter | come back after a death; in the lobby, start the map (host only) |
+| Escape | quit |
+
+The first player connected is the *host*: they choose the map in the lobby.
+After a victory or a defeat, the game returns to the lobby.
 
 ## Repository layout
 
@@ -59,7 +82,8 @@ back after a death, Escape to quit.
 | `src/server` | the authoritative server |
 | `src/client` | the display |
 | `docs` | documentation that concerns the whole project |
-| `tests` | automated tests of the game logic and of the protocol |
+| `tests` | automated tests of the game logic, the maps, the leaderboard and the protocol |
+| `tools` | helper scripts (generation of the sounds) |
 
 ## Documentation
 
@@ -69,10 +93,11 @@ Each part keeps its documentation next to its code:
 |---|---|
 | Game logic | [src/client/game/Rtype/doc](src/client/game/Rtype/doc/README.md): rules, architecture, systems, the `Game` API, how-to guides |
 | Server | [src/server/doc](src/server/doc/README.md): role, loop, how it plugs the game in |
-| Client | [src/client/doc](src/client/doc/README.md): rendering, input, planned architecture |
+| Client | [src/client/doc](src/client/doc/README.md): rendering, input, interpolation and prediction, lobby screen |
 
 Documentation that concerns the whole project is in [docs](docs/README.md):
 
+- [Gameplay](docs/gameplay.md)
 - [Architecture](docs/architecture.md)
 - [Build and run](docs/build.md)
 - [Network protocol](docs/protocol.md)
@@ -80,10 +105,49 @@ Documentation that concerns the whole project is in [docs](docs/README.md):
 - [Accessibility](docs/accessibility.md)
 - [Contributing](docs/contributing.md)
 
+## Tests
+
+```
+cmake --build --preset linux-debug
+./build/binaries/rtype_tests
+```
+
+The suite covers the game rules, the 3 maps, the leaderboard and the encoding
+of every network message. See [Build and run](docs/build.md#tests).
+
 ## Authors
 
 Thiago Semedo-Rocha, Antoine Leroy, Maxime Kournikov.
 
 ## License
 
-No license has been chosen yet.
+This project is released under the **MIT License**.
+
+```
+MIT License
+
+Copyright (c) 2026 The R-Type team (Thiago Semedo-Rocha, Antoine Leroy,
+Maxime Kournikov)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+The sprites in `src/client/game/Rtype/assets` come from the original R-Type
+sprite sheets and belong to their rights holders; they are used here for an
+educational project only.

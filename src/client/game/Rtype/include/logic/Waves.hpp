@@ -25,6 +25,14 @@ namespace rtype {
         return seconds * config::SCROLL_SPEED;
     }
 
+    struct ObstacleStep {
+        float at;
+        float y;
+        float width;
+        float height;
+        ObstacleKind kind = ObstacleKind::Rock;
+    };
+
     constexpr float RANDOM_Y = -1.f;
 
     // Le boss arrive a BOSS_SPAWN_SCROLL (20 s).

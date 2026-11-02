@@ -33,7 +33,8 @@ The subject asks for visible and decoupled layers for **rendering**,
 | `engine::network` | `engine/network` | UDP transport: sessions, ping, reliability, binary reader and writer (wraps Asio) |
 | `rtype::common` | `src/include` | shared headers: vectors (`utils/Vectors.hpp`), return codes |
 | `rtype::protocol` | `src/include/rtype/Protocol.hpp` | the encoding of the R-Type messages, shared by the server and the client |
-| `rtype::game` | `src/client/game/Rtype` | the game logic, header-only |
+| `rtype::game` | `src/client/game/Rtype` | the game logic, header-only: rules, monsters, bosses, walls, lobby, leaderboard |
+| `rtype::maps` | `src/client/game/Rtype/src/maps` | the data of the maps (levels, waves, walls); linked by the server and the tests |
 | `r-type_server` | `src/server` | the authoritative server |
 | `r-type_client` | `src/client` | the display |
 
@@ -59,10 +60,24 @@ be run and tested without a window or a socket.
  client                      server                              game logic
  ──────                      ──────                              ──────────
  keys ──── INPUT ─────────►  decode ──► Game::setInput(slot, in)
+ map  ──── SELECT_MAP ────►  host? ───► Game::startMap(segments, id)
                              every tick:  Game::update(dt)
  draw ◄─── SPAWN / DESTROY / encode ◄── events, states, status
-           STATES / STATUS
+           STATES / STATUS / LEADERBOARD
 ```
+
+## The life of a match
+
+```
+ Lobby ──(host: SELECT_MAP)──► Playing ──► Victory ─┐
+   ▲                              │                 │ end screen
+   │                              └──────► Defeat ──┤ (RESTART_DELAY)
+   └─────────────────────────────────────────────────┘
+```
+
+The server starts in the lobby and comes back to it after each match, or when
+the last player leaves. The server also records the time of every victory in
+the leaderboard of the map.
 
 - The **server has the final authority**. Clients send keys, never positions.
 - The **game logic receives `dt`** and reads no clock. The server owns the

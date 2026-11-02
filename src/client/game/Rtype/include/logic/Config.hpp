@@ -13,6 +13,7 @@ namespace rtype::config {
     // Les monstres apparaissent dans cette marge, a droite de la carte.
     constexpr float SPAWN_MARGIN = 100.f; // -> Spawn point des mobs, ils pop à droite de la carte
     constexpr float DESPAWN_MARGIN = 200.f; // -> Au delà de cette marge, les mobs et les projectiles depop
+    constexpr bool PLAYERS_INVINCIBLE = true;
     constexpr bool PLAYERS_DIE_OUT_OF_MAP = true; // -> Si le joueur sort de la carte, il clamse
 
     constexpr float TICK_RATE = 60.f;
@@ -51,7 +52,30 @@ namespace rtype::config {
     constexpr float BOSS_HEIGHT = 264.f;
     constexpr int BOSS_DAMAGE = 20;
     constexpr float BOSS_FIRE_COOLDOWN = 0.9f;
-    constexpr float BOSS_STOP_X = MAP_WIDTH - BOSS_WIDTH - 60.f; // -> Il s'arrete la
+    constexpr float DASHER_MIN_X = 700.f;
+    constexpr float DASHER_MARGIN_Y = 60.f;
+    constexpr float DASHER_FREQUENCY_X = 0.9f;
+    constexpr float DASHER_FREQUENCY_Y = 1.4f;
+    constexpr float DASHER_CORRECTION = 6.f;
+    constexpr float ZIGZAG_AMPLITUDE = 160.f;
+    constexpr float ZIGZAG_FREQUENCY = 2.2f;
+    constexpr float DIVE_DISTANCE = 900.f;
+    constexpr float ROCKET_CHARGE_TIME = 0.8f;
+    constexpr float SUMMON_INTERVAL = 5.f;
+    constexpr int SUMMON_COUNT = 3;
+    constexpr int SUMMON_MAX_ALIVE = 6;
+    constexpr float SUMMON_SPACING = 110.f;
+    constexpr float FORTRESS_SWAY_AMPLITUDE = 300.f;
+    constexpr float FORTRESS_SWAY_FREQUENCY = 0.5f;
+    constexpr float FORTRESS_BURST_PERIOD = 7.f;
+    constexpr float FORTRESS_BURST_DURATION = 2.f;
+    constexpr float FORTRESS_BURST_COOLDOWN = 0.35f;
+    constexpr float KILL_SKIP_SECONDS = 0.5f;
+    constexpr float KILL_SKIP_MAX_FRACTION = 0.4f;
+    constexpr float BOSS_RIGHT_MARGIN = 60.f;
+    constexpr float BOSS_EXPLOSION_MIN_SIZE = 200.f;
+    constexpr float BOSS_STOP_X =
+        MAP_WIDTH - BOSS_WIDTH - BOSS_RIGHT_MARGIN; // -> Il s'arrete la
     constexpr float BOSS_SWAY_AMPLITUDE = 280.f; // -> Va-et-vient vertical
     constexpr float BOSS_SWAY_FREQUENCY = 0.8f;
     constexpr int BOSS_FAN_BULLETS = 5;        // -> Balles par tir (eventail)
@@ -76,7 +100,9 @@ namespace rtype::config {
     constexpr int AUGMENT_HP_PRICE = 100;
     constexpr int AUGMENT_FIRE_RATE_PRICE = 200;
 
+    constexpr float OBSTACLE_TILE = 64.f;
     constexpr float SCROLL_SPEED = 120.f; //-> Vitesse de défilement de la carte
+    constexpr float OBSTACLE_SPEED = SCROLL_SPEED;
     constexpr float BOSS_SPAWN_SCROLL = 2400.f;  // -> Distance defilee (2400 / 120 = 20 s de jeu) a laquelle le boss arrive.
 
     constexpr std::size_t COIN_MIN_VALUE = 1;

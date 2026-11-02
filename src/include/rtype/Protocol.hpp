@@ -14,6 +14,8 @@
 #include "logic/Components.hpp"
 #include "logic/Config.hpp"
 #include "logic/Events.hpp"
+#include "logic/Leaderboard.hpp"
+#include "logic/MapList.hpp"
 #include "logic/Status.hpp"
 
 namespace rtype::protocol {
@@ -33,10 +35,11 @@ namespace rtype::protocol {
         gameLogic::Vec2Pos pos;
     };
 
-    constexpr std::uint8_t VERSION = 6;
+    constexpr std::uint8_t VERSION = 11;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
+    constexpr Engine::MessageType SELECT_MAP = 0x12;
 
     constexpr Engine::MessageType SPAWN = 0x20;
     constexpr Engine::MessageType DESTROY = 0x21;
@@ -44,6 +47,7 @@ namespace rtype::protocol {
     constexpr Engine::MessageType STATUS = 0x23;
     constexpr Engine::MessageType YOU = 0x24;
     constexpr Engine::MessageType OWN_STATE = 0x25;
+    constexpr Engine::MessageType LEADERBOARD = 0x26;
 
     constexpr std::uint8_t KEY_UP = 1 << 0;
     constexpr std::uint8_t KEY_DOWN = 1 << 1;
@@ -61,9 +65,10 @@ namespace rtype::protocol {
         (Engine::Protocol::MAX_PAYLOAD_SIZE - STATES_HEADER_SIZE) / STATE_SIZE;
 
     // STATUS : phase (1), boss hp (2), boss max hp (2), pieces (4), temps
-    // en ms (4), nombre de joueurs (1), puis par joueur : slot (1), hp (2),
-    // vivant (1).
-    constexpr std::size_t STATUS_HEADER_SIZE = 14;
+    // en ms (4), niveau (1), map (1), nombre de joueurs (1), puis par
+    // joueur : slot (1), hp (2), vivant (1).
+    constexpr std::size_t STATUS_HEADER_SIZE = 16;
+    constexpr std::size_t RECORD_SIZE = 5;
     constexpr std::size_t PLAYER_STATUS_SIZE = 4;
 
     inline void writeVec2(Engine::BinaryWriter &writer,
@@ -308,6 +313,8 @@ namespace rtype::protocol {
         writer.writeU16(static_cast<std::uint16_t>(status.bossMaxHp));
         writer.writeU32(status.coins);
         writer.writeU32(status.elapsedMs);
+        writer.writeU8(status.level);
+        writer.writeU8(status.map);
         writer.writeU8(static_cast<std::uint8_t>(status.players.size()));
         for (const PlayerStatus &player : status.players) {
             writer.writeU8(static_cast<std::uint8_t>(player.slot));
@@ -337,6 +344,8 @@ namespace rtype::protocol {
         std::uint16_t bossMaxHp = 0;
         std::uint32_t coins = 0;
         std::uint32_t elapsedMs = 0;
+        std::uint8_t level = 0;
+        std::uint8_t map = 0;
         std::uint8_t count = 0;
     };
 
@@ -348,19 +357,22 @@ namespace rtype::protocol {
         const std::optional<std::uint16_t> bossMaxHp = reader.readU16();
         const std::optional<std::uint32_t> coins = reader.readU32();
         const std::optional<std::uint32_t> elapsedMs = reader.readU32();
+        const std::optional<std::uint8_t> level = reader.readU8();
+        const std::optional<std::uint8_t> map = reader.readU8();
         const std::optional<std::uint8_t> count = reader.readU8();
 
         if (!phase || !bossHp || !bossMaxHp || !coins || !elapsedMs
-            || !count) {
+            || !level || !map || !count) {
             return std::nullopt;
         }
         return StatusHeader{*phase, *bossHp, *bossMaxHp, *coins, *elapsedMs,
-            *count};
+            *level, *map, *count};
     }
 
     inline bool isValid(const StatusHeader &header, const std::size_t left)
     {
-        return header.phase <= static_cast<std::uint8_t>(Phase::Defeat)
+        return header.phase <= static_cast<std::uint8_t>(Phase::Lobby)
+            && header.map < MAP_COUNT
             && header.count <= config::MAX_PLAYERS
             && header.bossHp <= header.bossMaxHp
             && left == header.count * PLAYER_STATUS_SIZE;
@@ -394,9 +406,78 @@ namespace rtype::protocol {
         status.bossMaxHp = header->bossMaxHp;
         status.coins = header->coins;
         status.elapsedMs = header->elapsedMs;
+        status.level = header->level;
+        status.map = header->map;
         if (!readPlayers(reader, header->count, status.players)) {
             return std::nullopt;
         }
         return status;
+    }
+
+    // SELECT_MAP : l'identifiant de la map choisie par l'hote.
+    inline Payload encodeSelectMap(const MapId map)
+    {
+        return {map};
+    }
+
+    inline std::optional<MapId> decodeSelectMap(const Payload &payload)
+    {
+        if (payload.size() != 1 || payload[0] >= MAP_COUNT) {
+            return std::nullopt;
+        }
+        return payload[0];
+    }
+
+    // LEADERBOARD : pour chaque map, le nombre de records (1) puis par
+    // record le temps en ms (4) et le nombre de joueurs (1).
+    inline Payload encode(const AllRecords &records)
+    {
+        Engine::BinaryWriter writer;
+
+        for (const MapRecords &map : records) {
+            writer.writeU8(static_cast<std::uint8_t>(map.size()));
+            for (const RunRecord &record : map) {
+                writer.writeU32(record.timeMs);
+                writer.writeU8(record.players);
+            }
+        }
+        return writer.data();
+    }
+
+    inline bool readRecords(Engine::BinaryReader &reader, MapRecords &out)
+    {
+        const std::optional<std::uint8_t> count = reader.readU8();
+
+        if (!count || *count > MAX_RECORDS
+            || reader.remaining() < *count * RECORD_SIZE) {
+            return false;
+        }
+        for (std::size_t i = 0; i < *count; ++i) {
+            const std::optional<std::uint32_t> time = reader.readU32();
+            const std::optional<std::uint8_t> players = reader.readU8();
+
+            if (!time || !players || *players == 0
+                || *players > config::MAX_PLAYERS) {
+                return false;
+            }
+            out.push_back({*time, *players});
+        }
+        return true;
+    }
+
+    inline std::optional<AllRecords> decodeLeaderboard(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+        AllRecords records;
+
+        for (MapRecords &map : records) {
+            if (!readRecords(reader, map)) {
+                return std::nullopt;
+            }
+        }
+        if (reader.remaining() != 0) {
+            return std::nullopt;
+        }
+        return records;
     }
 }

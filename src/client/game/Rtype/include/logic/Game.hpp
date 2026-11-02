@@ -7,6 +7,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <map>
 #include <optional>
 #include <random>
@@ -18,7 +19,10 @@
 #include "Config.hpp"
 #include "Events.hpp"
 #include "Factories.hpp"
+#include "LevelSkip.hpp"
 #include "Levels.hpp"
+#include "MapList.hpp"
+#include "MonsterBehavior.hpp"
 #include "Monsters.hpp"
 #include "Queries.hpp"
 #include "Replication.hpp"
@@ -30,12 +34,12 @@
 namespace rtype {
     class Game {
     public:
-        Game() : _rng(std::random_device{}())
-        {
-            _coinCounter = createCoinCounter(_reg);
-        }
+        Game() : Game(std::random_device{}()) {}
 
-        explicit Game(const unsigned int seed) : _rng(seed)
+        explicit Game(const unsigned int seed) : Game(seed, firstLevel()) {}
+
+        Game(const unsigned int seed, Segments segments)
+            : _segments(std::move(segments)), _rng(seed)
         {
             _coinCounter = createCoinCounter(_reg);
         }
@@ -117,6 +121,41 @@ namespace rtype {
             }
         }
 
+        // Le jeu attend alors qu'un joueur choisisse une map (startMap).
+        void openLobby()
+        {
+            _lobby = true;
+            reset();
+        }
+
+        // Le premier joueur connecte est celui qui choisit la map.
+        [[nodiscard]] std::optional<int> host() const
+        {
+            for (int slot = 0; slot < SLOTS; ++slot) {
+                if (isUsedSlot(slot)) {
+                    return slot;
+                }
+            }
+            return std::nullopt;
+        }
+
+        bool startMap(Segments segments, const MapId map)
+        {
+            if (_phase != Phase::Lobby) {
+                return false;
+            }
+            _segments = std::move(segments);
+            _map = map;
+            reset();
+            _phase = Phase::Playing;
+            return true;
+        }
+
+        [[nodiscard]] MapId map() const
+        {
+            return _map;
+        }
+
         // Appele a chaque tick : mouvements, tirs, collisions, niveau...
         void update(const float dt)
         {
@@ -124,6 +163,8 @@ namespace rtype {
                 idle();
             } else if (_phase == Phase::Playing) {
                 updatePlaying(dt);
+            } else if (_phase == Phase::Lobby) {
+                flyPlayers(dt);
             } else {
                 updateEnded(dt);
             }
@@ -151,11 +192,7 @@ namespace rtype {
         {
             GameStatus status;
 
-            status.phase = _phase;
-            status.coins = static_cast<std::uint32_t>(
-                _reg.get<CoinCounter>(_coinCounter).total);
-            status.elapsedMs = static_cast<std::uint32_t>(
-                _elapsed * config::MS_PER_SECOND);
+            describeMatch(status);
             for (const Engine::Entity boss : collectWith<BossTag>(_reg)) {
                 status.bossHp = std::max(0, _reg.get<Health>(boss).hp);
                 status.bossMaxHp =
@@ -213,6 +250,18 @@ namespace rtype {
             });
         }
 
+        void describeMatch(GameStatus &status)
+        {
+            status.phase = _phase;
+            status.map = _map;
+            status.coins = static_cast<std::uint32_t>(
+                _reg.get<CoinCounter>(_coinCounter).total);
+            status.elapsedMs = static_cast<std::uint32_t>(
+                _elapsed * config::MS_PER_SECOND);
+            status.level = static_cast<std::uint8_t>(std::min<std::size_t>(
+                level(), std::numeric_limits<std::uint8_t>::max()));
+        }
+
         PlayerStatus statusOf(const int slot)
         {
             const std::optional<Engine::Entity> player =
@@ -229,7 +278,7 @@ namespace rtype {
         // Personne n'est connecte : le niveau n'avance pas, et repart de zero.
         void idle()
         {
-            if (_scroll > 0.f || _nextBoss > 0 || _phase != Phase::Playing
+            if (_scroll > 0.f || _nextBoss > 0 || _phase != restingPhase()
                 || !_pending.empty()) {
                 reset();
             }
@@ -242,26 +291,49 @@ namespace rtype {
             lifetimeSystem(_reg, dt);
             playerControlSystem(_reg);
             advanceLevel(dt);
+            monsterSystem(_reg, dt);
             bossSystem(_reg, dt);
             shootingSystem(_reg);
             movementSystem(_reg, dt);
             collisionSystem(_reg);
             contactSystem(_reg);
+            obstacleSystem(_reg);
             coinPickupSystem(_reg);
             deleteUnitsOutOfBounds(_reg);
-            deathSystem(_reg, _rng);
+            protectPlayers();
+            skipLevel(deathSystem(_reg, _rng));
             updatePhase();
         }
 
         // Partie finie : les joueurs volent encore, puis tout recommence.
-        void updateEnded(const float dt)
+        void flyPlayers(const float dt)
         {
             lifetimeSystem(_reg, dt);
             playerControlSystem(_reg);
             movementSystem(_reg, dt);
+        }
+
+        [[nodiscard]] Phase restingPhase() const
+        {
+            if (_lobby) {
+                return Phase::Lobby;
+            }
+            return Phase::Playing;
+        }
+
+        void updateEnded(const float dt)
+        {
+            flyPlayers(dt);
             _phaseTimer -= dt;
             if (_phaseTimer <= 0.f) {
                 reset();
+            }
+        }
+
+        void skipLevel(const int kills)
+        {
+            if (kills > 0 && collectWith<BossTag>(_reg).empty()) {
+                _scroll += grantSkip(_segments, _skip, _scroll, kills);
             }
         }
 
@@ -271,6 +343,7 @@ namespace rtype {
                 _scroll += config::SCROLL_SPEED * dt;
                 queueDueWaves();
                 spawnDueBosses();
+                spawnDueObstacles();
             }
             spawnPending(dt);
         }
@@ -283,6 +356,18 @@ namespace rtype {
                 && bosses[_nextBoss].second <= _scroll) {
                 spawnBoss(_reg, bosses[_nextBoss].first);
                 ++_nextBoss;
+            }
+        }
+
+        void spawnDueObstacles()
+        {
+            const auto &obstacles = _segments.obstacles;
+
+            while (_nextObstacle < obstacles.size()
+                && obstacles[_nextObstacle].at <= _scroll) {
+                createObstacle(_reg, obstacles[_nextObstacle],
+                    _scroll - obstacles[_nextObstacle].at);
+                ++_nextObstacle;
             }
         }
 
@@ -338,6 +423,13 @@ namespace rtype {
             _pending = std::move(waiting);
         }
 
+        void protectPlayers()
+        {
+            if (config::PLAYERS_INVINCIBLE) {
+                healPlayers(_reg);
+            }
+        }
+
         void updatePhase()
         {
             if (allBossesSpawned() && collectWith<BossTag>(_reg).empty()) {
@@ -365,6 +457,7 @@ namespace rtype {
             _pending.clear();
             destroyAll(collectMonsters(_reg));
             destroyAll(collectProjectileEntities(_reg));
+            destroyAll(collectObstacles(_reg));
         }
 
         void destroyAll(const std::vector<Engine::Entity> &entities)
@@ -382,7 +475,9 @@ namespace rtype {
             _scroll = 0.f;
             _nextWave = 0;
             _nextBoss = 0;
-            _phase = Phase::Playing;
+            _nextObstacle = 0;
+            _skip = SkipBank{};
+            _phase = restingPhase();
             _phaseTimer = 0.f;
             _elapsed = 0.f;
             _reg.get<CoinCounter>(_coinCounter).total = 0;
@@ -431,12 +526,16 @@ namespace rtype {
         SlotTable _usedSlots{};
         std::map<int, std::vector<AugmentId>> _augments;
         Phase _phase = Phase::Playing;
+        bool _lobby = false;
+        MapId _map = 0;
         float _phaseTimer = 0.f;
         float _elapsed = 0.f;
         float _scroll = 0.f;
         std::size_t _nextWave = 0;
         std::size_t _nextBoss = 0;
-        Segments _segments = firstLevel();
+        std::size_t _nextObstacle = 0;
+        SkipBank _skip;
+        Segments _segments;
         std::vector<PendingSpawn> _pending;
         TrackedTable _tracked;
         std::vector<GameEvent> _events;

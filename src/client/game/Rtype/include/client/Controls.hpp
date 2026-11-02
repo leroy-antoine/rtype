@@ -11,6 +11,7 @@ namespace client {
 
         [[nodiscard]] const rtype::PlayerInput &input() const;
         [[nodiscard]] bool respawnRequested() const;
+        [[nodiscard]] int menuMove() const;
 
     private:
         void handle(Engine::Window &window, const Engine::Events::Closed &event);
@@ -26,5 +27,6 @@ namespace client {
 
         rtype::PlayerInput _input;
         bool _respawn = false;
+        int _menuMove = 0;
     };
 }

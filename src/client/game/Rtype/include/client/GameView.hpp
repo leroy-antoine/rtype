@@ -35,10 +35,15 @@ namespace client {
         void drawLayer(Engine::Registry &reg, float elapsed, bool effects);
         void drawEntity(const Engine::Registry &reg, Engine::Entity e, const gameLogic::Vec2Pos &pos,
             const gameLogic::Vec2Hitbox &box, rtype::SpriteId id, float elapsed);
+        void drawTiled(const Engine::Sprite &sprite, const gameLogic::Vec2Pos &pos,
+            const gameLogic::Vec2Hitbox &box);
+        void drawTile(const Engine::Sprite &sprite, Engine::Vector2f position,
+            Engine::Vector2f size);
 
         Engine::Renderer &_renderer;
         const SpriteBank &_sprites;
         float _worldToScreen;
+        float _screenWidth;
         Background _background;
         Hud _hud;
     };
