@@ -5,9 +5,10 @@
 #include "Kinds.hpp"
 
 namespace rtype {
-    // Une vague : `count` monstres lances quand le niveau a defile de `at`.
-    // Le i-eme monstre apparait `i * interval` secondes apres le premier, a la
-    // hauteur `y + i * dy`. Si y < 0, la hauteur de depart est tiree au hasard.
+    // Une vague : count monstres lances quand le niveau a defile de at.
+    // Le i-eme monstre apparait i * interval secondes apres le premier, a la
+    // hauteur y + i * dy. Si y < 0, chaque monstre a sa propre hauteur tiree
+    // au hasard (dy est alors ignore).
     // Tous les monstres de la vague sont du type `kind`.
     struct WaveStep {
         float at;

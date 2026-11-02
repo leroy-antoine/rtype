@@ -18,9 +18,11 @@ add_library(rtype_game INTERFACE
         include/logic/Collectibles.hpp
         include/logic/Levels.hpp
         include/logic/LevelBuilder.hpp
+        include/logic/Builder.hpp
         include/logic/Kinds.hpp
         include/logic/MonsterDefs.hpp
-        include/logic/BossDefs.hpp)
+        include/logic/BossDefs.hpp
+        src/maps/map1.cpp)
 add_library(rtype::game ALIAS rtype_game)
 target_include_directories(rtype_game INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 

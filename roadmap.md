@@ -128,3 +128,39 @@ Même schéma que les monstres, avec leur propre enum et leur propre table.
 - `Fortress` : énorme, lent, beaucoup de PV, tirs denses.
 
 L'identifiant de boss de `bossSpawn` (le `size_t`) deviendra un `BossKind`.
+
+## Maps : une map est une campagne complète (idée, à faire plus tard)
+
+- Une **map** est une campagne entière de 20 niveaux, pas un niveau. `map1.cpp`
+  construit les 20 niveaux de la map 1, `map2.cpp` ceux de la map 2.
+- Plus tard, un **écran de sélection** permettra de choisir la map avant de
+  jouer. Le client envoie l'identifiant de la map au serveur, le serveur le
+  valide (un identifiant inconnu ne construit rien) et construit le jeu avec les
+  `Segments` de cette map.
+- Un état `Lobby` avant la partie sera nécessaire (aujourd'hui `Phase` vaut
+  `Playing`, `Victory` ou `Defeat`). Après une victoire, retour à cet écran.
+- En multijoueur, tous les joueurs jouent la même map : proposition, c'est le
+  premier joueur connecté qui choisit, les autres voient le choix.
+- Le classement sera **par map**, puisque les temps ne sont comparables que sur
+  le même parcours.
+- Message réseau de sélection : nouvelle version du protocole, tests et doc.
+
+### Ce qui est en place
+
+- `src/maps/` : bibliothèque `rtype_maps` (alias `rtype::maps`).
+  - `mapN.cpp` : contient seulement les données : une fonction qui renvoie la
+    liste des `LevelDef` de la map (types de monstres, nombre, boss...).
+  - `builder.hpp` (dans `src/client/game/Rtype/include/logic/`) : `buildRun`
+    met les niveaux bout à bout, `MAPS` est le tableau de pointeurs de fonctions indexé par l'identifiant de la map,
+    `buildMap(id)` renvoie les `Segments` (ou rien si l'identifiant est
+    inconnu).
+- `LevelBuilder.hpp` (`rtype::game`) : `LevelDef`, `wave()` et `shifted()`.
+- `Game` n'utilise pas encore les maps : il garde `firstLevel()`. La
+  préparation à faire : lui donner ses `Segments` en paramètre.
+
+### Ajouter une map ou un niveau
+
+- Un niveau : une entrée de plus dans la liste de `mapN()`.
+- Une map : un nouveau `mapN.cpp` dans `src/maps/`, son nom dans
+  `src/maps/CMakeLists.txt`, sa déclaration et sa ligne dans `MAPS` de
+  `logic/builder.hpp`.

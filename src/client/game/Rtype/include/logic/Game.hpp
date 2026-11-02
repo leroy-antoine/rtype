@@ -298,20 +298,24 @@ namespace rtype {
             }
         }
 
-        void queueWave(const WaveStep &wave)
+        float spawnHeight(const WaveStep &wave, const float index)
         {
             std::uniform_real_distribution<float> randomY(
                 config::WAVE_MIN_Y, config::WAVE_MAX_Y);
-            float y = wave.y;
 
-            if (y < 0.f) {
-                y = randomY(_rng);
+            if (wave.y < 0.f) {
+                return randomY(_rng);
             }
+            return wave.y + index * wave.dy;
+        }
+
+        void queueWave(const WaveStep &wave)
+        {
             for (int i = 0; i < wave.count; ++i) {
                 const auto n = static_cast<float>(i);
 
-                _pending.push_back(
-                    {n * wave.interval, y + n * wave.dy, wave.kind});
+                _pending.push_back({n * wave.interval,
+                    spawnHeight(wave, n), wave.kind});
             }
         }
 

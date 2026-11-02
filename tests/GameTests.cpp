@@ -280,6 +280,22 @@ TEST(the_status_uses_the_health_of_the_kind_of_boss)
     CHECK(game.status().bossMaxHp == bossDef(BossKind::Fortress).hp);
 }
 
+TEST(the_monsters_of_a_random_wave_do_not_share_the_same_height)
+{
+    Game game(1);
+
+    game.addPlayer();
+    run(game, 4.5f);
+    std::vector<float> heights;
+    for (const Engine::Entity m : collectMonsters(game.registry())) {
+        heights.push_back(game.registry().get<gameLogic::Vec2Pos>(m).y);
+    }
+    CHECK(heights.size() >= 3);
+    CHECK(std::ranges::any_of(heights, [&heights](const float y) {
+        return y != heights.front();
+    }));
+}
+
 TEST(a_game_starts_at_the_first_level)
 {
     Game game(1);

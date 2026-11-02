@@ -95,6 +95,8 @@ Headers only include the layers below them, which avoids circular includes.
 | `MonsterDefs.hpp` | `MonsterDef` and the table of definitions indexed by `MonsterKind` (stats, size, sprite) |
 | `Boss.hpp` | the boss behaviour (`bossSystem`) and its fan of bullets |
 | `Waves.hpp` | the first table of waves of monsters (`WAVES`) |
+| `LevelBuilder.hpp` | `LevelDef` (one level, distances relative to its start), `wave()` and `shifted()`, the bricks used to write the levels of a map |
+| `builder.hpp` | `buildRun` (puts the levels of a map one after another), `MAPS` (one function per map id) and `buildMap(id)`; the maps themselves are in `src/maps` |
 | `Levels.hpp` | `Segments`: the waves, the boss and the level numbers of the whole run, each with its distance |
 | `Events.hpp` | `EntitySpawned`, `EntityDestroyed`, `EntityState`: what is told to the clients |
 | `Status.hpp` | `GameStatus` and `Phase`: what the HUD shows |
@@ -130,7 +132,8 @@ These come from the engine (`engine/core`, not part of the game logic):
   centre leaves the map (`PLAYERS_DIE_OUT_OF_MAP`). A dead player can come back
   with `respawnPlayer` while the match is running.
 - **Monsters** come in **waves** (`Waves.hpp`): a wave launches several
-  monsters one after the other, at a fixed or random height. They fly to the
+  monsters one after the other, at a fixed height or (`RANDOM_Y`) at a random
+  height drawn separately for each monster. They fly to the
   left and shoot continuously. A monster that touches a player kills him.
 - The level is described by `Segments` (`Levels.hpp`): waves, bosses and level
   numbers, each with the distance at which it starts. The first level has the

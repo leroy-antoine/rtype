@@ -360,9 +360,9 @@
     "semantic_hash": "c2e29a418822826e1150e71b9d50c18c"
   },
   "tests/GameTests.cpp": {
-    "mtime": 1793379303.9291296,
-    "seen": 1793379305.4238555,
-    "ast_hash": "dcd5168d9c213894ac0f4a64aae62b39",
+    "mtime": 1793384041.0145605,
+    "seen": 1793384057.3202982,
+    "ast_hash": "073b3f65672f5f5c4232a6a7f9cb04aa",
     "semantic_hash": ""
   },
   "tests/ProtocolTests.cpp": {
@@ -606,9 +606,9 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Components.hpp": {
-    "mtime": 1793227033.1986666,
-    "seen": 1793379305.4238298,
-    "ast_hash": "3155d05c4f6cc3c47fbe3bce66eba47d",
+    "mtime": 1793384041.0136352,
+    "seen": 1793384057.3202167,
+    "ast_hash": "84091a5afe81ed3c9125a996a47f0305",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Config.hpp": {
@@ -630,21 +630,21 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Factories.hpp": {
-    "mtime": 1793227033.1986666,
-    "seen": 1793379305.423833,
-    "ast_hash": "1a48c3a07877248252dfe918aeadc01c",
+    "mtime": 1793384041.0140197,
+    "seen": 1793384057.3202267,
+    "ast_hash": "978172dd0de5ea81db21975dbe6f7dd4",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Game.hpp": {
-    "mtime": 1793379303.9291296,
-    "seen": 1793379305.4238334,
-    "ast_hash": "653e42197b1d7ccc5500555bf93a1867",
+    "mtime": 1793384041.0143988,
+    "seen": 1793384057.3202288,
+    "ast_hash": "2c0278296ec95947758a1db5963c6a45",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Monsters.hpp": {
-    "mtime": 1792945736.193279,
-    "seen": 1793379305.423834,
-    "ast_hash": "2d1823668d73eb03747588c6da4b5da5",
+    "mtime": 1793384041.0141034,
+    "seen": 1793384057.3202407,
+    "ast_hash": "7bfe3d2f0f807ce147106f2c912f77c5",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Movements.hpp": {
@@ -678,9 +678,9 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Waves.hpp": {
-    "mtime": 1792945736.193996,
-    "seen": 1793379305.4238386,
-    "ast_hash": "8b784444222814b42dccf0423c7151ce",
+    "mtime": 1793384041.0137725,
+    "seen": 1793384057.3202538,
+    "ast_hash": "227e7e686bc3e591f4839baac658e904",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/src/App.cpp": {
@@ -792,21 +792,21 @@
     "semantic_hash": ""
   },
   "roadmap.md": {
-    "mtime": 1793377808.7893724,
-    "seen": 1793379305.4238765,
-    "ast_hash": "490151c86fb88e645d0225f9ba5e8d9c",
+    "mtime": 1793382544.3267648,
+    "seen": 1793384057.3203547,
+    "ast_hash": "1fe226958b04e11c6fbc07b721f31aaf",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/CMakeLists.txt": {
-    "mtime": 1793227033.1966667,
-    "seen": 1793379305.4238796,
-    "ast_hash": "d928048c4521ad654fde25ab43c9d0fc",
+    "mtime": 1793384041.0133877,
+    "seen": 1793384057.3203638,
+    "ast_hash": "74bd2e7c1cfb2564aca53b5d75b8f31a",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/doc/README.md": {
-    "mtime": 1793379303.9281297,
-    "seen": 1793379305.4238803,
-    "ast_hash": "117ab51b3f7dcba3189a1bef2c4f5837",
+    "mtime": 1793384041.0148435,
+    "seen": 1793384057.320366,
+    "ast_hash": "f8e0a26c2eadcf3ae934bdf1f1ff1c06",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/assets/coin_spin_sheet.png": {
@@ -1119,6 +1119,36 @@
     "mtime": 1792500622.712559,
     "seen": 1793379305.423921,
     "ast_hash": "a310b3185662fe27d00c836043b901be",
+    "semantic_hash": ""
+  },
+  "src/client/game/Rtype/include/logic/BossDefs.hpp": {
+    "mtime": 1793384040.9836733,
+    "seen": 1793384057.320203,
+    "ast_hash": "375f79c0cbd8f369bfc8968a2eaeff83",
+    "semantic_hash": ""
+  },
+  "src/client/game/Rtype/include/logic/Kinds.hpp": {
+    "mtime": 1793382544.1327653,
+    "seen": 1793384057.3202312,
+    "ast_hash": "f72ad265b0ed8768d2d771c9aeb1a194",
+    "semantic_hash": ""
+  },
+  "src/client/game/Rtype/include/logic/LevelBuilder.hpp": {
+    "mtime": 1793381666.696571,
+    "seen": 1793384057.320234,
+    "ast_hash": "6ba47cd2827c7664ffa1b2049430ac2f",
+    "semantic_hash": ""
+  },
+  "src/client/game/Rtype/include/logic/Levels.hpp": {
+    "mtime": 1793384041.0138533,
+    "seen": 1793384057.320236,
+    "ast_hash": "da55dd7d7720bb7a1acce810ed040496",
+    "semantic_hash": ""
+  },
+  "src/client/game/Rtype/include/logic/MonsterDefs.hpp": {
+    "mtime": 1793383519.969049,
+    "seen": 1793384057.320238,
+    "ast_hash": "40de9cdc38d57083195052eeb7b77aff",
     "semantic_hash": ""
   }
 }
