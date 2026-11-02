@@ -75,6 +75,12 @@ namespace rtype::config {
     constexpr int AUGMENT_HP_PRICE = 100;
     constexpr int AUGMENT_FIRE_RATE_PRICE = 200;
 
+    constexpr int RARITY_COMMON_WEIGHT = 60;
+    constexpr int RARITY_RARE_WEIGHT = 25;
+    constexpr int RARITY_EPIC_WEIGHT = 12;
+    constexpr int RARITY_LEGENDARY_WEIGHT = 3;
+    constexpr std::size_t SHOP_OFFER_COUNT = 3;
+
     constexpr float SCROLL_SPEED = 120.f; //-> Vitesse de défilement de la carte
     constexpr float BOSS_SPAWN_SCROLL = 2400.f;  // -> Distance defilee (2400 / 120 = 20 s de jeu) a laquelle le boss arrive.
 

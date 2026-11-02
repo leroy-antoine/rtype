@@ -21,6 +21,7 @@
 #include "Monsters.hpp"
 #include "Queries.hpp"
 #include "Replication.hpp"
+#include "Shop.hpp"
 #include "Status.hpp"
 #include "Systems.hpp"
 #include "Waves.hpp"
@@ -104,6 +105,16 @@ namespace rtype {
                 return {};
             }
             return owned->second;
+        }
+
+        void restockShop()
+        {
+            _shopOffers = rollOffers(_rng, config::SHOP_OFFER_COUNT);
+        }
+
+        [[nodiscard]] const std::vector<AugmentId> &shopOffers() const
+        {
+            return _shopOffers;
         }
 
         void setInput(const int slot, const PlayerInput &input)
@@ -398,6 +409,7 @@ namespace rtype {
         Engine::Registry _reg;
         SlotTable _usedSlots{};
         std::map<int, std::vector<AugmentId>> _augments;
+        std::vector<AugmentId> _shopOffers;
         Phase _phase = Phase::Playing;
         float _phaseTimer = 0.f;
         float _scroll = 0.f;
