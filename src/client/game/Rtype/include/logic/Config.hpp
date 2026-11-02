@@ -70,15 +70,24 @@ namespace rtype::config {
     constexpr float AUGMENT_SPEED_BONUS = 75.f;
     constexpr int AUGMENT_HP_BONUS = 25;
 
-    constexpr int AUGMENT_DAMAGE_PRICE = 50;
-    constexpr int AUGMENT_SPEED_PRICE = 50;
-    constexpr int AUGMENT_HP_PRICE = 100;
-    constexpr int AUGMENT_FIRE_RATE_PRICE = 200;
+    constexpr std::size_t AUGMENT_DAMAGE_PRICE = 50;
+    constexpr std::size_t AUGMENT_SPEED_PRICE = 50;
+    constexpr std::size_t AUGMENT_HP_PRICE = 100;
+    constexpr std::size_t AUGMENT_FIRE_RATE_PRICE = 200;
 
-    constexpr int RARITY_COMMON_WEIGHT = 60;
-    constexpr int RARITY_RARE_WEIGHT = 25;
-    constexpr int RARITY_EPIC_WEIGHT = 12;
-    constexpr int RARITY_LEGENDARY_WEIGHT = 3;
+    constexpr int COMMON_WEIGHT = 60;
+    constexpr int COMMON_WEIGHT_PER_LEVEL = -2;
+    constexpr int COMMON_BOSS_BONUS = -20;
+    constexpr int RARE_WEIGHT = 25;
+    constexpr int RARE_WEIGHT_PER_LEVEL = 1;
+    constexpr int RARE_BOSS_BONUS = 5;
+    constexpr int EPIC_WEIGHT = 12;
+    constexpr int EPIC_WEIGHT_PER_LEVEL = 1;
+    constexpr int EPIC_BOSS_BONUS = 10;
+    constexpr int LEGENDARY_WEIGHT = 3;
+    constexpr int LEGENDARY_WEIGHT_PER_LEVEL = 1;
+    constexpr int LEGENDARY_BOSS_BONUS = 5;
+    constexpr int MIN_RARITY_WEIGHT = 1;
     constexpr std::size_t SHOP_OFFER_COUNT = 3;
 
     constexpr float SCROLL_SPEED = 120.f; //-> Vitesse de défilement de la carte
