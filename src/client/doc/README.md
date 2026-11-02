@@ -126,6 +126,11 @@ The window is 1280 x 720. The world is 1920 x 1080, so everything is scaled by
 - **HUD**: one health bar per player, a boss bar while the boss is there, a
   hint to respawn, and a message on victory or defeat. The top right corner
   shows the shared purse: the spinning coin and the number of coins in yellow.
+  The top left corner shows the elapsed time of the match (`mm:ss.d`), aligned with
+  the `P1` label, followed by an animated stopwatch (`stopwatch_sheet.png`, 16 frames), above the health
+  bars. The time and the coin counter share the same text size. The server counts it, so a player who joins late sees the
+  same time as the others. It stops when the match ends and is drawn above the
+  end screen, so the final time stays readable.
 - **Coins**: dropped by monsters, drawn from a sprite sheet of 6 frames
   (`coin_spin_sheet.png`). The animated GIF is not used directly, because SFML
   only reads its first image.

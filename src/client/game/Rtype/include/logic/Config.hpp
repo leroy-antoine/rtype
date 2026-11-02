@@ -59,6 +59,7 @@ namespace rtype::config {
     constexpr float BOSS_BULLET_SPEED = 480.f;
     constexpr float BOSS_BULLET_SIZE = 40.f;
 
+    constexpr float MS_PER_SECOND = 1000.f;
     constexpr float RESTART_DELAY = 6.f; // -> Secondes avant la nouvelle partie
 
     // Hauteur (haut du monstre) tiree au hasard pour une vague.

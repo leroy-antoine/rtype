@@ -95,7 +95,7 @@ One `tick()` does:
 3. `broadcastEvents()`: `SPAWN` and `DESTROY` of this tick (reliable);
 4. `broadcastStates()`: the positions (`STATES`, unreliable);
 5. every 6th tick, `broadcastStatus()`: phase, boss and player health, coins
-   of the shared purse (`STATUS`, about 10 times per second);
+   of the shared purse, elapsed time (`STATUS`, about 10 times per second);
 6. `server.flush()`: sends the datagrams.
 
 The game never reads a clock itself, it receives `dt`. Time does not depend on

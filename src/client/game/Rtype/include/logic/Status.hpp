@@ -18,6 +18,7 @@ namespace rtype {
         int bossHp = 0;    // -> 0 si le boss n'est pas la
         int bossMaxHp = 0;
         std::uint32_t coins = 0;
+        std::uint32_t elapsedMs = 0;
         std::vector<PlayerStatus> players;
     };
 }

@@ -469,3 +469,40 @@ TEST(an_augment_needs_a_connected_player_and_a_valid_id)
     CHECK(!game.addAugment(0, AugmentId::Count));
     CHECK(game.ownedAugments(0).empty());
 }
+
+TEST(the_timer_counts_the_time_of_the_match)
+{
+    Game game(1);
+
+    game.addPlayer();
+    CHECK(game.status().elapsedMs == 0);
+    run(game, 2.f);
+    CHECK(game.status().elapsedMs >= 1990);
+    CHECK(game.status().elapsedMs <= 2010);
+}
+
+TEST(the_timer_restarts_with_a_new_game)
+{
+    Game game(1);
+
+    game.addPlayer();
+    run(game, 1.f);
+    game.removePlayer(0);
+    run(game, 0.1f);
+    CHECK(game.status().elapsedMs == 0);
+}
+
+TEST(the_timer_stops_when_the_match_is_over)
+{
+    Game game(1);
+
+    game.addPlayer();
+    run(game, 1.f);
+    kill(game, 0);
+    run(game, 0.1f);
+    const std::uint32_t atTheEnd = game.status().elapsedMs;
+
+    run(game, 1.f);
+    CHECK(game.phase() != Phase::Playing);
+    CHECK(game.status().elapsedMs == atTheEnd);
+}

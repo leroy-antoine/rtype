@@ -33,7 +33,7 @@ namespace rtype::protocol {
         gameLogic::Vec2Pos pos;
     };
 
-    constexpr std::uint8_t VERSION = 5;
+    constexpr std::uint8_t VERSION = 6;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
@@ -60,9 +60,10 @@ namespace rtype::protocol {
     constexpr std::size_t MAX_STATES_PER_MESSAGE =
         (Engine::Protocol::MAX_PAYLOAD_SIZE - STATES_HEADER_SIZE) / STATE_SIZE;
 
-    // STATUS : phase (1), boss hp (2), boss max hp (2), pieces (4), nombre de
-    // joueurs (1), puis par joueur : slot (1), hp (2), vivant (1).
-    constexpr std::size_t STATUS_HEADER_SIZE = 10;
+    // STATUS : phase (1), boss hp (2), boss max hp (2), pieces (4), temps
+    // en ms (4), nombre de joueurs (1), puis par joueur : slot (1), hp (2),
+    // vivant (1).
+    constexpr std::size_t STATUS_HEADER_SIZE = 14;
     constexpr std::size_t PLAYER_STATUS_SIZE = 4;
 
     inline void writeVec2(Engine::BinaryWriter &writer,
@@ -306,6 +307,7 @@ namespace rtype::protocol {
         writer.writeU16(static_cast<std::uint16_t>(status.bossHp));
         writer.writeU16(static_cast<std::uint16_t>(status.bossMaxHp));
         writer.writeU32(status.coins);
+        writer.writeU32(status.elapsedMs);
         writer.writeU8(static_cast<std::uint8_t>(status.players.size()));
         for (const PlayerStatus &player : status.players) {
             writer.writeU8(static_cast<std::uint8_t>(player.slot));
@@ -329,33 +331,71 @@ namespace rtype::protocol {
         return PlayerStatus{*slot, *hp, *alive == 1};
     }
 
-    inline std::optional<GameStatus> decodeStatus(const Payload &payload)
+    struct StatusHeader {
+        std::uint8_t phase = 0;
+        std::uint16_t bossHp = 0;
+        std::uint16_t bossMaxHp = 0;
+        std::uint32_t coins = 0;
+        std::uint32_t elapsedMs = 0;
+        std::uint8_t count = 0;
+    };
+
+    inline std::optional<StatusHeader> readStatusHeader(
+        Engine::BinaryReader &reader)
     {
-        Engine::BinaryReader reader(payload);
         const std::optional<std::uint8_t> phase = reader.readU8();
         const std::optional<std::uint16_t> bossHp = reader.readU16();
         const std::optional<std::uint16_t> bossMaxHp = reader.readU16();
         const std::optional<std::uint32_t> coins = reader.readU32();
+        const std::optional<std::uint32_t> elapsedMs = reader.readU32();
         const std::optional<std::uint8_t> count = reader.readU8();
-        GameStatus status;
 
-        if (!phase || !bossHp || !bossMaxHp || !coins || !count
-            || *phase > static_cast<std::uint8_t>(Phase::Defeat)
-            || *count > config::MAX_PLAYERS || *bossHp > *bossMaxHp
-            || reader.remaining() != *count * PLAYER_STATUS_SIZE) {
+        if (!phase || !bossHp || !bossMaxHp || !coins || !elapsedMs
+            || !count) {
             return std::nullopt;
         }
-        status.phase = static_cast<Phase>(*phase);
-        status.bossHp = *bossHp;
-        status.bossMaxHp = *bossMaxHp;
-        status.coins = *coins;
-        for (std::size_t i = 0; i < *count; ++i) {
+        return StatusHeader{*phase, *bossHp, *bossMaxHp, *coins, *elapsedMs,
+            *count};
+    }
+
+    inline bool isValid(const StatusHeader &header, const std::size_t left)
+    {
+        return header.phase <= static_cast<std::uint8_t>(Phase::Defeat)
+            && header.count <= config::MAX_PLAYERS
+            && header.bossHp <= header.bossMaxHp
+            && left == header.count * PLAYER_STATUS_SIZE;
+    }
+
+    inline bool readPlayers(Engine::BinaryReader &reader,
+        const std::size_t count, std::vector<PlayerStatus> &players)
+    {
+        for (std::size_t i = 0; i < count; ++i) {
             const std::optional<PlayerStatus> player = readPlayerStatus(reader);
 
             if (!player) {
-                return std::nullopt;
+                return false;
             }
-            status.players.push_back(*player);
+            players.push_back(*player);
+        }
+        return true;
+    }
+
+    inline std::optional<GameStatus> decodeStatus(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+        const std::optional<StatusHeader> header = readStatusHeader(reader);
+        GameStatus status;
+
+        if (!header || !isValid(*header, reader.remaining())) {
+            return std::nullopt;
+        }
+        status.phase = static_cast<Phase>(header->phase);
+        status.bossHp = header->bossHp;
+        status.bossMaxHp = header->bossMaxHp;
+        status.coins = header->coins;
+        status.elapsedMs = header->elapsedMs;
+        if (!readPlayers(reader, header->count, status.players)) {
+            return std::nullopt;
         }
         return status;
     }

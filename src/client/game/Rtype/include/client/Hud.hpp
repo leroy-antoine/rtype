@@ -24,12 +24,18 @@ namespace client {
         static constexpr float BAR_HEIGHT = 14.f;
         static constexpr float ROW_STEP = 30.f;
         static constexpr float BOSS_BAR_WIDTH = 600.f;
-        static constexpr float COIN_MARGIN = 16.f;
-        static constexpr float COIN_ICON_SIZE = 32.f;
-        static constexpr float COIN_ICON_GAP = 10.f;
-        static constexpr float COIN_TEXT_SCALE = 4.f;
+        static constexpr float PLAYERS_TOP = 60.f;
+        static constexpr float MARGIN = 16.f;
+        static constexpr float ICON_SIZE = 32.f;
+        static constexpr float ICON_GAP = 10.f;
+        static constexpr float TEXT_SCALE = 4.f;
+
+        static float textTop();
 
         void drawPlayers(const rtype::GameStatus &status);
+        void drawTimer(const rtype::GameStatus &status, float elapsed);
+        void drawIcon(const Engine::Sprite &sprite,
+            Engine::Vector2f position, float elapsed);
         void drawCoins(const rtype::GameStatus &status, float elapsed);
         void drawBar(Engine::Vector2f position, Engine::Vector2f size,
             float ratio, Engine::Color fill);

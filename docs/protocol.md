@@ -27,7 +27,7 @@ A new client can be written from these two pages alone.
 | Direction | the client sends keys, the server sends the world |
 | Datagram | at most **1200 bytes**, carries one or several messages |
 | Byte order | **big-endian** for every integer and float |
-| Protocol version | `5` (`rtype::protocol::VERSION`), checked at connection |
+| Protocol version | `6` (`rtype::protocol::VERSION`), checked at connection |
 | Tick | the server simulates at 60 Hz and sends the states every tick |
 
 The server is the authority. A client never sends a position, a hit or a
@@ -62,7 +62,7 @@ Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
 
 ```
  client                                   server
-   │ ── Connect(version=5) ─────────────►  │  every 500 ms, 10 tries at most
+   │ ── Connect(version=6) ─────────────►  │  every 500 ms, 10 tries at most
    │ ◄───────────── Accept(token) ──────── │  or Refuse(0 version, 1 full)
    │ ◄───────────────────── YOU(slot) ──── │  reliable
    │ ◄────────────────── SPAWN × n ─────── │  reliable, the whole world
@@ -95,7 +95,7 @@ Sender: **C** is the client, **S** is the server. Delivery: **R** is reliable
 | `0x20` | `SPAWN` | S | R | 22 |
 | `0x21` | `DESTROY` | S | R | 4 |
 | `0x22` | `STATES` | S | U | 5 + 12 × n |
-| `0x23` | `STATUS` | S | U | 10 + 4 × n |
+| `0x23` | `STATUS` | S | U | 14 + 4 × n |
 | `0x24` | `YOU` | S | R | 1 |
 | `0x25` | `OWN_STATE` | S | U | 12 |
 
@@ -174,10 +174,11 @@ What the HUD shows, sent about 10 times per second.
 | 1 | boss hp | `u16` | `0` when there is no boss |
 | 3 | boss max hp | `u16` | the boss hp cannot exceed it |
 | 5 | coins | `u32` | the shared purse of the players |
-| 9 | count `n` | `u8` | number of players, at most 4 |
-| 10 + 4 × i | slot | `u8` | 0 to 3 |
-| 11 + 4 × i | hp | `u16` | |
-| 13 + 4 × i | alive | `u8` | `0` or `1` |
+| 9 | elapsed time | `u32` | milliseconds since the start of the match, frozen when it ends |
+| 13 | count `n` | `u8` | number of players, at most 4 |
+| 14 + 4 × i | slot | `u8` | 0 to 3 |
+| 15 + 4 × i | hp | `u16` | |
+| 17 + 4 × i | alive | `u8` | `0` or `1` |
 
 ### `YOU` (0x24)
 

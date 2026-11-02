@@ -154,6 +154,8 @@ namespace rtype {
             status.phase = _phase;
             status.coins = static_cast<std::uint32_t>(
                 _reg.get<CoinCounter>(_coinCounter).total);
+            status.elapsedMs = static_cast<std::uint32_t>(
+                _elapsed * config::MS_PER_SECOND);
             for (const Engine::Entity boss : collectWith<BossTag>(_reg)) {
                 status.bossHp = std::max(0, _reg.get<Health>(boss).hp);
                 status.bossMaxHp =
@@ -235,6 +237,7 @@ namespace rtype {
 
         void updatePlaying(const float dt)
         {
+            _elapsed += dt;
             updateWeaponTimers(_reg, dt);
             lifetimeSystem(_reg, dt);
             playerControlSystem(_reg);
@@ -381,6 +384,7 @@ namespace rtype {
             _nextBoss = 0;
             _phase = Phase::Playing;
             _phaseTimer = 0.f;
+            _elapsed = 0.f;
             _reg.get<CoinCounter>(_coinCounter).total = 0;
             for (int slot = 0; slot < SLOTS; ++slot) {
                 if (isUsedSlot(slot)) {
@@ -428,6 +432,7 @@ namespace rtype {
         std::map<int, std::vector<AugmentId>> _augments;
         Phase _phase = Phase::Playing;
         float _phaseTimer = 0.f;
+        float _elapsed = 0.f;
         float _scroll = 0.f;
         std::size_t _nextWave = 0;
         std::size_t _nextBoss = 0;

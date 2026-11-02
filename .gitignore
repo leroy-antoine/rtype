@@ -20,5 +20,8 @@ a.out
 /graphify-out/
 .graphify_python
 .graphify_root
-docs/graphify-out/2026-10-30
-docs/graphify-out/2026-*
+/docs/graphify-out/graph.html
+/docs/graphify-out/20*/
+
+# Personal notes
+/roadmap.md

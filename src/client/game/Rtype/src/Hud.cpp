@@ -2,6 +2,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include "logic/Config.hpp"
 #include "client/Hud.hpp"
@@ -17,6 +18,30 @@ namespace client {
         constexpr Color YELLOW{255, 220, 40, 255};
 
         // Une couleur par slot, comme les vaisseaux.
+        constexpr std::uint32_t MS_PER_MINUTE = 60000;
+        constexpr std::uint32_t MS_PER_SECOND = 1000;
+        constexpr std::uint32_t MS_PER_TENTH = 100;
+
+        std::string twoDigits(const std::uint32_t value)
+        {
+            std::string text = std::to_string(value);
+
+            if (text.size() < 2) {
+                text.insert(0, "0");
+            }
+            return text;
+        }
+
+        std::string formatTime(const std::uint32_t ms)
+        {
+            const std::uint32_t minutes = ms / MS_PER_MINUTE;
+            const std::uint32_t seconds = ms / MS_PER_SECOND % 60;
+            const std::uint32_t tenths = ms / MS_PER_TENTH % 10;
+
+            return twoDigits(minutes) + ":" + twoDigits(seconds) + "."
+                + std::to_string(tenths);
+        }
+
         constexpr std::array<Color, 4> SLOT_COLORS = {{
             {90, 170, 255, 255}, {255, 90, 90, 255},
             {110, 230, 110, 255}, {255, 220, 80, 255}}};
@@ -47,6 +72,7 @@ namespace client {
         } else {
             drawEndScreen(*status, elapsed);
         }
+        drawTimer(*status, elapsed);
     }
 
     // Retient depuis quand la partie est finie, pour le compte a rebours.
@@ -61,34 +87,49 @@ namespace client {
     // Une ligne par joueur : son nom (P1...) et sa barre de vie.
     void Hud::drawPlayers(const rtype::GameStatus &status)
     {
-        float top = 16.f;
+        float top = PLAYERS_TOP;
 
         for (const rtype::PlayerStatus &player : status.players) {
             const auto slot = static_cast<std::size_t>(player.slot);
             const float ratio = static_cast<float>(player.hp)
                 / static_cast<float>(rtype::config::PLAYER_HP);
 
-            _font.draw("P" + std::to_string(player.slot + 1), {16.f, top},
+            _font.draw("P" + std::to_string(player.slot + 1), {MARGIN, top},
                 2.f, SLOT_COLORS[slot]);
             drawBar({BAR_X, top}, {BAR_WIDTH, BAR_HEIGHT}, ratio, GREEN);
             top += ROW_STEP;
         }
     }
 
+    float Hud::textTop()
+    {
+        return MARGIN + (ICON_SIZE - Font::height(TEXT_SCALE)) / 2.f;
+    }
+
+    void Hud::drawIcon(const Engine::Sprite &sprite,
+        const Engine::Vector2f position, const float elapsed)
+    {
+        _renderer.drawResized(sprite.texture, position,
+            sprite.animation.frameAt(elapsed), {ICON_SIZE, ICON_SIZE});
+    }
+
+    void Hud::drawTimer(const rtype::GameStatus &status, const float elapsed)
+    {
+        const std::string text = formatTime(status.elapsedMs);
+        const float iconX = MARGIN + Font::width(text, TEXT_SCALE) + ICON_GAP;
+
+        _font.draw(text, {MARGIN, textTop()}, TEXT_SCALE, WHITE);
+        drawIcon(_sprites.clock(), {iconX, MARGIN}, elapsed);
+    }
+
     void Hud::drawCoins(const rtype::GameStatus &status, const float elapsed)
     {
         const std::string text = std::to_string(status.coins);
-        const float textWidth = Font::width(text, COIN_TEXT_SCALE);
-        const float textX = _width - COIN_MARGIN - textWidth;
-        const float iconX = textX - COIN_ICON_GAP - COIN_ICON_SIZE;
-        const float textY = COIN_MARGIN
-            + (COIN_ICON_SIZE - Font::height(COIN_TEXT_SCALE)) / 2.f;
-        const Engine::Sprite &sprite = _sprites.get(rtype::SpriteId::Coin);
+        const float textX = _width - MARGIN - Font::width(text, TEXT_SCALE);
+        const float iconX = textX - ICON_GAP - ICON_SIZE;
 
-        _renderer.drawResized(sprite.texture, {iconX, COIN_MARGIN},
-            sprite.animation.frameAt(elapsed),
-            {COIN_ICON_SIZE, COIN_ICON_SIZE});
-        _font.draw(text, {textX, textY}, COIN_TEXT_SCALE, YELLOW);
+        drawIcon(_sprites.get(rtype::SpriteId::Coin), {iconX, MARGIN}, elapsed);
+        _font.draw(text, {textX, textTop()}, TEXT_SCALE, YELLOW);
     }
 
     void Hud::drawBar(const Engine::Vector2f position,
