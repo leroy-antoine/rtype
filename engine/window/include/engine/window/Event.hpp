@@ -12,7 +12,8 @@ namespace Engine {
         Right,
         Space,
         Enter,
-        Escape
+        Escape,
+        Backspace
     };
     // a rajouter des keys pour la suite probablement esc ect ...
 

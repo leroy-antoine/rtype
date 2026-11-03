@@ -17,7 +17,8 @@ three decoupled layers: **rendering**, **networking** and **game logic**.
   zigzagging elites, rockets that charge, bombers that drop bombs) and **four
   bosses** (a standard boss, a roaming Dasher, a Summoner that calls
   reinforcements and a Fortress that fires barrages).
-- **Walls**: rocks to hide behind and deadly hazard gates to cross.
+- **Obstacles**: solid rocks to hide behind, deadly spikes, swinging gates, and portals that speed the ship up or reverse the controls.
+- **Music and scenery** that change with every boss and every zone of the map.
 - **Coins** shared by the team, a match **timer**, and a **leaderboard** with
   the best times of each map.
 - A custom **engine**: ECS, window, audio and a reliable UDP transport,
@@ -83,7 +84,6 @@ After a victory or a defeat, the game returns to the lobby.
 | `src/client` | the display |
 | `docs` | documentation that concerns the whole project |
 | `tests` | automated tests of the game logic, the maps, the leaderboard and the protocol |
-| `tools` | helper scripts (generation of the sounds) |
 
 ## Documentation
 

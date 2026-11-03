@@ -1,5 +1,4 @@
 {
-  "0": "ECS Column Storage",
   "5": "Client Connection",
   "8": "Delivery and Sessions",
   "9": "Build and Protocol Docs",
@@ -18,7 +17,6 @@
   "40": "Build Tooling Docs",
   "42": "Reliable Channel",
   "47": "Architecture Targets",
-  "49": "Status Tests",
   "62": "Message Types",
   "70": "Session Info",
   "76": "Window Impl Header",

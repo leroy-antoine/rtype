@@ -24,6 +24,21 @@ namespace client {
         static constexpr int PLAYER_FRAME_UP = 4;
         static constexpr float ANIMATION_PHASE = 0.13f;
 
+        struct Area {
+            gameLogic::Vec2Pos pos;
+            gameLogic::Vec2Hitbox box;
+        };
+
+        struct ScreenRect {
+            Engine::Vector2f position;
+            Engine::Vector2f size;
+        };
+
+        static bool isBlock(rtype::SpriteId id);
+        static bool isPortalSprite(rtype::SpriteId id);
+        static Aura auraOf(rtype::SpriteId id);
+        static Scene sceneOf(Replica &replica);
+
         static int tiltFrame(const Engine::Registry &reg, Engine::Entity e);
         static Engine::IntRect playerFrame(const Engine::Registry &reg, Engine::Entity e,
             const Engine::Animation &animation);
@@ -35,15 +50,16 @@ namespace client {
         void drawLayer(Engine::Registry &reg, float elapsed, bool effects);
         void drawEntity(const Engine::Registry &reg, Engine::Entity e, const gameLogic::Vec2Pos &pos,
             const gameLogic::Vec2Hitbox &box, rtype::SpriteId id, float elapsed);
-        void drawTiled(const Engine::Sprite &sprite, const gameLogic::Vec2Pos &pos,
-            const gameLogic::Vec2Hitbox &box);
-        void drawTile(const Engine::Sprite &sprite, Engine::Vector2f position,
-            Engine::Vector2f size);
+        void drawTiled(const Engine::Sprite &sprite, const Engine::IntRect &frame,
+            Engine::Vector2f tile, const Area &area);
+        void drawTile(const Engine::Sprite &sprite, const Engine::IntRect &frame,
+            Engine::Vector2f tile, const ScreenRect &target);
 
         Engine::Renderer &_renderer;
         const SpriteBank &_sprites;
         float _worldToScreen;
         float _screenWidth;
+        float _screenHeight;
         Background _background;
         Hud _hud;
     };

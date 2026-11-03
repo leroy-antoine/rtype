@@ -1,6 +1,7 @@
 #include <cstddef>
 #include "logic/Builder.hpp"
 #include "logic/Levels.hpp"
+#include "logic/Zones.hpp"
 #include "TestHarness.hpp"
 
 using namespace rtype;
@@ -118,9 +119,10 @@ TEST(a_gate_always_leaves_room_for_a_ship)
             const ObstacleStep &top = level.obstacles[i - 1];
             const ObstacleStep &bottom = level.obstacles[i];
 
-            if (top.at == bottom.at && top.y == 0.f
-                && bottom.y + bottom.height == config::MAP_HEIGHT) {
-                CHECK(bottom.y - top.height >= 3.f * config::PLAYER_HEIGHT);
+            if (top.at == bottom.at && !isPortal(top.kind)
+                && top.amplitude == bottom.amplitude) {
+                CHECK(bottom.y - (top.y + top.height)
+                    >= 3.f * config::PLAYER_HEIGHT);
             }
         }
     }
@@ -143,7 +145,7 @@ TEST(a_gate_has_a_wall_above_and_below_its_gap)
 {
     std::vector<ObstacleStep> walls;
 
-    addGate(walls, 100.f, 400.f, 200.f, 80.f);
+    addGate(walls, {100.f, 400.f, 200.f, 80.f});
     CHECK(walls.size() == 2);
     CHECK(walls[0].y == 0.f);
     CHECK(walls[0].height == 400.f);
@@ -224,9 +226,9 @@ TEST(every_map_ends_with_a_boss_and_keeps_its_gates_passable)
                 const ObstacleStep &top = level.obstacles[i - 1];
                 const ObstacleStep &bottom = level.obstacles[i];
 
-                if (top.at == bottom.at && top.y == 0.f
-                    && bottom.y + bottom.height == config::MAP_HEIGHT) {
-                    CHECK(bottom.y - top.height
+                if (top.at == bottom.at && !isPortal(top.kind)
+                    && top.amplitude == bottom.amplitude) {
+                    CHECK(bottom.y - (top.y + top.height)
                         >= 3.f * config::PLAYER_HEIGHT);
                 }
             }
@@ -258,4 +260,121 @@ TEST(the_death_runs_map_has_only_walls_before_its_boss_level)
         CHECK(levels[i].bosses.empty());
         CHECK(levels[i].obstacles.size() >= 12);
     }
+}
+
+TEST(every_level_gives_back_the_normal_controls_and_speed)
+{
+    for (const MapFn map : MAPS) {
+        for (const LevelDef &level : map()) {
+            int reverses = 0;
+            bool fast = false;
+
+            for (const ObstacleStep &step : level.obstacles) {
+                if (step.kind == ObstacleKind::ReversePortal) {
+                    ++reverses;
+                }
+                if (step.kind == ObstacleKind::FastPortal) {
+                    fast = true;
+                }
+                if (step.kind == ObstacleKind::NormalPortal) {
+                    fast = false;
+                }
+            }
+            CHECK(reverses % 2 == 0);
+            CHECK(!fast);
+        }
+    }
+}
+
+TEST(the_death_runs_have_portals_and_moving_gates)
+{
+    const std::vector<LevelDef> levels = map3();
+    int moving = 0;
+    int portals = 0;
+
+    for (const LevelDef &level : levels) {
+        for (const ObstacleStep &step : level.obstacles) {
+            moving += step.amplitude > 0.f;
+            portals += isPortal(step.kind);
+        }
+    }
+    CHECK(moving > 0);
+    CHECK(portals >= 12);
+}
+
+TEST(a_moving_gate_keeps_a_wall_above_and_below_during_its_swing)
+{
+    std::vector<ObstacleStep> walls;
+
+    addGate(walls, {100.f, 400.f, 300.f, 80.f, ObstacleKind::Spike,
+        {90.f, 3.f}});
+    CHECK(walls.size() == 2);
+    CHECK(walls[0].y + walls[0].amplitude <= 0.f + 1.f);
+    CHECK(walls[1].y + walls[1].height - walls[1].amplitude
+        >= config::MAP_HEIGHT - 1.f);
+}
+
+TEST(a_portal_crosses_the_whole_height_of_the_map)
+{
+    const ObstacleStep gate = portal(300.f, ObstacleKind::FastPortal);
+
+    CHECK(gate.y == 0.f);
+    CHECK(gate.height == config::MAP_HEIGHT);
+    CHECK(gate.width == config::PORTAL_WIDTH);
+}
+
+TEST(each_zone_has_a_theme_and_the_death_runs_are_in_the_warp)
+{
+    CHECK(zoneOf(0, 1) == Zone::DeepSpace);
+    CHECK(zoneOf(0, 10) == Zone::Warp);
+    CHECK(zoneOf(0, 15) == Zone::Warp);
+    CHECK(zoneOf(0, 20) == Zone::Core);
+    CHECK(zoneOf(0, 99) == Zone::Core);
+    CHECK(zoneOf(1, 3) == Zone::Arena);
+    CHECK(zoneOf(2, 1) == Zone::Warp);
+    CHECK(zoneOf(2, 5) == Zone::Core);
+}
+
+TEST(a_pinching_gate_never_closes_below_two_and_a_half_ships)
+{
+    for (const MapFn map : MAPS) {
+        for (const LevelDef &level : map()) {
+            for (std::size_t i = 1; i < level.obstacles.size(); ++i) {
+                const ObstacleStep &top = level.obstacles[i - 1];
+                const ObstacleStep &bottom = level.obstacles[i];
+
+                if (top.at == bottom.at && !isPortal(top.kind)
+                    && top.amplitude == -bottom.amplitude
+                    && top.amplitude != 0.f) {
+                    CHECK(bottom.y - (top.y + top.height)
+                        - 2.f * std::abs(top.amplitude)
+                        >= 2.5f * config::PLAYER_HEIGHT);
+                }
+            }
+        }
+    }
+}
+
+TEST(the_walls_of_the_death_runs_come_faster_than_the_scrolling)
+{
+    int fast = 0;
+
+    for (const LevelDef &level : map3()) {
+        for (const ObstacleStep &step : level.obstacles) {
+            fast += step.speed > 1.f;
+        }
+    }
+    CHECK(fast > 100);
+}
+
+TEST(a_gate_can_pinch_and_come_faster)
+{
+    std::vector<ObstacleStep> walls;
+
+    addGate(walls, {100.f, 400.f, 300.f, 80.f, ObstacleKind::Spike,
+        {50.f, 2.f}, 1.5f, true});
+    CHECK(walls.size() == 2);
+    CHECK(walls[0].amplitude == 50.f);
+    CHECK(walls[1].amplitude == -50.f);
+    CHECK(walls[0].speed == 1.5f);
 }

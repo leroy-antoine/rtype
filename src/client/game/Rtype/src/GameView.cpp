@@ -6,17 +6,59 @@ namespace client {
     GameView::GameView(Engine::Renderer &renderer, const SpriteBank &sprites, const float worldToScreen,
         const float screenWidth, const float screenHeight)
         : _renderer(renderer), _sprites(sprites), _worldToScreen(worldToScreen),
-        _screenWidth(screenWidth),
-        _background(screenWidth, screenHeight, worldToScreen),
+        _screenWidth(screenWidth), _screenHeight(screenHeight),
+        _background(sprites, screenWidth, screenHeight, worldToScreen),
         _hud(renderer, sprites, screenWidth, screenHeight)
     {
     }
 
     void GameView::draw(Replica &replica, const float elapsed)
     {
-        _background.draw(_renderer, elapsed);
+        _background.draw(_renderer, sceneOf(replica), elapsed);
         drawWorld(replica.registry(), elapsed);
         _hud.draw(replica, elapsed);
+    }
+
+    bool GameView::isBlock(const rtype::SpriteId id)
+    {
+        return id == rtype::SpriteId::RockWall
+            || id == rtype::SpriteId::SpikeWall;
+    }
+
+    bool GameView::isPortalSprite(const rtype::SpriteId id)
+    {
+        return id == rtype::SpriteId::ReversePortal
+            || id == rtype::SpriteId::FastPortal
+            || id == rtype::SpriteId::NormalPortal;
+    }
+
+    Aura GameView::auraOf(const rtype::SpriteId id)
+    {
+        switch (id) {
+            case rtype::SpriteId::Boss: return Aura::Standard;
+            case rtype::SpriteId::DasherBoss: return Aura::Dasher;
+            case rtype::SpriteId::SummonerBoss: return Aura::Summoner;
+            case rtype::SpriteId::FortressBoss: return Aura::Fortress;
+            default: return Aura::None;
+        }
+    }
+
+    Scene GameView::sceneOf(Replica &replica)
+    {
+        Scene scene;
+        const auto &status = replica.status();
+
+        if (status && status->phase != rtype::Phase::Lobby) {
+            scene.zone = rtype::zoneOf(status->map, status->level);
+        }
+        replica.registry().each<rtype::Renderable>(
+            [&scene](const Engine::Entity, const rtype::Renderable &sprite) {
+                if (auraOf(sprite.id) != Aura::None) {
+                    scene.aura = auraOf(sprite.id);
+                }
+            });
+        scene.boosted = replica.prediction().speedFactor() > 1.f;
+        return scene;
     }
 
     void GameView::drawWorld(Engine::Registry &reg, const float elapsed)
@@ -42,9 +84,16 @@ namespace client {
     {
         const Engine::Sprite &sprite = _sprites.get(id);
 
-        if (id == rtype::SpriteId::RockWall
-            || id == rtype::SpriteId::HazardWall) {
-            drawTiled(sprite, pos, box);
+        if (isBlock(id)) {
+            drawTiled(sprite, sprite.animation.firstFrame,
+                {rtype::config::OBSTACLE_TILE, rtype::config::OBSTACLE_TILE},
+                {pos, box});
+            return;
+        }
+        if (isPortalSprite(id)) {
+            drawTiled(sprite, sprite.animation.frameAt(elapsed),
+                {rtype::config::PORTAL_WIDTH, rtype::config::OBSTACLE_TILE},
+                {pos, box});
             return;
         }
         _renderer.drawResized(sprite.texture,
@@ -54,35 +103,40 @@ namespace client {
     }
 
     void GameView::drawTiled(const Engine::Sprite &sprite,
-        const gameLogic::Vec2Pos &pos, const gameLogic::Vec2Hitbox &box)
+        const Engine::IntRect &frame, const Engine::Vector2f tile,
+        const Area &area)
     {
-        const float tile = rtype::config::OBSTACLE_TILE;
-
-        for (float y = 0.f; y < box.y; y += tile) {
-            for (float x = 0.f; x < box.x; x += tile) {
-                drawTile(sprite, {(pos.x + x) * _worldToScreen,
-                    (pos.y + y) * _worldToScreen},
-                    {std::min(tile, box.x - x), std::min(tile, box.y - y)});
+        for (float y = 0.f; y < area.box.y; y += tile.y) {
+            for (float x = 0.f; x < area.box.x; x += tile.x) {
+                drawTile(sprite, frame, tile,
+                    {{(area.pos.x + x) * _worldToScreen,
+                        (area.pos.y + y) * _worldToScreen},
+                    {std::min(tile.x, area.box.x - x),
+                        std::min(tile.y, area.box.y - y)}});
             }
         }
     }
 
     void GameView::drawTile(const Engine::Sprite &sprite,
-        const Engine::Vector2f position, const Engine::Vector2f size)
+        const Engine::IntRect &frame, const Engine::Vector2f tile,
+        const ScreenRect &target)
     {
-        const float tile = rtype::config::OBSTACLE_TILE;
-        const float width = size.x * _worldToScreen;
+        const float width = target.size.x * _worldToScreen;
+        const float height = target.size.y * _worldToScreen;
 
-        if (position.x > _screenWidth || position.x + width < 0.f) {
+        if (target.position.x > _screenWidth || target.position.x + width < 0.f
+            || target.position.y > _screenHeight
+            || target.position.y + height < 0.f) {
             return;
         }
-        const Engine::IntRect frame = sprite.animation.firstFrame;
         const Engine::IntRect source{frame.left, frame.top,
-            static_cast<int>(static_cast<float>(frame.width) * size.x / tile),
-            static_cast<int>(static_cast<float>(frame.height) * size.y / tile)};
+            static_cast<int>(static_cast<float>(frame.width)
+                * target.size.x / tile.x),
+            static_cast<int>(static_cast<float>(frame.height)
+                * target.size.y / tile.y)};
 
-        _renderer.drawResized(sprite.texture, position, source,
-            {width, size.y * _worldToScreen});
+        _renderer.drawResized(sprite.texture, target.position, source,
+            {width, height});
     }
 
     int GameView::tiltFrame(const Engine::Registry &reg, const Engine::Entity e)

@@ -37,6 +37,7 @@ namespace client {
         void drawPlayers(const rtype::GameStatus &status);
         void drawTimer(const rtype::GameStatus &status, float elapsed);
         void drawLevel(const rtype::GameStatus &status);
+        void drawEffects(const Replica &replica);
         void drawIcon(const Engine::Sprite &sprite,
             Engine::Vector2f position, float elapsed);
         void drawCoins(const rtype::GameStatus &status, float elapsed);
@@ -47,6 +48,8 @@ namespace client {
             std::optional<int> self, float elapsed);
         void drawEndScreen(const rtype::GameStatus &status, float elapsed);
         void drawLobby(const Replica &replica);
+        void drawMenuHint(const Replica &replica);
+        void drawPauseMenu(const Replica &replica);
         void drawMapList(rtype::MapId cursor);
         void drawRecords(const rtype::MapRecords &records);
         void trackPhase(rtype::Phase phase, float elapsed);

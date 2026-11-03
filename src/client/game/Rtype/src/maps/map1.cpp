@@ -6,6 +6,12 @@ namespace rtype {
         using MK = MonsterKind;
         using BK = BossKind;
 
+        constexpr Motion SWING{80.f, 4.f};
+        constexpr Motion SLOW_SWING{60.f, 5.f};
+        constexpr ObstacleKind FAST = ObstacleKind::FastPortal;
+        constexpr ObstacleKind REVERSE = ObstacleKind::ReversePortal;
+        constexpr ObstacleKind NORMAL = ObstacleKind::NormalPortal;
+
         LevelDef level1()
         {
             return {2500.f,
@@ -129,12 +135,14 @@ namespace rtype {
         {
             LevelDef level{4900.f, {}, {}};
 
-            addGates(level.obstacles,
+            addRun(level.obstacles,
                 {{540.f, 300.f}, {340.f, 280.f}, {640.f, 280.f},
                  {300.f, 260.f}, {680.f, 260.f}, {420.f, 240.f},
-                 {260.f, 240.f}, {700.f, 220.f}, {380.f, 200.f},
-                 {620.f, 200.f}, {260.f, 180.f}},
-                {600.f, 380.f, 96.f, ObstacleKind::Hazard});
+                 {260.f, 240.f}, {700.f, 220.f, SLOW_SWING},
+                 {380.f, 200.f, SLOW_SWING}, {620.f, 200.f, SLOW_SWING},
+                 {260.f, 180.f}},
+                {600.f, 380.f, 96.f, ObstacleKind::Spike},
+                {{-1, FAST}, {2, REVERSE}, {5, REVERSE}, {10, NORMAL}});
             return level;
         }
 
@@ -210,14 +218,17 @@ namespace rtype {
         {
             LevelDef level{5900.f, {}, {}};
 
-            addGates(level.obstacles,
+            addRun(level.obstacles,
                 {{540.f, 240.f}, {360.f, 240.f}, {620.f, 230.f},
                  {280.f, 230.f}, {700.f, 220.f}, {420.f, 220.f},
-                 {200.f, 210.f}, {560.f, 210.f}, {760.f, 200.f},
-                 {360.f, 200.f}, {640.f, 190.f}, {240.f, 190.f},
-                 {520.f, 180.f}, {800.f, 170.f}, {420.f, 160.f},
-                 {260.f, 160.f}},
-                {500.f, 320.f, 80.f, ObstacleKind::Hazard});
+                 {300.f, 240.f, SWING}, {560.f, 240.f, SWING},
+                 {700.f, 240.f, SWING}, {400.f, 230.f, SWING},
+                 {640.f, 230.f, SWING}, {300.f, 220.f},
+                 {520.f, 200.f}, {760.f, 190.f}, {420.f, 180.f},
+                 {300.f, 180.f}},
+                {500.f, 320.f, 80.f, ObstacleKind::Spike},
+                {{-1, FAST}, {2, REVERSE}, {5, REVERSE}, {8, REVERSE},
+                 {11, REVERSE}, {15, NORMAL}});
             return level;
         }
 
@@ -283,14 +294,16 @@ namespace rtype {
                 {wave(3100.f, MK::Elite, 8, RANDOM_Y, 0.f, 0.3f),
                  wave(3500.f, MK::Bomber, 3, 150.f, 300.f, 0.f),
                  wave(3800.f, MK::Kamikaze, 8, RANDOM_Y, 0.f, 0.2f)},
-                {{BK::Summoner, 4800.f}, {BK::Dasher, 5100.f},
+                {{BK::Summoner, 5000.f}, {BK::Dasher, 5200.f},
                  {BK::Fortress, 5400.f}}};
 
-            addGates(level.obstacles,
-                {{540.f, 220.f}, {300.f, 220.f}, {720.f, 210.f},
-                 {360.f, 210.f}, {640.f, 200.f}, {260.f, 190.f},
-                 {760.f, 180.f}, {500.f, 170.f}},
-                {400.f, 340.f, 88.f, ObstacleKind::Hazard});
+            addRun(level.obstacles,
+                {{540.f, 240.f}, {300.f, 240.f}, {720.f, 230.f},
+                 {360.f, 240.f, SWING}, {640.f, 240.f, SWING},
+                 {320.f, 230.f, SWING}, {700.f, 220.f},
+                 {500.f, 200.f}},
+                {400.f, 340.f, 88.f, ObstacleKind::Spike},
+                {{-1, FAST}, {1, REVERSE}, {3, REVERSE}, {7, NORMAL}});
             return level;
         }
     }

@@ -9,6 +9,8 @@ in [the game logic documentation](../src/client/game/Rtype/doc/README.md).
 - [Enemies](#enemies)
 - [Bosses](#bosses)
 - [Walls](#walls)
+- [Portals](#portals)
+- [Music and scenery](#music-and-scenery)
 - [Coins, time and level skip](#coins-time-and-level-skip)
 - [Leaderboard](#leaderboard)
 - [Winning and losing](#winning-and-losing)
@@ -31,7 +33,7 @@ the highlighted map; the other players wait for them.
 |---|---|
 | **CAMPAIGN** | 20 levels with a growing difficulty, more and more bosses, rocks and two full death runs |
 | **BOSS RUSH** | 5 short levels, one to three bosses each, ending with the Fortress, the Summoner and the Dasher |
-| **DEATH RUNS** | 4 levels of deadly gates to cross without a single enemy, then two bosses |
+| **DEATH RUNS** | 4 relentless levels of spike gates, with portals, without a single enemy, then two bosses |
 
 The level number is shown at the top centre of the screen.
 
@@ -42,6 +44,8 @@ The level number is shown at the top centre of the screen.
 | Arrow keys | move the ship |
 | Space | fire (hold to keep firing) |
 | Enter | come back after your ship is destroyed, if a teammate is still alive |
+| Backspace | host only: pause the match and show the pause menu; again to resume |
+| Enter (paused) | host only: leave the match and go back to the map menu |
 | Escape | quit |
 
 Leaving the screen with your ship, or touching an enemy, destroys it.
@@ -73,14 +77,52 @@ at the bottom of the screen. Monsters called by the Summoner drop no coin.
 
 Walls scroll with the background.
 
-- **Rock** walls are solid grey blocks. They form caves, pillars and gates, and
-  they are useful: they stop every bullet, yours and the enemies'.
-- **Hazard** walls are red and black. They look like rocks but they are the
-  danger of the *death runs*.
+- **Rock** walls are solid asteroids. Your ship cannot cross them: they block
+  and push it. They form caves, pillars and gates, they stop every bullet,
+  yours and the enemies', and you can hide behind them. But a rock keeps
+  coming from the right: if it pushes your ship against the left edge of the
+  screen, the ship is **crushed**.
+- **Spikes** are steel stars with glowing red tips. Touching one **destroys**
+  your ship at once. The gates of the *death runs* are made of spikes.
+- Some gates **swing** up and down while they come: follow the gap.
+- Some gates **pinch**: the two walls close on the gap and open again.
+- **Sweepers** are spike blocks that sweep up and down very fast between two
+  gates: time your move.
+- In the death runs the walls come **faster than the scrolling** (up to twice
+  as fast) and follow each other closely.
 
-A ship that touches any wall is destroyed. Enemies fly through walls. Every
-gate leaves a gap wide enough for a ship; the death runs can still be crossed
-at about 60 % of the ship speed, so they are demanding but fair.
+Enemies fly through walls. Every gate leaves a gap wide enough for a ship.
+
+## Portals
+
+A portal is a glowing column across the whole screen: you cannot avoid it.
+They appear in the death runs.
+
+| Portal | Effect |
+|---|---|
+| Cyan, `>>` | **speed up**: the ship moves 1.5 times faster |
+| Violet, `<>` | **reversed controls**: all four arrow keys are inverted, until the next violet portal |
+| Green, `=` | back to the normal speed |
+
+The effects stop at the end of the level. The text `CONTROLS REVERSED` or
+`SPEED UP` reminds you of them at the bottom left of the screen. Every death
+run can be crossed, but only by a player who keeps moving: the gates of the
+last levels of the *Death runs* map need a ship at least 1.2 times faster than
+the normal speed, which is what the fast portal gives.
+
+## Music and scenery
+
+Each boss has its own music (a march for the Standard boss, a frantic
+arpeggio for the Dasher, an eerie drone for the Summoner, a heavy slow beat for
+the Fortress), the death runs have a driving track of their own, and the
+levels share a lighter one.
+
+The scenery changes with the part of the map: deep blue space, a purple nebula,
+an asteroid belt, the wreckage of a station, the red heart of the Bydo core,
+and streaks of light in the warp of the death runs. While a boss is on screen
+the scenery takes its colour: a pulsing red glow for the Standard boss, fast
+cyan streaks for the Dasher, expanding violet rings for the Summoner, a heavy
+red vignette and a rumble for the Fortress. Nothing flashes.
 
 ## Coins, time and level skip
 

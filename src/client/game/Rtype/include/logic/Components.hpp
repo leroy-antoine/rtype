@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include "engine/core/Entity.hpp"
 #include "Config.hpp"
 #include "Kinds.hpp"
 
@@ -36,6 +37,21 @@ namespace rtype {
     // Le boss : il entre, s'arrete, puis fait des va-et-vient.
     struct ObstacleTag {
         ObstacleKind kind = ObstacleKind::Rock;
+    };
+
+    // Va-et-vient vertical d'un obstacle autour de sa hauteur de depart.
+    struct ObstacleMotion {
+        float baseY = 0.f;
+        float amplitude = 0.f;
+        float omega = 0.f;
+        float age = 0.f;
+    };
+
+    // Ce que les portails ont change chez un joueur.
+    struct PlayerEffects {
+        bool inverted = false;
+        float speedFactor = 1.f;
+        Engine::Entity lastPortal{};
     };
 
     struct BossType {
@@ -76,8 +92,15 @@ namespace rtype {
         Player, Monster, PlayerBullet, MonsterBullet, Explosion, Boss, Coin,
         Tank, Kamikaze, Elite, Rocket, Bomber,
         DasherBoss, SummonerBoss, FortressBoss,
-        RocketMissile, Bomb, AlienShard, RockWall, HazardWall, Count
+        RocketMissile, Bomb, AlienShard, RockWall, SpikeWall,
+        ReversePortal, FastPortal, NormalPortal, Count
     };
+
+    constexpr bool isBossSprite(const SpriteId id)
+    {
+        return id == SpriteId::Boss || id == SpriteId::DasherBoss
+            || id == SpriteId::SummonerBoss || id == SpriteId::FortressBoss;
+    }
 
     struct Renderable {
         SpriteId id = SpriteId::Player;

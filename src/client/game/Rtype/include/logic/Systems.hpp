@@ -14,6 +14,7 @@
 #include "Queries.hpp"
 #include "Boss.hpp"
 #include "MonsterBehavior.hpp"
+#include "Obstacles.hpp"
 
 
 namespace rtype {
@@ -98,11 +99,12 @@ namespace rtype {
     // Transforme les touches de chaque joueur en vitesse.
     inline void playerControlSystem(Engine::Registry &reg)
     {
-        reg.each<PlayerInput, Speed, gameLogic::Vec2Velocity>(
+        reg.each<PlayerInput, Speed, PlayerEffects, gameLogic::Vec2Velocity>(
             [](Engine::Entity, const PlayerInput &input, const Speed &speed,
-               gameLogic::Vec2Velocity &vel) {
+               const PlayerEffects &effects, gameLogic::Vec2Velocity &vel) {
                 vel = gameLogic::Vec2Velocity{
-                    inputDirection(input) * speed.value};
+                    inputDirection(input, effects.inverted)
+                        * (speed.value * effects.speedFactor)};
             });
     }
 
@@ -138,61 +140,6 @@ namespace rtype {
     {
         for (const Engine::Entity e : collectPlayers(reg)) {
             reg.get<Health>(e).hp = config::PLAYER_HP;
-        }
-    }
-
-    inline std::vector<Collider> obstacleColliders(Engine::Registry &reg)
-    {
-        std::vector<Collider> found;
-
-        reg.each<ObstacleTag, gameLogic::Vec2Pos, gameLogic::Vec2Hitbox>(
-            [&found](const Engine::Entity e, const ObstacleTag &,
-                const gameLogic::Vec2Pos &pos,
-                const gameLogic::Vec2Hitbox &box) {
-                found.push_back({e, pos, box, Team{}});
-            });
-        return found;
-    }
-
-    inline void crushPlayers(Engine::Registry &reg,
-        const std::vector<Collider> &walls)
-    {
-        const std::vector<Collider> players =
-            collectColliders(reg, collectPlayers(reg));
-
-        for (const Collider &player : players) {
-            if (isAlive(reg, player.entity) && touchesAny(player, walls)) {
-                reg.get<Health>(player.entity).hp = 0;
-            }
-        }
-    }
-
-    inline void absorbProjectiles(Engine::Registry &reg,
-        const std::vector<Collider> &walls)
-    {
-        for (const Collider &bullet : collectProjectiles(reg)) {
-            if (touchesAny(bullet, walls)) {
-                createExplosionOn(reg, bullet.entity,
-                    config::HIT_EXPLOSION_SIZE);
-                reg.destroy(bullet.entity);
-            }
-        }
-    }
-
-    inline void obstacleSystem(Engine::Registry &reg)
-    {
-        const std::vector<Collider> walls = obstacleColliders(reg);
-
-        crushPlayers(reg, walls);
-        absorbProjectiles(reg, walls);
-    }
-
-    inline void destroyFarObstacles(Engine::Registry &reg)
-    {
-        for (const Collider &block : obstacleColliders(reg)) {
-            if (isFarOutOfBounds(block)) {
-                reg.destroy(block.entity);
-            }
         }
     }
 

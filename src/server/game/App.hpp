@@ -34,6 +34,8 @@ namespace server {
         void broadcastStatus();
         void recordVictory();
         void selectMap(int slot, const rtype::protocol::Payload &payload);
+        void leaveMatch(int slot);
+        void pauseMatch(int slot, const rtype::protocol::Payload &payload);
         void sendOwnStates();
         void sendWorld(Engine::ClientId client);
         void sleep() const;

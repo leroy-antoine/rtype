@@ -211,3 +211,54 @@ TEST(a_bad_leaderboard_is_rejected)
     payload[5] = 0;
     CHECK(!protocol::decodeLeaderboard(payload).has_value());
 }
+
+TEST(the_effects_of_the_portals_survive_an_own_state_round_trip)
+{
+    protocol::OwnState state;
+
+    state.lastInput = 9;
+    state.pos = gameLogic::Vec2Pos{{10.f, 20.f}};
+    state.inverted = true;
+    state.speedPercent = 150;
+    const std::optional<protocol::OwnState> decoded =
+        protocol::decodeOwnState(protocol::encode(state));
+
+    CHECK(decoded.has_value());
+    CHECK(decoded->lastInput == 9);
+    CHECK(decoded->inverted);
+    CHECK(decoded->speedPercent == 150);
+}
+
+TEST(an_own_state_with_bad_effects_is_rejected)
+{
+    protocol::Payload payload = protocol::encode(protocol::OwnState{});
+
+    CHECK(payload.size() == protocol::OWN_STATE_SIZE);
+    payload[12] = 2;
+    CHECK(!protocol::decodeOwnState(payload).has_value());
+    payload[12] = 0;
+    payload[13] = 0;
+    CHECK(!protocol::decodeOwnState(payload).has_value());
+    payload.pop_back();
+    CHECK(!protocol::decodeOwnState(payload).has_value());
+}
+
+TEST(a_paused_status_survives_a_round_trip)
+{
+    GameStatus status;
+
+    status.phase = Phase::Playing;
+    status.paused = true;
+    const auto decoded = protocol::decodeStatus(protocol::encode(status));
+    CHECK(decoded.has_value());
+    CHECK(decoded->paused);
+    CHECK(decoded->phase == Phase::Playing);
+}
+
+TEST(a_pause_message_survives_a_round_trip)
+{
+    CHECK(protocol::decodePause(protocol::encodePause(true)) == true);
+    CHECK(protocol::decodePause(protocol::encodePause(false)) == false);
+    CHECK(!protocol::decodePause({2}).has_value());
+    CHECK(!protocol::decodePause({}).has_value());
+}

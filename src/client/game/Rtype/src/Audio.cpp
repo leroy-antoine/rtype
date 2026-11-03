@@ -11,6 +11,11 @@ namespace client {
         constexpr std::array<const char *, 7> FILES = {
             "shoot.wav", "hit.wav", "explosion.wav", "boss_alert.wav",
             "victory.wav", "defeat.wav", "coin_pickup.mp3"};
+
+        constexpr std::array<const char *, 7> MUSIC = {
+            "", "music_level.ogg", "music_boss.ogg", "music_boss_dasher.ogg",
+            "music_boss_summoner.ogg", "music_boss_fortress.ogg",
+            "music_deathrun.ogg"};
     }
 
     Audio::Audio(const std::filesystem::path &assets) : _dir(assets / "sounds")
@@ -49,10 +54,9 @@ namespace client {
         try {
             if (track == Track::None) {
                 _player.stopMusic();
-            } else if (track == Track::Level) {
-                _player.playMusic((_dir / "music_level.ogg").string());
             } else {
-                _player.playMusic((_dir / "music_boss.ogg").string());
+                _player.playMusic(
+                    (_dir / MUSIC[static_cast<std::size_t>(track)]).string());
             }
         } catch (const std::exception &e) {
             std::cerr << "R-Type: music disabled (" << e.what() << ")"
@@ -85,12 +89,11 @@ namespace client {
             case Cue::CoinPickup: playSound(Sound::Coin, 0.6f); break;
             case Cue::BossAppears:
                 playSound(Sound::BossAlert, 0.9f);
-                playMusic(Track::Boss);
                 break;
         }
     }
 
-    void Audio::follow(const Replica &replica)
+    void Audio::follow(Replica &replica)
     {
         const std::optional<rtype::GameStatus> &status = replica.status();
 
@@ -103,11 +106,24 @@ namespace client {
         if (status->phase != rtype::Phase::Playing) {
             return;
         }
-        if (status->bossMaxHp > 0) {
-            playMusic(Track::Boss);
-        } else {
-            playMusic(Track::Level);
+        playMusic(trackFor(replica));
+    }
+
+    Audio::Track Audio::trackFor(Replica &replica)
+    {
+        switch (replica.bossSprite().value_or(rtype::SpriteId::Count)) {
+            case rtype::SpriteId::Boss: return Track::BossStandard;
+            case rtype::SpriteId::DasherBoss: return Track::BossDasher;
+            case rtype::SpriteId::SummonerBoss: return Track::BossSummoner;
+            case rtype::SpriteId::FortressBoss: return Track::BossFortress;
+            default: break;
         }
+        const auto &status = replica.status();
+
+        if (rtype::zoneOf(status->map, status->level) == rtype::Zone::Warp) {
+            return Track::DeathRun;
+        }
+        return Track::Level;
     }
 
     void Audio::onPhase(const rtype::Phase phase)

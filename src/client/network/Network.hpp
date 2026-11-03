@@ -17,6 +17,8 @@ namespace client {
         void sendInput(std::uint32_t sequence, const rtype::PlayerInput &input);
         void requestRespawn();
         void selectMap(rtype::MapId map);
+        void leaveMatch();
+        void setPause(bool paused);
         void flush();
         [[nodiscard]] bool connected() const;
 

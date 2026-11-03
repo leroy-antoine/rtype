@@ -33,13 +33,17 @@ namespace rtype::protocol {
     struct OwnState {
         std::uint32_t lastInput = 0;
         gameLogic::Vec2Pos pos;
+        bool inverted = false;
+        std::uint8_t speedPercent = 100;
     };
 
-    constexpr std::uint8_t VERSION = 11;
+    constexpr std::uint8_t VERSION = 14;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
     constexpr Engine::MessageType SELECT_MAP = 0x12;
+    constexpr Engine::MessageType LEAVE_MATCH = 0x13;
+    constexpr Engine::MessageType PAUSE = 0x14;
 
     constexpr Engine::MessageType SPAWN = 0x20;
     constexpr Engine::MessageType DESTROY = 0x21;
@@ -57,7 +61,8 @@ namespace rtype::protocol {
     constexpr std::uint8_t KEYS_MASK = 0x1F;
 
     constexpr std::size_t INPUT_SIZE = 5;
-    constexpr std::size_t OWN_STATE_SIZE = 12;
+    constexpr std::size_t OWN_STATE_SIZE = 14;
+    constexpr std::uint8_t FLAG_INVERTED = 1 << 0;
     constexpr std::size_t SPAWN_SIZE = 22;
     constexpr std::size_t STATE_SIZE = 12;
     constexpr std::size_t STATES_HEADER_SIZE = 5;
@@ -143,6 +148,8 @@ namespace rtype::protocol {
 
         writer.writeU32(state.lastInput);
         writeVec2(writer, state.pos);
+        writer.writeU8(state.inverted ? FLAG_INVERTED : 0);
+        writer.writeU8(state.speedPercent);
         return writer.data();
     }
 
@@ -151,11 +158,15 @@ namespace rtype::protocol {
         Engine::BinaryReader reader(payload);
         const std::optional<std::uint32_t> lastInput = reader.readU32();
         const std::optional<gameLogic::Vec2> pos = readVec2(reader);
+        const std::optional<std::uint8_t> flags = reader.readU8();
+        const std::optional<std::uint8_t> speed = reader.readU8();
 
-        if (payload.size() != OWN_STATE_SIZE || !lastInput || !pos) {
+        if (payload.size() != OWN_STATE_SIZE || !lastInput || !pos || !flags
+            || !speed || (*flags & ~FLAG_INVERTED) != 0 || *speed == 0) {
             return std::nullopt;
         }
-        return OwnState{*lastInput, gameLogic::Vec2Pos{*pos}};
+        return OwnState{*lastInput, gameLogic::Vec2Pos{*pos},
+            hasKey(*flags, FLAG_INVERTED), *speed};
     }
 
     inline Engine::MessageType typeOf(const EntitySpawned &)
@@ -304,11 +315,23 @@ namespace rtype::protocol {
         return payload[0];
     }
 
+    constexpr std::uint8_t PAUSED_FLAG = 0x80;
+
+    inline std::uint8_t phaseByte(const GameStatus &status)
+    {
+        const auto phase = static_cast<std::uint8_t>(status.phase);
+
+        if (status.paused) {
+            return phase | PAUSED_FLAG;
+        }
+        return phase;
+    }
+
     inline Payload encode(const GameStatus &status)
     {
         Engine::BinaryWriter writer;
 
-        writer.writeU8(static_cast<std::uint8_t>(status.phase));
+        writer.writeU8(phaseByte(status));
         writer.writeU16(static_cast<std::uint16_t>(status.bossHp));
         writer.writeU16(static_cast<std::uint16_t>(status.bossMaxHp));
         writer.writeU32(status.coins);
@@ -371,7 +394,8 @@ namespace rtype::protocol {
 
     inline bool isValid(const StatusHeader &header, const std::size_t left)
     {
-        return header.phase <= static_cast<std::uint8_t>(Phase::Lobby)
+        return (header.phase & ~PAUSED_FLAG)
+                <= static_cast<std::uint8_t>(Phase::Lobby)
             && header.map < MAP_COUNT
             && header.count <= config::MAX_PLAYERS
             && header.bossHp <= header.bossMaxHp
@@ -401,7 +425,8 @@ namespace rtype::protocol {
         if (!header || !isValid(*header, reader.remaining())) {
             return std::nullopt;
         }
-        status.phase = static_cast<Phase>(header->phase);
+        status.phase = static_cast<Phase>(header->phase & ~PAUSED_FLAG);
+        status.paused = (header->phase & PAUSED_FLAG) != 0;
         status.bossHp = header->bossHp;
         status.bossMaxHp = header->bossMaxHp;
         status.coins = header->coins;
@@ -426,6 +451,20 @@ namespace rtype::protocol {
             return std::nullopt;
         }
         return payload[0];
+    }
+
+    // PAUSE : 1 pour mettre la partie en pause, 0 pour la reprendre.
+    inline Payload encodePause(const bool paused)
+    {
+        return {static_cast<std::uint8_t>(paused)};
+    }
+
+    inline std::optional<bool> decodePause(const Payload &payload)
+    {
+        if (payload.size() != 1 || payload[0] > 1) {
+            return std::nullopt;
+        }
+        return payload[0] == 1;
     }
 
     // LEADERBOARD : pour chaque map, le nombre de records (1) puis par

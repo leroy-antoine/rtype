@@ -8,6 +8,7 @@
 #include "engine/audio/SoundManager.hpp"
 #include "Replica.hpp"
 #include "logic/Status.hpp"
+#include "logic/Zones.hpp"
 
 namespace client {
     // Sons et musique. Si les fichiers ou la carte son manquent, le jeu
@@ -18,12 +19,13 @@ namespace client {
 
         void play(const std::vector<Cue> &cues);
         // Suit l'etat de la partie : musique du niveau ou du boss, jingles de fin.
-        void follow(const Replica &replica);
+        void follow(Replica &replica);
 
     private:
         enum class Sound { Shoot, Hit, Explosion, BossAlert, Victory, Defeat,
             Coin, Count };
-        enum class Track { None, Level, Boss };
+        enum class Track { None, Level, BossStandard, BossDasher,
+            BossSummoner, BossFortress, DeathRun, Count };
 
         static constexpr std::size_t SOUND_COUNT =
             static_cast<std::size_t>(Sound::Count);
@@ -33,6 +35,7 @@ namespace client {
         void playMusic(Track track);
         void playCue(Cue cue);
         void onPhase(rtype::Phase phase);
+        [[nodiscard]] static Track trackFor(Replica &replica);
 
         std::filesystem::path _dir;
         Engine::SoundManager _sounds;

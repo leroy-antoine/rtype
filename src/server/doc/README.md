@@ -57,6 +57,8 @@ game logic knows nothing of the network.
 | a client connects | `game.addPlayer()`, remembers `client id -> slot`, sends `YOU` and the whole world (`SPAWN` for each entity). If the game is full, it disconnects the client |
 | `INPUT` | decodes the keys and calls `game.setInput(slot, input)`; an invalid payload is ignored |
 | `RESPAWN` | calls `game.respawnPlayer(slot)` |
+| `LEAVE_MATCH` | if the sender is the host, calls `game.openLobby()`: the match is dropped and the lobby is shown again |
+| `PAUSE` | if the sender is the host, `game.setPaused(paused)`: the simulation and the clock stop until the host resumes |
 | `SELECT_MAP` | if the sender is the host (`game.host()`) and the map exists, builds it with `buildMap(id)` and calls `game.startMap`; ignored otherwise |
 | a client disconnects or times out | `game.removePlayer(slot)`; the ship is destroyed and every client is told by a `DESTROY` |
 | any message from an unknown client | ignored |
@@ -111,6 +113,7 @@ the speed of the CPU.
 | `SPAWN`, `DESTROY` | an entity appears or disappears | reliable |
 | `STATES` | every tick | unreliable |
 | `STATUS` | every 6 ticks | unreliable |
+| `OWN_STATE` | every tick, to one client | unreliable (position and the effects of the portals) |
 | `LEADERBOARD` | a client connects, a match is won | reliable |
 
 Monster movement and shots reach the clients as positions (`STATES`) and

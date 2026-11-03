@@ -22,7 +22,7 @@
 | Sounds have a visual counterpart | **done** for the important ones | health bars, a boss bar, and end-of-game messages on screen |
 | Colour-blind friendly palette | proposal | avoid red / green as the only difference between friend and enemy bullets |
 | High-contrast option | proposal | bullets and ships clearly separated from the star-field |
-| No fast flashing | proposal | avoid strobing explosions (they last 0.4 s) |
+| No fast flashing | **done** for the scenery | the backgrounds and the boss auras only drift and pulse slowly; explosions still last 0.4 s |
 | Independent volume sliders and a mute option | proposal | music and effects separate; the game also runs without any sound |
 | Scalable interface text | proposal | readable at a distance |
 

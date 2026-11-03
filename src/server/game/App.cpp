@@ -117,8 +117,12 @@ namespace server {
             if (!player || input == _lastInputs.end()) {
                 continue;
             }
+            const rtype::PlayerEffects &effects =
+                _game.registry().get<rtype::PlayerEffects>(*player);
             const rtype::protocol::OwnState state{input->second,
-                _game.registry().get<gameLogic::Vec2Pos>(*player)};
+                _game.registry().get<gameLogic::Vec2Pos>(*player),
+                effects.inverted, static_cast<std::uint8_t>(
+                    effects.speedFactor * rtype::config::SPEED_PERCENT)};
 
             _server.send(client, rtype::protocol::OWN_STATE, rtype::protocol::encode(state));
         }
@@ -204,6 +208,29 @@ namespace server {
         }
         if (event.type == rtype::protocol::SELECT_MAP) {
             selectMap(*slot, event.payload);
+        }
+        if (event.type == rtype::protocol::LEAVE_MATCH) {
+            leaveMatch(*slot);
+        }
+        if (event.type == rtype::protocol::PAUSE) {
+            pauseMatch(*slot, event.payload);
+        }
+    }
+
+    void App::leaveMatch(const int slot)
+    {
+        if (_game.host() == slot) {
+            _game.openLobby();
+        }
+    }
+
+    void App::pauseMatch(const int slot,
+        const rtype::protocol::Payload &payload)
+    {
+        const std::optional<bool> paused = rtype::protocol::decodePause(payload);
+
+        if (paused && _game.host() == slot) {
+            _game.setPaused(*paused);
         }
     }
 

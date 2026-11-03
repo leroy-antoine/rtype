@@ -16,6 +16,8 @@ namespace client {
         constexpr Color GREEN{90, 220, 90, 255};
         constexpr Color RED{235, 70, 60, 255};
         constexpr Color YELLOW{255, 220, 40, 255};
+        constexpr Color MAGENTA{235, 90, 255, 255};
+        constexpr Color CYAN{90, 230, 255, 255};
 
         // Une couleur par slot, comme les vaisseaux.
         constexpr std::uint32_t MS_PER_MINUTE = 60000;
@@ -71,13 +73,18 @@ namespace client {
         drawPlayers(*status);
         drawCoins(*status, elapsed);
         drawBossBar(*status);
-        if (status->phase == rtype::Phase::Playing) {
-            drawRespawnHint(*status, replica.slot(), elapsed);
-        } else {
+        if (status->phase != rtype::Phase::Playing) {
             drawEndScreen(*status, elapsed);
+        } else if (!status->paused) {
+            drawRespawnHint(*status, replica.slot(), elapsed);
+            drawMenuHint(replica);
         }
         drawTimer(*status, elapsed);
         drawLevel(*status);
+        drawEffects(replica);
+        if (status->paused) {
+            drawPauseMenu(replica);
+        }
     }
 
     // Retient depuis quand la partie est finie, pour le compte a rebours.
@@ -133,6 +140,20 @@ namespace client {
             _width / 2.f, textTop(), TEXT_SCALE, WHITE);
     }
 
+    void Hud::drawEffects(const Replica &replica)
+    {
+        const Prediction &prediction = replica.prediction();
+        float top = _height - 90.f;
+
+        if (prediction.inverted()) {
+            _font.draw("CONTROLS REVERSED", {MARGIN, top}, 3.f, MAGENTA);
+            top -= 36.f;
+        }
+        if (prediction.speedFactor() > 1.f) {
+            _font.draw("SPEED UP", {MARGIN, top}, 3.f, CYAN);
+        }
+    }
+
     void Hud::drawCoins(const rtype::GameStatus &status, const float elapsed)
     {
         const std::string text = std::to_string(status.coins);
@@ -165,6 +186,28 @@ namespace client {
         _font.drawCentered("BOSS", _width / 2.f, top - 22.f, 2.f, WHITE);
         drawBar({(_width - BOSS_BAR_WIDTH) / 2.f, top}, {BOSS_BAR_WIDTH, 16.f},
             ratio, RED);
+    }
+
+    void Hud::drawMenuHint(const Replica &replica)
+    {
+        if (replica.isHost()) {
+            _font.drawCentered("BACKSPACE: PAUSE", _width - 120.f,
+                _height - 20.f, 2.f, {160, 160, 160, 255});
+        }
+    }
+
+    void Hud::drawPauseMenu(const Replica &replica)
+    {
+        std::string hint = "WAITING FOR P1 TO RESUME";
+
+        if (replica.isHost()) {
+            hint = "BACKSPACE: RESUME   ENTER: MAP MENU";
+        }
+        _renderer.drawRect({0.f, 0.f}, {_width, _height}, {0, 0, 0, 170});
+        _font.drawCentered("PAUSED", _width / 2.f, _height / 2.f - 40.f, 7.f,
+            WHITE);
+        _font.drawCentered(hint, _width / 2.f, _height / 2.f + 40.f, 3.f,
+            WHITE);
     }
 
     // Message au joueur dont le vaisseau est detruit.

@@ -95,6 +95,9 @@ Headers only include the layers below them, which avoids circular includes.
 | `Queries.hpp` | read-only searches in the world (`collectWith<Tag>`, `findFreeSlot`, ...) |
 | `Systems.hpp` | the systems (see below) |
 | `Monsters.hpp` | monster spawning |
+| `Obstacles.hpp` | the systems of the obstacles: swing, push of the rocks, spikes, portals, bullets |
+| `Solids.hpp` | `pushOutOf` and `resolveSolids`, shared by the server and the client prediction |
+| `Zones.hpp` | `Zone` and `zoneOf(map, level)`: which scenery goes with a level |
 | `Kinds.hpp` | `MonsterKind` and `BossKind`, the kinds of monsters and bosses |
 | `BossDefs.hpp` | the table of definitions of the bosses, indexed by `BossKind` (it reuses `MonsterDef`) |
 | `MonsterDefs.hpp` | `MonsterDef` and the table of definitions indexed by `MonsterKind` (stats, size, sprite) |
@@ -230,27 +233,58 @@ Bosses have their own table, `BOSS_BEHAVIORS` (`Boss.hpp`):
 The Dasher does not sway like the other bosses: after its entrance it follows a
 fast Lissajous curve over the whole right side of the map (`roamBoss`). Each
 boss kind has its behaviour in the `BOSS_BEHAVIORS` table (`Boss.hpp`); the
-Summoner and the Fortress still use the standard sway.
+Summoner and the Fortress have their own behaviour too (see
+[Behaviours](#behaviours)).
 
 ## Obstacles
 
-A level can contain walls (`ObstacleStep`: distance, height on the map, size,
-kind). A wall appears at the right edge when the level reaches its distance and
-then moves left at the speed of the scrolling, so it stays still against the
-background. The rules:
+A level can contain obstacles (`ObstacleStep`: distance, height on the map,
+size, kind, and optionally a swing). An obstacle appears at the right edge when
+the level reaches its distance and then moves left at the speed of the
+scrolling, so it stays still against the background. A wall that has left the
+map is removed. There are five kinds (`ObstacleKind`):
 
-- a player who touches a wall **dies** (his health falls to 0);
-- a wall **absorbs** every bullet that touches it, from both teams, and cannot
-  be destroyed;
-- monsters and bosses fly through walls;
-- a wall that has left the map is removed.
+| Kind | Effect on a player | Bullets | Monsters |
+|---|---|---|---|
+| `Rock` | **solid**: the ship cannot cross it and is pushed out (`pushOutOf`). A rock that pushes a ship against the left edge of the map crushes it, because a player whose centre leaves the map dies | absorbed | fly through |
+| `Spike` | **deadly**: touching it sets the health to 0 | absorbed | fly through |
+| `ReversePortal` | inverts the four keys; crossing a second one gives them back | cross | cross |
+| `FastPortal` | the ship moves `FAST_SPEED_FACTOR` (1.5) times faster | cross | cross |
+| `NormalPortal` | back to the normal speed | cross | cross |
 
-There are two kinds, `Rock` (stone blocks, used for cover, caves and pillars)
-and `Hazard` (red and black plates, used in the death runs). Both behave the
-same. The client draws a wall by repeating a 32 x 32 tile (`obstacle_rock.png`,
-`obstacle_hazard.png`) every `OBSTACLE_TILE` units, so a wall of any size keeps
-the proportions of the tile. In `LevelBuilder.hpp`, `wall()` writes one wall and
-`addGate()` writes a top and a bottom wall around a gap.
+A **portal** has the whole height of the map (`portal()` in `LevelBuilder.hpp`),
+so it cannot be avoided. It acts once on each player that crosses it
+(`PlayerEffects::lastPortal`). The effects are kept by the player (the
+component `PlayerEffects`, read by `playerControlSystem`) until a `NormalPortal`
+or a reverse portal changes them, and are cleared when the level changes
+(`endPortalEffects`) and when a ship is created again. The speed of the ships
+is independent of the scrolling: a fast portal changes how fast the ship
+moves, not how fast the walls come.
+
+An obstacle also has a `speed`: a multiplier of `OBSTACLE_SPEED`. A wall with
+`speed = 2` crosses the screen twice as fast as the background, so the same
+distance in the level leaves half the time to react. The portals and the
+blocks of a run share the speed of its gates, so they keep their place between
+them.
+
+An obstacle can **swing**: `ObstacleStep::amplitude` and `period` move it up
+and down around its height (`ObstacleMotion`, `obstacleMotionSystem`). A gate
+that swings (`GateSpec::motion`) extends its two walls beyond the map by the
+amplitude, so the gap stays the only hole while it moves. A **pinching** gate
+(`GateSpec::pinch`) moves its two walls in opposite directions, so the gap
+closes and opens; the tests keep its smallest opening above 2.5 ship heights.
+`addSweepers` puts fast swinging spike blocks between two gates of a run.
+
+In `LevelBuilder.hpp`, `wall()` writes one wall, `portal()` one portal and
+`addGate(walls, GateSpec)` the top and the bottom wall around a gap.
+`MapHelpers.hpp` has `addGates` and `addRun` (the gates of a death run with its
+portals). The systems are in `Obstacles.hpp`, the push in `Solids.hpp`, which
+the client also uses to predict its own ship against the rocks.
+
+The client draws a wall by repeating a 64 x 64 tile (`obstacle_rock.png`: an
+asteroid with craters and mineral veins; `obstacle_spike.png`: a lattice of
+steel spikes with glowing red tips) every `OBSTACLE_TILE` units, and a portal
+with an animated tile (`portal_*.png`).
 
 ## Maps and lobby
 
@@ -260,7 +294,7 @@ There are three maps (`MAPS` in `Builder.hpp`, names in `MapList.hpp`):
 |---|---|---|
 | 0 | CAMPAIGN | the 20 levels described below |
 | 1 | BOSS RUSH | 5 short levels, one to three bosses each, ending with the Fortress, the Summoner and the Dasher |
-| 2 | DEATH RUNS | 4 levels of hazard gates (the same gates as levels 10 and 15 of the campaign, the last one reversed), then a level with the Fortress and the Dasher |
+| 2 | DEATH RUNS | 4 relentless levels of spike gates, then a level with the Fortress and the Dasher: *Chain* (14 narrowing gates in a row, zigzag), *Sweepers* (fast spike blocks between the gates), *Pinch* (gates that close and open) and *Gauntlet* (16 gates 1.6 s apart, swinging, with reversed keys). Every level starts with a fast portal and the walls come 1.4 to 2 times faster than the scrolling |
 
 `Game` has a `Lobby` phase, entered with `openLobby()` (the server does it at
 startup). In the lobby nothing is simulated except the movement of the ships.
@@ -287,17 +321,17 @@ dead).
 | 7 | Cave | a tunnel of rocks above and below |
 | 8 | Rocket battery | columns of rocket launchers |
 | 9 | Summoner | Tanks, then the Summoner boss |
-| 10 | **Death run I** | hazard gates only, no enemy, never touch a wall |
+| 10 | **Death run I** | spike gates only, no enemy, a fast portal, two stretches with reversed keys, a few swinging gates |
 | 11 | Bomber raid | slow bombers and fast Kamikazes |
 | 12 | Crossfire | pillars and a mix of every enemy |
 | 13 | Boss rush | Standard, then Dasher |
 | 14 | Tank wall | lines of Tanks and Bombers, rocks as cover |
-| 15 | **Death run II** | 16 narrower gates, faster rhythm |
+| 15 | **Death run II** | 16 narrower gates, four reversed stretches, five swinging gates |
 | 16 | Escorted bosses | Summoner, then Standard |
 | 17 | Gauntlet | rock gates to cross while enemies attack |
 | 18 | Rocket storm | a narrow cave full of rockets and Kamikazes |
 | 19 | Last stand | every enemy, then Standard and Summoner |
-| 20 | Finale | a hazard gauntlet, then Summoner, Dasher and Fortress |
+| 20 | Finale | a spike gauntlet with swinging gates and reversed keys, then Summoner, Dasher and Fortress |
 
 Every wall pattern was checked with a reachability analysis (a ship moving at
 500 units per second): the death runs can still be crossed by a ship moving at
@@ -324,13 +358,13 @@ changes of the world into events for the clients.
 | 2 | `lifetimeSystem(dt)` | short-lived entities (explosions) expire |
 | 3 | `playerControlSystem` | keys become velocities, before they are used |
 | 4 | `advanceLevel(dt)` | scrolls the level, queues the due waves, spawns monsters, walls and bosses |
-| 5 | `monsterSystem(dt)` | the movement of each kind of monster (dive, zigzag, charge) |
+| 5 | `monsterSystem(dt)` | the movement of each kind of monster (dive, zigzag, charge), then `obstacleMotionSystem(dt)` moves the swinging obstacles |
 | 6 | `bossSystem(dt)` | moves the boss, makes it summon or fire a barrage |
 | 7 | `shootingSystem` | bullets are born at the current position of the shooter |
 | 8 | `movementSystem(dt)` | everybody moves: players, monsters, bullets, walls |
 | 9 | `collisionSystem` | bullets hit their targets, using the positions *after* the move |
 | 10 | `contactSystem` | a monster touching a player kills him |
-| 11 | `obstacleSystem` | a wall kills the player it touches and absorbs the bullets |
+| 11 | `obstacleSystem` | rocks push the players out, spikes kill, portals change the effects, walls absorb the bullets |
 | 12 | `coinPickupSystem` | players pick up the coins they touch |
 | 13 | `deleteUnitsOutOfBounds` | sets the hp of players who left the map to 0 and removes far entities and walls |
 | 14 | `deathSystem` | destroys everything with `hp <= 0`, drops the coins, returns the kills |
@@ -571,7 +605,7 @@ Done and working:
 - players (4 slots), movement from keys, shooting, respawn
 - 6 kinds of monsters with their own stats, projectile and movement
 - 4 kinds of bosses (Standard, Dasher, Summoner, Fortress)
-- walls (rock and hazard) that kill on contact and absorb bullets
+- walls: solid rocks, deadly spikes, swinging gates, and portals (speed, reversed keys)
 - 3 maps (a 20-level campaign, a boss rush, death runs) built from
   `LevelDef`s, and the lobby to choose one
 - coins, shared purse, match timer, level skip by kills

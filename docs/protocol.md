@@ -27,7 +27,7 @@ A new client can be written from these two pages alone.
 | Direction | the client sends keys, the server sends the world |
 | Datagram | at most **1200 bytes**, carries one or several messages |
 | Byte order | **big-endian** for every integer and float |
-| Protocol version | `11` (`rtype::protocol::VERSION`), checked at connection |
+| Protocol version | `14` (`rtype::protocol::VERSION`), checked at connection |
 | Tick | the server simulates at 60 Hz and sends the states every tick |
 
 The server is the authority. A client never sends a position, a hit or a
@@ -62,7 +62,7 @@ Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
 
 ```
  client                                   server
-   │ ── Connect(version=11) ─────────────►  │  every 500 ms, 10 tries at most
+   │ ── Connect(version=12) ─────────────►  │  every 500 ms, 10 tries at most
    │ ◄───────────── Accept(token) ──────── │  or Refuse(0 version, 1 full)
    │ ◄───────────────────── YOU(slot) ──── │  reliable
    │ ◄────────────────── SPAWN × n ─────── │  reliable, the whole world
@@ -95,12 +95,14 @@ Sender: **C** is the client, **S** is the server. Delivery: **R** is reliable
 | `0x10` | `INPUT` | C | U | 5 |
 | `0x11` | `RESPAWN` | C | R | 0 |
 | `0x12` | `SELECT_MAP` | C | R | 1 |
+| `0x13` | `LEAVE_MATCH` | C | R | 0 |
+| `0x14` | `PAUSE` | C | R | 1 |
 | `0x20` | `SPAWN` | S | R | 22 |
 | `0x21` | `DESTROY` | S | R | 4 |
 | `0x22` | `STATES` | S | U | 5 + 12 × n |
 | `0x23` | `STATUS` | S | U | 16 + 4 × n |
 | `0x24` | `YOU` | S | R | 1 |
-| `0x25` | `OWN_STATE` | S | U | 12 |
+| `0x25` | `OWN_STATE` | S | U | 14 |
 | `0x26` | `LEADERBOARD` | S | R | 3 to 28 |
 
 ### `INPUT` (0x10)
@@ -121,6 +123,21 @@ server remembers the last `sequence` it applied and sends it back in
 
 No payload. Asks the server to bring the player back after its death. The
 server accepts it only while the game is running and the player is dead.
+
+### `LEAVE_MATCH` (0x13)
+
+No payload. Sent by the host to abandon the running match and return to the
+lobby. Used from the pause menu. The server ignores it when the sender is not the host.
+
+### `PAUSE` (0x14)
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | paused | `u8` | 1 to pause the match, 0 to resume it |
+
+Sent by the host. While paused, the server stops the simulation and the
+clock, and sets bit 7 of the `phase` of `STATUS`. Ignored when the sender is
+not the host or when the game is not running.
 
 ### `SELECT_MAP` (0x12)
 
@@ -167,9 +184,12 @@ to a client that has just connected, then one for each new entity.
 | 16 | bomb |
 | 17 | alien shard |
 | 18 | rock wall |
-| 19 | hazard wall |
+| 19 | spike wall |
+| 20 | reverse portal |
+| 21 | fast portal |
+| 22 | normal portal |
 
-A value of 20 or more is invalid, and so is a player slot of 4 or more.
+A value of 23 or more is invalid, and so is a player slot of 4 or more.
 
 ### `DESTROY` (0x21)
 
@@ -198,7 +218,7 @@ What the HUD shows, sent about 10 times per second.
 
 | Offset | Field | Type | Meaning |
 |---|---|---|---|
-| 0 | phase | `u8` | 0 playing, 1 victory, 2 defeat, 3 lobby |
+| 0 | phase | `u8` | bits 0-6: 0 playing, 1 victory, 2 defeat, 3 lobby; bit 7 (`0x80`): the match is paused |
 | 1 | boss hp | `u16` | `0` when there is no boss |
 | 3 | boss max hp | `u16` | the boss hp cannot exceed it |
 | 5 | coins | `u32` | the shared purse of the players |
@@ -231,6 +251,11 @@ client only.
 |---|---|---|---|
 | 0 | last input | `u32` | `sequence` of the last `INPUT` the server applied |
 | 4 | position | `Vec2` | top-left corner of the ship |
+| 12 | flags | `u8` | bit 0: the keys are inverted (a reverse portal was crossed); other bits must be `0` |
+| 13 | speed | `u8` | speed of the ship in percent of the normal speed (`100` normal, `150` after a fast portal), never `0` |
+
+The flags and the speed are the effects of the portals on this ship. The
+client needs them to predict the movement with the same rules as the server.
 
 The client replays the inputs sent after `last input` on top of this position
 (prediction), so its ship answers at once and is corrected if the server
@@ -256,7 +281,7 @@ a count above 5, or `0` players is rejected.
 UDP can lose, duplicate and reorder datagrams. The protocol picks the delivery
 per message:
 
-- **Reliable** (`SPAWN`, `DESTROY`, `YOU`, `RESPAWN`, `SELECT_MAP`, `LEADERBOARD`): a spawn or a death must
+- **Reliable** (`SPAWN`, `DESTROY`, `YOU`, `RESPAWN`, `SELECT_MAP`, `LEAVE_MATCH`, `PAUSE`, `LEADERBOARD`): a spawn or a death must
   not be missed, or the client would draw a wrong world. The sender resends
   until an Ack comes back, the receiver applies the messages in order.
 - **Unreliable** (`INPUT`, `STATES`, `STATUS`, `OWN_STATE`): they are repeated every tick

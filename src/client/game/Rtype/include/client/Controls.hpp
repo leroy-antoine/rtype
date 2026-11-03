@@ -11,6 +11,7 @@ namespace client {
 
         [[nodiscard]] const rtype::PlayerInput &input() const;
         [[nodiscard]] bool respawnRequested() const;
+        [[nodiscard]] bool pauseRequested() const;
         [[nodiscard]] int menuMove() const;
 
     private:
@@ -27,6 +28,7 @@ namespace client {
 
         rtype::PlayerInput _input;
         bool _respawn = false;
+        bool _pause = false;
         int _menuMove = 0;
     };
 }

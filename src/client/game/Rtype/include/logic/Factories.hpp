@@ -35,6 +35,7 @@ namespace rtype {
         reg.add(e, Weapon{config::PLAYER_FIRE_COOLDOWN});
         reg.add(e, Damage{config::PLAYER_DAMAGE});
         reg.add(e, Team{TeamId::Player});
+        reg.add(e, PlayerEffects{});
         reg.add(e, Renderable{SpriteId::Player});
         return e;
     }
@@ -175,10 +176,24 @@ namespace rtype {
 
     inline SpriteId obstacleSprite(const ObstacleKind kind)
     {
-        if (kind == ObstacleKind::Hazard) {
-            return SpriteId::HazardWall;
+        switch (kind) {
+            case ObstacleKind::Spike: return SpriteId::SpikeWall;
+            case ObstacleKind::ReversePortal: return SpriteId::ReversePortal;
+            case ObstacleKind::FastPortal: return SpriteId::FastPortal;
+            case ObstacleKind::NormalPortal: return SpriteId::NormalPortal;
+            default: return SpriteId::RockWall;
         }
-        return SpriteId::RockWall;
+    }
+
+    inline void addObstacleMotion(Engine::Registry &reg, const Engine::Entity e,
+        const ObstacleStep &step)
+    {
+        constexpr float TWO_PI = 6.2831853f;
+
+        if (step.amplitude != 0.f && step.period > 0.f) {
+            reg.add(e, ObstacleMotion{step.y, step.amplitude,
+                TWO_PI / step.period, 0.f});
+        }
     }
 
     inline Engine::Entity createObstacle(Engine::Registry &reg,
@@ -190,8 +205,10 @@ namespace rtype {
         reg.add(e, gameLogic::Vec2Pos{{config::MAP_WIDTH - overshoot,
             step.y}});
         reg.add(e, gameLogic::Vec2Hitbox{{step.width, step.height}});
-        reg.add(e, gameLogic::Vec2Velocity{{-config::OBSTACLE_SPEED, 0.f}});
+        reg.add(e, gameLogic::Vec2Velocity{{
+            -config::OBSTACLE_SPEED * step.speed, 0.f}});
         reg.add(e, Renderable{obstacleSprite(step.kind)});
+        addObstacleMotion(reg, e, step);
         return e;
     }
 

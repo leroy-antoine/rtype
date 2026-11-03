@@ -64,6 +64,23 @@ namespace client {
         }
     }
 
+    void Network::leaveMatch()
+    {
+        if (_client.connected()) {
+            _client.send(rtype::protocol::LEAVE_MATCH, {},
+                Engine::Delivery::Reliable);
+        }
+    }
+
+    void Network::setPause(const bool paused)
+    {
+        if (_client.connected()) {
+            _client.send(rtype::protocol::PAUSE,
+                rtype::protocol::encodePause(paused),
+                Engine::Delivery::Reliable);
+        }
+    }
+
     void Network::flush()
     {
         _client.flush();

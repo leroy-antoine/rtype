@@ -101,6 +101,10 @@ namespace rtype::config {
     constexpr int AUGMENT_FIRE_RATE_PRICE = 200;
 
     constexpr float OBSTACLE_TILE = 64.f;
+    constexpr float PORTAL_WIDTH = 90.f;
+    constexpr float SWEEPER_WIDTH = 90.f;
+    constexpr float FAST_SPEED_FACTOR = 1.5f;
+    constexpr float SPEED_PERCENT = 100.f;
     constexpr float SCROLL_SPEED = 120.f; //-> Vitesse de défilement de la carte
     constexpr float OBSTACLE_SPEED = SCROLL_SPEED;
     constexpr float BOSS_SPAWN_SCROLL = 2400.f;  // -> Distance defilee (2400 / 120 = 20 s de jeu) a laquelle le boss arrive.

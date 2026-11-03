@@ -36,7 +36,10 @@ namespace client {
         bool listening();
         void sendControls(float dt);
         [[nodiscard]] bool inLobby() const;
+        [[nodiscard]] bool isPaused() const;
         void useMenu();
+        void useMatch();
+        void usePause();
         float advance();
         [[nodiscard]] float elapsed() const;
 

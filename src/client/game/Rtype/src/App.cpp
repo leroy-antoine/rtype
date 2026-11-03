@@ -72,13 +72,46 @@ namespace client {
 
     void App::sendControls(const float dt)
     {
+        rtype::PlayerInput input = _controls.input();
+
         if (inLobby()) {
             useMenu();
+        } else if (isPaused()) {
+            usePause();
+            input = {};
+        } else {
+            useMatch();
+        }
+        _network.sendInput(_replica.predict(input, dt), input);
+        _network.flush();
+    }
+
+    bool App::isPaused() const
+    {
+        const auto &status = _replica.status();
+
+        return status && status->paused;
+    }
+
+    void App::useMatch()
+    {
+        if (_controls.pauseRequested() && _replica.isHost()) {
+            _network.setPause(true);
         } else if (_controls.respawnRequested()) {
             _network.requestRespawn();
         }
-        _network.sendInput(_replica.predict(_controls.input(), dt), _controls.input());
-        _network.flush();
+    }
+
+    void App::usePause()
+    {
+        if (!_replica.isHost()) {
+            return;
+        }
+        if (_controls.pauseRequested()) {
+            _network.setPause(false);
+        } else if (_controls.respawnRequested()) {
+            _network.leaveMatch();
+        }
     }
 
     bool App::inLobby() const

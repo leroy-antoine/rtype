@@ -443,16 +443,80 @@ TEST(the_dasher_roams_the_whole_right_side_of_the_map_and_stays_on_it)
     CHECK(maxY - minY > 600.f);
 }
 
-TEST(a_player_who_touches_a_wall_dies)
+namespace {
+    Engine::Entity blockOn(Engine::Registry &reg, const Engine::Entity target,
+        const ObstacleKind kind)
+    {
+        const Engine::Entity block =
+            createObstacle(reg, wall(0.f, 0.f, 200.f, 200.f, kind));
+
+        reg.get<gameLogic::Vec2Pos>(block) =
+            reg.get<gameLogic::Vec2Pos>(target);
+        return block;
+    }
+}
+
+namespace {
+    Collider colliderOf(Engine::Registry &reg, const Engine::Entity e)
+    {
+        return {e, reg.get<gameLogic::Vec2Pos>(e),
+            reg.get<gameLogic::Vec2Hitbox>(e), Team{}};
+    }
+}
+
+TEST(a_player_who_touches_a_spike_dies)
 {
     Engine::Registry reg;
     const Engine::Entity player = createPlayer(reg, 0);
-    const Engine::Entity block = createObstacle(reg, wall(0.f, 0.f, 200.f, 200.f));
 
-    reg.get<gameLogic::Vec2Pos>(block) =
-        reg.get<gameLogic::Vec2Pos>(player);
+    blockOn(reg, player, ObstacleKind::Spike);
     obstacleSystem(reg);
     CHECK(reg.get<Health>(player).hp <= 0);
+}
+
+TEST(a_player_who_touches_a_rock_is_pushed_out_and_lives)
+{
+    Engine::Registry reg;
+    const Engine::Entity player = createPlayer(reg, 0);
+    const Engine::Entity rock = blockOn(reg, player, ObstacleKind::Rock);
+
+    obstacleSystem(reg);
+    CHECK(reg.get<Health>(player).hp == config::PLAYER_HP);
+    CHECK(!overlaps(colliderOf(reg, player), colliderOf(reg, rock)));
+}
+
+TEST(a_rock_cannot_be_crossed_by_a_moving_player)
+{
+    Engine::Registry reg;
+    const Engine::Entity player = createPlayer(reg, 0);
+    const Engine::Entity rock = createObstacle(reg, wall(0.f, 0.f, 100.f,
+        config::MAP_HEIGHT));
+
+    reg.get<gameLogic::Vec2Pos>(rock).x = 400.f;
+    reg.get<gameLogic::Vec2Velocity>(rock) = gameLogic::Vec2Velocity{};
+    reg.get<PlayerInput>(player).right = true;
+    for (int i = 0; i < 120; ++i) {
+        playerControlSystem(reg);
+        movementSystem(reg, config::FIXED_DT);
+        obstacleSystem(reg);
+    }
+    CHECK(reg.get<gameLogic::Vec2Pos>(player).x + config::PLAYER_WIDTH
+        <= 400.f + 1.f);
+}
+
+TEST(a_rock_that_pushes_a_player_off_the_map_crushes_him)
+{
+    Game game(1);
+
+    game.addPlayer();
+    const Engine::Entity player = *findPlayerBySlot(game.registry(), 0);
+    const Engine::Entity rock = createObstacle(game.registry(),
+        wall(0.f, 0.f, 400.f, config::MAP_HEIGHT));
+
+    game.registry().get<gameLogic::Vec2Pos>(rock).x = 300.f;
+    run(game, 6.f);
+    CHECK(!game.isPlayerAlive(0));
+    CHECK(!game.registry().alive(player));
 }
 
 TEST(a_player_away_from_the_walls_is_safe)
@@ -460,9 +524,98 @@ TEST(a_player_away_from_the_walls_is_safe)
     Engine::Registry reg;
     const Engine::Entity player = createPlayer(reg, 0);
 
-    createObstacle(reg, wall(0.f, 0.f, 200.f, 200.f));
+    createObstacle(reg, wall(0.f, 0.f, 200.f, 200.f, ObstacleKind::Spike));
     obstacleSystem(reg);
     CHECK(reg.get<Health>(player).hp == config::PLAYER_HP);
+}
+
+TEST(a_reverse_portal_inverts_the_keys_once)
+{
+    Engine::Registry reg;
+    const Engine::Entity player = createPlayer(reg, 0);
+    const Engine::Entity gate = blockOn(reg, player,
+        ObstacleKind::ReversePortal);
+
+    obstacleSystem(reg);
+    obstacleSystem(reg);
+    CHECK(reg.get<PlayerEffects>(player).inverted);
+    reg.get<PlayerInput>(player).right = true;
+    playerControlSystem(reg);
+    CHECK(reg.get<gameLogic::Vec2Velocity>(player).x < 0.f);
+    reg.get<gameLogic::Vec2Pos>(gate).x = 1500.f;
+    obstacleSystem(reg);
+    blockOn(reg, player, ObstacleKind::ReversePortal);
+    obstacleSystem(reg);
+    CHECK(!reg.get<PlayerEffects>(player).inverted);
+}
+
+TEST(speed_portals_change_the_speed_of_a_player)
+{
+    Engine::Registry reg;
+    const Engine::Entity player = createPlayer(reg, 0);
+
+    blockOn(reg, player, ObstacleKind::FastPortal);
+    obstacleSystem(reg);
+    reg.get<PlayerInput>(player).right = true;
+    playerControlSystem(reg);
+    CHECK(reg.get<gameLogic::Vec2Velocity>(player).x
+        == config::PLAYER_SPEED * config::FAST_SPEED_FACTOR);
+    blockOn(reg, player, ObstacleKind::NormalPortal);
+    obstacleSystem(reg);
+    playerControlSystem(reg);
+    CHECK(reg.get<gameLogic::Vec2Velocity>(player).x
+        == config::PLAYER_SPEED);
+}
+
+TEST(a_portal_stops_no_bullet_and_hurts_nobody)
+{
+    Engine::Registry reg;
+    const Engine::Entity player = createPlayer(reg, 0);
+    const Engine::Entity bullet = createBullet(reg, player, {900.f, 0.f});
+    const Engine::Entity gate = blockOn(reg, bullet, ObstacleKind::FastPortal);
+
+    obstacleSystem(reg);
+    CHECK(reg.alive(bullet));
+    CHECK(reg.alive(gate));
+    CHECK(reg.get<Health>(player).hp == config::PLAYER_HP);
+}
+
+TEST(a_moving_obstacle_swings_around_its_height)
+{
+    Engine::Registry reg;
+    ObstacleStep step = wall(0.f, 500.f, 100.f, 100.f, ObstacleKind::Spike);
+    float lowest = 5000.f;
+    float highest = -5000.f;
+
+    step.amplitude = 100.f;
+    step.period = 2.f;
+    const Engine::Entity e = createObstacle(reg, step);
+    for (int i = 0; i < 240; ++i) {
+        obstacleMotionSystem(reg, config::FIXED_DT);
+        lowest = std::min(lowest, reg.get<gameLogic::Vec2Pos>(e).y);
+        highest = std::max(highest, reg.get<gameLogic::Vec2Pos>(e).y);
+    }
+    CHECK(lowest < 410.f);
+    CHECK(highest > 590.f);
+}
+
+TEST(the_effects_of_the_portals_end_with_the_level)
+{
+    Segments segments;
+
+    segments.levels = {{1, 0.f}, {2, 240.f}};
+    segments.bossSpawn = {{BossKind::Standard, 1.0e9f}};
+    Game game(1, segments);
+
+    game.addPlayer();
+    const Engine::Entity player = *findPlayerBySlot(game.registry(), 0);
+
+    run(game, 0.1f);
+    game.registry().get<PlayerEffects>(player).inverted = true;
+    game.registry().get<PlayerEffects>(player).speedFactor = 1.5f;
+    run(game, 3.f);
+    CHECK(!game.registry().get<PlayerEffects>(player).inverted);
+    CHECK(game.registry().get<PlayerEffects>(player).speedFactor == 1.f);
 }
 
 TEST(a_wall_absorbs_the_bullets_that_touch_it)
@@ -1052,4 +1205,58 @@ TEST(the_best_times_are_sorted_capped_and_saved)
     CHECK(loaded.all()[1].size() == MAX_RECORDS);
     CHECK(loaded.all()[1].back().timeMs == 5000);
     std::filesystem::remove(file);
+}
+
+TEST(a_fast_wall_travels_faster_than_the_scrolling)
+{
+    Engine::Registry reg;
+    ObstacleStep step = wall(0.f, 0.f, 100.f, 100.f, ObstacleKind::Spike);
+
+    step.speed = 2.f;
+    const Engine::Entity e = createObstacle(reg, step);
+
+    CHECK(reg.get<gameLogic::Vec2Velocity>(e).x
+        == -config::OBSTACLE_SPEED * 2.f);
+}
+
+TEST(the_lobby_can_be_reopened_during_a_match)
+{
+    Game game(1);
+
+    game.addPlayer();
+    game.openLobby();
+    game.startMap(*buildMap(1), 1);
+    game.update(1.f);
+    game.openLobby();
+    CHECK(game.phase() == Phase::Lobby);
+    CHECK(game.startMap(*buildMap(0), 0));
+    CHECK(game.map() == 0);
+}
+
+TEST(a_paused_match_does_not_advance)
+{
+    Game game(1);
+
+    game.addPlayer();
+    game.openLobby();
+    game.startMap(*buildMap(0), 0);
+    game.update(0.1f);
+    game.setPaused(true);
+    const auto before = game.status().elapsedMs;
+    game.update(1.f);
+    CHECK(game.status().paused);
+    CHECK(game.status().elapsedMs == before);
+    game.setPaused(false);
+    game.update(1.f);
+    CHECK(game.status().elapsedMs > before);
+}
+
+TEST(the_lobby_cannot_be_paused)
+{
+    Game game(1);
+
+    game.addPlayer();
+    game.openLobby();
+    game.setPaused(true);
+    CHECK(!game.paused());
 }

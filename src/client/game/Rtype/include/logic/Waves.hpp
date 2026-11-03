@@ -31,6 +31,9 @@ namespace rtype {
         float width;
         float height;
         ObstacleKind kind = ObstacleKind::Rock;
+        float amplitude = 0.f;
+        float period = 0.f;
+        float speed = 1.f;
     };
 
     constexpr float RANDOM_Y = -1.f;

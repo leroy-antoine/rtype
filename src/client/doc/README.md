@@ -67,11 +67,11 @@ tests: the client only uses its types (components, events, status, config).
 | `network/Network` | wraps `Engine::Client`: connection events, sending the keys, decoding the messages into the replica |
 | `App` | the main loop: receive, poll the input, send it, draw |
 | `Replica` | the local copy of the world, the interpolation, the last `STATUS`, the slot of this player, the lobby cursor, the leaderboard, the sound cues |
-| `Prediction` | the predicted position of this player's ship and its reconciliation with `OWN_STATE` |
+| `Prediction` | the predicted position of this player's ship, with the effects of the portals and the push of the rocks, and its reconciliation with `OWN_STATE` |
 | `Controls` | turns window events into the five keys of a `PlayerInput`, plus the menu actions (cursor up or down, Enter) |
 | `GameView` | draws the entities of the replica |
 | `SpriteBank` | maps each kind of entity to a texture and a source rectangle |
-| `Background` | the star-field |
+| `Background` | the scenery: sky gradient, nebula, zone decor, star-field and boss aura (see [Background](#background)) |
 | `Hud` | health bars, boss bar, coin counter, timer, level, respawn hint, end screens and the lobby screen (map list, best times) |
 | `Font` | small bitmap font for the HUD, drawn with rectangles |
 | `Audio` | sounds and music |
@@ -140,16 +140,48 @@ The window is 1280 x 720. The world is 1920 x 1080, so everything is scaled by
   cursor (`1. 02:13.4  2P`). The host (the first player of the `STATUS` list)
   starts the match with Enter; the others see `WAITING FOR P1 TO CHOOSE THE
   MAP`. The times come from the `LEADERBOARD` message.
-- **Walls**: drawn by repeating a small tile (`obstacle_rock.png`,
-  `obstacle_hazard.png`) over the size of the wall.
+- **Walls and portals**: drawn by repeating a 64 x 64 tile (`obstacle_rock.png`,
+  `obstacle_spike.png`) over the size of the wall; a portal repeats an animated
+  tile (`portal_reverse.png`, `portal_fast.png`, `portal_normal.png`). The
+  HUD writes `CONTROLS REVERSED` or `SPEED UP` at the bottom left while the
+  effect lasts.
 - **Coins**: dropped by monsters, drawn from a sprite sheet of 6 frames
   (`coin_spin_sheet.png`). The animated GIF is not used directly, because SFML
   only reads its first image.
 
+## Background
+
+`Background` draws, from back to front: a vertical gradient, a nebula, the
+decor of the **zone**, three layers of stars and the **aura** of the boss that
+is on screen. It never flashes: everything pulses slowly or drifts.
+
+| Zone | Levels | Look |
+|---|---|---|
+| Deep space | 1-4 | dark blue sky, blue nebula |
+| Nebula | 5-8 | purple sky and nebula |
+| Asteroids | 9, 11, 12 | brown sky, two layers of drifting rocks |
+| Wreckage | 13, 14, 16 | green sky, the girders of a derelict station |
+| Core | 17-20 | deep red sky and a slow red glow, oppressive |
+| Warp | 10, 15, the *Death runs* map | fast streaks of light, stars stretched, faster while the ship is boosted |
+| Arena | the *Boss rush* map | dark crimson sky |
+
+The zone comes from the map and the level of the `STATUS` (`zoneOf`). When it
+changes, the screen fades to black and back in about a second.
+
+| Boss | Aura (fades in over a few seconds) |
+|---|---|
+| Standard | a red vignette that pulses slowly |
+| Dasher | very fast cyan streaks |
+| Summoner | a violet tint and rings that expand from the right |
+| Fortress | a heavy red vignette, red bars and a slight rumble |
+
+The textures are plain png files of the `assets` folder (`bg_nebula_*.png`,
+`bg_rocks.png`, `bg_girders.png`, `bg_ring.png`), drawn for the project.
+
 ## Sound
 
 `Audio` plays sounds (`shoot`, `hit`, `explosion`, `boss_alert`, `victory`,
-`defeat`, `coin_pickup`) and two music tracks (level, boss). The replica turns
+`defeat`, `coin_pickup`) and several music tracks: the level, one for each boss, and one for the death runs (zone Warp). The replica turns
 what it sees into *cues* (a player bullet appeared, an entity exploded, the
 boss appeared, the purse grew), and `Audio` plays them. The coin sound is
 played when the number of coins of a `STATUS` is higher than the previous one,

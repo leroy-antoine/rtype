@@ -35,6 +35,8 @@ namespace client {
         [[nodiscard]] const rtype::AllRecords &records() const;
         [[nodiscard]] rtype::MapId mapCursor() const;
         [[nodiscard]] bool isHost() const;
+        [[nodiscard]] std::optional<rtype::SpriteId> bossSprite();
+        [[nodiscard]] const Prediction &prediction() const;
         std::vector<Cue> takeCues();
 
     private:
@@ -54,6 +56,7 @@ namespace client {
         void applyPrediction();
         std::optional<Engine::Entity> localPlayer();
         void recordSpawnCue(const rtype::EntitySpawned &spawn);
+        void refreshSolids();
 
         Engine::Registry _reg;
         std::unordered_map<std::uint32_t, Engine::Entity> _entities;

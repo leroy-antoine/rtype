@@ -161,6 +161,8 @@ namespace rtype {
         {
             if (!hasPlayers()) {
                 idle();
+            } else if (_paused) {
+                return;
             } else if (_phase == Phase::Playing) {
                 updatePlaying(dt);
             } else if (_phase == Phase::Lobby) {
@@ -204,6 +206,16 @@ namespace rtype {
                 }
             }
             return status;
+        }
+
+        void setPaused(const bool paused)
+        {
+            _paused = paused && _phase == Phase::Playing;
+        }
+
+        [[nodiscard]] bool paused() const
+        {
+            return _paused;
         }
 
         [[nodiscard]] Phase phase() const
@@ -253,6 +265,7 @@ namespace rtype {
         void describeMatch(GameStatus &status)
         {
             status.phase = _phase;
+            status.paused = _paused;
             status.map = _map;
             status.coins = static_cast<std::uint32_t>(
                 _reg.get<CoinCounter>(_coinCounter).total);
@@ -292,6 +305,7 @@ namespace rtype {
             playerControlSystem(_reg);
             advanceLevel(dt);
             monsterSystem(_reg, dt);
+            obstacleMotionSystem(_reg, dt);
             bossSystem(_reg, dt);
             shootingSystem(_reg);
             movementSystem(_reg, dt);
@@ -330,6 +344,20 @@ namespace rtype {
             }
         }
 
+        void endPortalEffects()
+        {
+            const std::size_t now = level();
+
+            if (now == _effectLevel) {
+                return;
+            }
+            _effectLevel = now;
+            _reg.each<PlayerEffects>(
+                [](const Engine::Entity, PlayerEffects &effects) {
+                    effects = PlayerEffects{};
+                });
+        }
+
         void skipLevel(const int kills)
         {
             if (kills > 0 && collectWith<BossTag>(_reg).empty()) {
@@ -341,6 +369,7 @@ namespace rtype {
         {
             if (collectWith<BossTag>(_reg).empty()) {
                 _scroll += config::SCROLL_SPEED * dt;
+                endPortalEffects();
                 queueDueWaves();
                 spawnDueBosses();
                 spawnDueObstacles();
@@ -477,6 +506,8 @@ namespace rtype {
             _nextBoss = 0;
             _nextObstacle = 0;
             _skip = SkipBank{};
+            _effectLevel = 0;
+            _paused = false;
             _phase = restingPhase();
             _phaseTimer = 0.f;
             _elapsed = 0.f;
@@ -527,6 +558,7 @@ namespace rtype {
         std::map<int, std::vector<AugmentId>> _augments;
         Phase _phase = Phase::Playing;
         bool _lobby = false;
+        bool _paused = false;
         MapId _map = 0;
         float _phaseTimer = 0.f;
         float _elapsed = 0.f;
@@ -535,6 +567,7 @@ namespace rtype {
         std::size_t _nextBoss = 0;
         std::size_t _nextObstacle = 0;
         SkipBank _skip;
+        std::size_t _effectLevel = 0;
         Segments _segments;
         std::vector<PendingSpawn> _pending;
         TrackedTable _tracked;
