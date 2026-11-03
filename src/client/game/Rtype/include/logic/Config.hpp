@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 
 //  - distances en unites de la carte (1 unite = 1 pixel d'une carte 1920x1080)
 //  - vitesses en unites par seconde
@@ -108,4 +109,6 @@ namespace rtype::config {
     constexpr std::size_t COIN_MAX_VALUE = 15;
     constexpr float COIN_WIDTH = 32.f;
     constexpr float COIN_HEIGHT = 32.f;
+
+    constexpr std::uint8_t SHOP_OFFER_COUNT = 5;
 }

@@ -1,6 +1,7 @@
 #include <csignal>
 #include <iostream>
 #include <thread>
+#include <utility>
 #include <variant>
 #include <vector>
 #include "rtype/Protocol.hpp"
@@ -52,6 +53,7 @@ namespace server {
         if (_ticks++ % STATUS_EVERY_TICKS == 0) {
             broadcastStatus();
         }
+        syncAugments();
         _server.flush();
     }
 
@@ -107,6 +109,8 @@ namespace server {
         for (const rtype::EntitySpawned &spawn : _game.spawns()) {
             _server.send(client, rtype::protocol::SPAWN, rtype::protocol::encode(spawn), Engine::Delivery::Reliable);
         }
+        _server.send(client, rtype::protocol::AUGMENTS, rtype::protocol::encodeAugments(ownedAugments()),
+            Engine::Delivery::Reliable);
     }
 
     void App::sleep() const
@@ -170,6 +174,27 @@ namespace server {
         }
         if (event.type == rtype::protocol::RESPAWN) {
             _game.respawnPlayer(*slot);
+        }
+    }
+
+    rtype::protocol::OwnedAugment App::ownedAugments() const
+    {
+        rtype::protocol::OwnedAugment owned{};
+
+        for (std::size_t slot = 0; slot < owned.size(); ++slot) {
+            owned[slot] = _game.ownedAugments(static_cast<int>(slot));
+        }
+        return owned;
+    }
+
+    void App::syncAugments()
+    {
+        rtype::protocol::OwnedAugment owned = ownedAugments();
+
+        if (owned != _sentAugments) {
+            _server.broadcast(rtype::protocol::AUGMENTS, rtype::protocol::encodeAugments(owned),
+                Engine::Delivery::Reliable);
+            _sentAugments = std::move(owned);
         }
     }
 }

@@ -27,7 +27,7 @@ A new client can be written from these two pages alone.
 | Direction | the client sends keys, the server sends the world |
 | Datagram | at most **1200 bytes**, carries one or several messages |
 | Byte order | **big-endian** for every integer and float |
-| Protocol version | `5` (`rtype::protocol::VERSION`), checked at connection |
+| Protocol version | `6` (`rtype::protocol::VERSION`), checked at connection |
 | Tick | the server simulates at 60 Hz and sends the states every tick |
 
 The server is the authority. A client never sends a position, a hit or a
@@ -62,14 +62,16 @@ Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
 
 ```
  client                                   server
-   │ ── Connect(version=5) ─────────────►  │  every 500 ms, 10 tries at most
+   │ ── Connect(version=6) ─────────────►  │  every 500 ms, 10 tries at most
    │ ◄───────────── Accept(token) ──────── │  or Refuse(0 version, 1 full)
    │ ◄───────────────────── YOU(slot) ──── │  reliable
    │ ◄────────────────── SPAWN × n ─────── │  reliable, the whole world
+   │ ◄──────────────────── AUGMENTS ────── │  reliable, the augments owned
    │ ── INPUT(sequence, keys) ──────────►  │  every frame of the client
    │ ◄─────────────── STATES, STATUS ───── │  every tick / every 6 ticks
    │ ◄──────────────────── OWN_STATE ───── │  every tick, to this client only
    │ ◄─────────────── SPAWN, DESTROY ───── │  reliable, when something happens
+   │ ◄─────────────── AUGMENTS, SHOP ───── │  reliable, when they change
    │ ── Disconnect ─────────────────────►  │
 ```
 
@@ -98,6 +100,8 @@ Sender: **C** is the client, **S** is the server. Delivery: **R** is reliable
 | `0x23` | `STATUS` | S | U | 10 + 4 × n |
 | `0x24` | `YOU` | S | R | 1 |
 | `0x25` | `OWN_STATE` | S | U | 12 |
+| `0x26` | `AUGMENTS` | S | R | 1 + Σ (2 + n) |
+| `0x27` | `SHOP` | S | R | 1 + n |
 
 ### `INPUT` (0x10)
 
@@ -202,13 +206,56 @@ The client replays the inputs sent after `last input` on top of this position
 disagrees. It is only sent once the server has received an `INPUT` from this
 client.
 
+### `AUGMENTS` (0x26)
+
+The augments owned by every player. Sent when they change (a purchase, a
+player who leaves) and once to a client that just connected.
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | count `p` | `u8` | number of players listed, at most 4 |
+
+Then, for each listed player:
+
+| Field | Type | Meaning |
+|---|---|---|
+| slot | `u8` | 0 to 3, a slot appears at most once |
+| count `n` | `u8` | number of augments, at most 32 |
+| ids | `u8` × n | augment ids, see the table below |
+
+A player without augments is not listed, so an empty message is the single
+byte `0`. The message is rejected if a slot is out of range or listed twice,
+an id is unknown, a count is too large, or bytes are missing or left over.
+The message replaces the whole previous list on the client.
+
+| Id | Augment |
+|---|---|
+| 0 | DamageUp |
+| 1 | SpeedUp |
+| 2 | MaxHpUp |
+| 3 | FireRateUp |
+
+Prices and rarities are not sent: the client reads them from the shared
+augment table (`logic/Augments.hpp`).
+
+### `SHOP` (0x27)
+
+The augments currently on sale.
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | count `n` | `u8` | number of offers, at most `SHOP_OFFER_COUNT` |
+| 1 + i | id | `u8` | augment id |
+
+The payload size must be exactly `1 + n` and every id must be known.
+
 ## Reliability
 
 UDP can lose, duplicate and reorder datagrams. The protocol picks the delivery
 per message:
 
-- **Reliable** (`SPAWN`, `DESTROY`, `YOU`, `RESPAWN`): a spawn or a death must
-  not be missed, or the client would draw a wrong world. The sender resends
+- **Reliable** (`SPAWN`, `DESTROY`, `YOU`, `RESPAWN`, `AUGMENTS`, `SHOP`): a
+  spawn, a death or a purchase must not be missed, or the client would draw a wrong world. The sender resends
   until an Ack comes back, the receiver applies the messages in order.
 - **Unreliable** (`INPUT`, `STATES`, `STATUS`, `OWN_STATE`): they are repeated every tick
   or every frame, so a lost one is replaced by the next. Resending an old
