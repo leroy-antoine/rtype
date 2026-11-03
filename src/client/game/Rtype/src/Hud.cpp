@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include "logic/Config.hpp"
+#include "client/AugmentStyle.hpp"
 #include "client/Hud.hpp"
 
 namespace client {
@@ -22,34 +23,6 @@ namespace client {
         constexpr std::array<Color, 4> SLOT_COLORS = {{
             {90, 170, 255, 255}, {255, 90, 90, 255},
             {110, 230, 110, 255}, {255, 220, 80, 255}}};
-
-        std::string augmentLabel(const rtype::AugmentId id)
-        {
-            switch (id) {
-                case rtype::AugmentId::DamageUp: return "DMG";
-                case rtype::AugmentId::SpeedUp: return "SPD";
-                case rtype::AugmentId::MaxHpUp: return "HP";
-                case rtype::AugmentId::FireRateUp: return "FR";
-                case rtype::AugmentId::Count: break;
-            }
-            return "?";
-        }
-
-        Color rarityColor(const rtype::AugmentId id)
-        {
-            const std::optional<rtype::AugmentDef> def = rtype::findAugment(id);
-
-            if (!def) {
-                return WHITE;
-            }
-            switch (def->rarity) {
-                case rtype::Rarity::Common: return {170, 170, 170, 255};
-                case rtype::Rarity::Rare: return {80, 150, 255, 255};
-                case rtype::Rarity::Epic: return {190, 90, 255, 255};
-                case rtype::Rarity::Legendary: return {255, 165, 0, 255};
-            }
-            return WHITE;
-        }
     }
 
     Hud::Hud(Engine::Renderer &renderer, const SpriteBank &sprites,

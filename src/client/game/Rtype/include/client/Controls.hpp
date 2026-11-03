@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include "engine/window/Event.hpp"
 #include "engine/window/Window.hpp"
 #include "logic/Components.hpp"
@@ -11,6 +12,7 @@ namespace client {
 
         [[nodiscard]] const rtype::PlayerInput &input() const;
         [[nodiscard]] bool respawnRequested() const;
+        [[nodiscard]] const std::vector<Engine::Key> &pressedKeys() const;
 
     private:
         void handle(Engine::Window &window, const Engine::Events::Closed &event);
@@ -26,5 +28,6 @@ namespace client {
 
         rtype::PlayerInput _input;
         bool _respawn = false;
+        std::vector<Engine::Key> _pressed;
     };
 }

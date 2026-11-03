@@ -11,12 +11,16 @@ namespace client {
         constexpr std::array<const char *, 7> FILES = {
             "shoot.wav", "hit.wav", "explosion.wav", "boss_alert.wav",
             "victory.wav", "defeat.wav", "coin_pickup.mp3"};
+
+        constexpr std::array<const char *, 2> SHOP_FILES = {
+            "trade_accept.ogg", "trade_refuse.ogg"};
     }
 
     Audio::Audio(const std::filesystem::path &assets) : _dir(assets / "sounds")
     {
         try {
             load();
+            loadShopSounds();
             _player.setMusicVolume(MUSIC_VOLUME);
             _player.setSoundVolume(SOUND_VOLUME);
             _enabled = true;
@@ -30,6 +34,28 @@ namespace client {
     {
         for (std::size_t i = 0; i < SOUND_COUNT; ++i) {
             _ids[i] = _sounds.load((_dir / FILES[i]).string());
+        }
+    }
+
+    void Audio::loadShopSounds()
+    {
+        for (std::size_t i = 0; i < SHOP_SOUND_COUNT; ++i) {
+            try {
+                _shopIds[i] = _sounds.load((_dir / SHOP_FILES[i]).string());
+            } catch (const std::exception &e) {
+                std::cerr << "R-Type: shop sound missing (" << e.what() << ")"
+                    << std::endl;
+            }
+        }
+    }
+
+    void Audio::playShopSound(const ShopSound sound, const float volume)
+    {
+        const std::optional<Engine::SoundID> &id =
+            _shopIds[static_cast<std::size_t>(sound)];
+
+        if (_enabled && id) {
+            _player.play(*id, volume);
         }
     }
 
@@ -83,6 +109,8 @@ namespace client {
             case Cue::Explosion: playSound(Sound::Explosion, 0.7f); break;
             case Cue::BossExplosion: playSound(Sound::Explosion, 1.f); break;
             case Cue::CoinPickup: playSound(Sound::Coin, 0.6f); break;
+            case Cue::Purchase: playShopSound(ShopSound::Accept, 0.8f); break;
+            case Cue::PurchaseRefused: playShopSound(ShopSound::Refuse, 0.8f); break;
             case Cue::BossAppears:
                 playSound(Sound::BossAlert, 0.9f);
                 playMusic(Track::Boss);

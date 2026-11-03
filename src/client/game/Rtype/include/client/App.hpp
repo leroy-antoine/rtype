@@ -12,6 +12,7 @@
 #include "Controls.hpp"
 #include "GameView.hpp"
 #include "Replica.hpp"
+#include "ShopPanel.hpp"
 
 namespace client {
     class App {
@@ -31,10 +32,10 @@ namespace client {
         // Les sons du monde recu a la connexion ne sont pas rejoues.
         static constexpr float LISTEN_DELAY = 0.5f;
 
-        bool loop(Engine::Window &window, GameView &view, Audio &audio);
+        bool loop(Engine::Window &window, GameView &view, Audio &audio, ShopPanel &shop);
         void playSounds(Audio &audio);
         bool listening();
-        void sendControls(float dt);
+        void sendControls(float dt, ShopPanel &shop);
         float advance();
         [[nodiscard]] float elapsed() const;
 

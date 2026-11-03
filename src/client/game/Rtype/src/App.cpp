@@ -20,17 +20,18 @@ namespace client {
         const SpriteBank sprites(textures, _assets);
         GameView view(renderer, sprites, WORLD_TO_SCREEN, WINDOW_WIDTH, WINDOW_HEIGHT);
         Audio audio(_assets);
+        ShopPanel shop(renderer, sprites, WINDOW_WIDTH, WINDOW_HEIGHT);
 
         window.setFramerateLimit(FRAMERATE);
         _start = Clock::now();
         _last = _start;
-        if (!loop(window, view, audio)) {
+        if (!loop(window, view, audio, shop)) {
             return RTYPE_ERROR;
         }
         return RTYPE_SUCCESS;
     }
 
-    bool App::loop(Engine::Window &window, GameView &view, Audio &audio)
+    bool App::loop(Engine::Window &window, GameView &view, Audio &audio, ShopPanel &shop)
     {
         while (window.isOpen()) {
             if (!_network.update(_replica)) {
@@ -38,11 +39,15 @@ namespace client {
             }
             _controls.poll(window);
             const float dt = advance();
-            sendControls(dt);
+            if (const std::optional<rtype::protocol::BuyResult> result = _replica.takeBuyResult()) {
+                shop.showResult(*result, elapsed());
+            }
+            sendControls(dt, shop);
             _replica.update(dt);
             playSounds(audio);
             window.clear(4, 4, 18);
             view.draw(_replica, elapsed());
+            shop.draw(_replica, elapsed());
             window.display();
         }
         return true;
@@ -70,12 +75,21 @@ namespace client {
         return elapsed() - *_connectedSince >= LISTEN_DELAY;
     }
 
-    void App::sendControls(const float dt)
+    void App::sendControls(const float dt, ShopPanel &shop)
     {
-        if (_controls.respawnRequested()) {
-            _network.requestRespawn();
+        if (ShopPanel::isOpen(_replica)) {
+            const rtype::PlayerInput idle{};
+
+            if (const std::optional<rtype::AugmentId> id = shop.handle(_controls.pressedKeys(), _replica, elapsed())) {
+                _network.buy(*id);
+            }
+            _network.sendInput(_replica.predict(idle, dt), idle);
+        } else {
+            if (_controls.respawnRequested()) {
+                _network.requestRespawn();
+            }
+            _network.sendInput(_replica.predict(_controls.input(), dt), _controls.input());
         }
-        _network.sendInput(_replica.predict(_controls.input(), dt), _controls.input());
         _network.flush();
     }
 
