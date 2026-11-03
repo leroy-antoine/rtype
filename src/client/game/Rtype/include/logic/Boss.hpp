@@ -4,6 +4,7 @@
 #include <vector>
 #include "engine/core/Registry.hpp"
 #include "utils/Vectors.hpp"
+#include "Bullet.hpp"
 #include "Components.hpp"
 #include "Config.hpp"
 #include "Queries.hpp"
@@ -32,16 +33,7 @@ namespace rtype {
     // Les vitesses des balles d'un tir du boss : un eventail vers la gauche.
     inline std::vector<gameLogic::Vec2> bossFan()
     {
-        constexpr int count = config::BOSS_FAN_BULLETS;
-        std::vector<gameLogic::Vec2> shots;
-
-        for (int i = 0; i < count; ++i) {
-            const float angle = (static_cast<float>(i)
-                - static_cast<float>(count - 1) / 2.f) * config::BOSS_FAN_ANGLE;
-
-            shots.push_back({-std::cos(angle) * config::BOSS_BULLET_SPEED,
-                std::sin(angle) * config::BOSS_BULLET_SPEED});
-        }
-        return shots;
+        return fan(config::BOSS_FAN_BULLETS, config::BOSS_FAN_ANGLE,
+            config::BOSS_BULLET_SPEED, -1.f);
     }
 }

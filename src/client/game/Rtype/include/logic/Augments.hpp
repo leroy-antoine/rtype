@@ -12,7 +12,8 @@ namespace rtype {
     enum class Rarity : std::uint8_t { Common, Rare, Epic, Legendary };
 
     enum class AugmentId : std::uint8_t {
-        DamageUp, SpeedUp, MaxHpUp, FireRateUp, Count
+        DamageUp, SpeedUp, MaxHpUp, FireRateUp, Regeneration, Shield,
+        MultiShot, Count
     };
 
     using AugmentEffect = void (*)(Engine::Registry &, Engine::Entity);
@@ -43,6 +44,9 @@ namespace rtype {
         if (reg.has<Health>(e)) {
             reg.get<Health>(e).hp += config::AUGMENT_HP_BONUS;
         }
+        if (reg.has<MaxHealth>(e)) {
+            reg.get<MaxHealth>(e).hp += config::AUGMENT_HP_BONUS;
+        }
     }
 
     inline void reduceFireCooldown(Engine::Registry &reg,
@@ -51,6 +55,33 @@ namespace rtype {
         if (reg.has<Weapon>(e)) {
             reg.get<Weapon>(e).cooldown *= config::AUGMENT_FIRE_COOLDOWN_FACTOR;
         }
+    }
+
+    inline void addRegeneration(Engine::Registry &reg, const Engine::Entity e)
+    {
+        if (reg.has<Regeneration>(e)) {
+            reg.get<Regeneration>(e).hp += config::REGENERATION_HP;
+            return;
+        }
+        reg.add(e, Regeneration{});
+    }
+
+    inline void addShield(Engine::Registry &reg, const Engine::Entity e)
+    {
+        if (reg.has<Shield>(e)) {
+            reg.get<Shield>(e).cooldown *= config::SHIELD_COOLDOWN_FACTOR;
+            return;
+        }
+        reg.add(e, Shield{});
+    }
+
+    inline void addMultiShot(Engine::Registry &reg, const Engine::Entity e)
+    {
+        if (reg.has<MultiShot>(e)) {
+            reg.get<MultiShot>(e).bullets += config::MULTISHOT_EXTRA_BULLETS;
+            return;
+        }
+        reg.add(e, MultiShot{});
     }
 
     inline constexpr std::array AUGMENTS = {
@@ -62,6 +93,12 @@ namespace rtype {
             config::AUGMENT_HP_PRICE, addHp},
         AugmentDef{AugmentId::FireRateUp, Rarity::Epic,
             config::AUGMENT_FIRE_RATE_PRICE, reduceFireCooldown},
+        AugmentDef{AugmentId::Regeneration, Rarity::Rare,
+            config::AUGMENT_REGENERATION_PRICE, addRegeneration},
+        AugmentDef{AugmentId::Shield, Rarity::Epic,
+            config::AUGMENT_SHIELD_PRICE, addShield},
+        AugmentDef{AugmentId::MultiShot, Rarity::Legendary,
+            config::AUGMENT_MULTISHOT_PRICE, addMultiShot},
     };
 
     inline std::optional<AugmentDef> findAugment(const AugmentId id)
