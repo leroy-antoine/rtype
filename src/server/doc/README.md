@@ -136,8 +136,9 @@ spawns of bullets (`SPAWN`). The kill of a player or of a monster is a
   lobby, with `SELECT_MAP`; the server builds the map with `buildMap(id)` and
   calls `Game::startMap`. A message from another player, an unknown map, or a
   message outside the lobby is ignored.
-- **End of a match**: after a victory or a defeat, the end screen is shown for
-  a few seconds (`RESTART_DELAY`), then the game returns to the lobby. A dead
+- **End of a match**: the end screen is shown for a few seconds
+  (`RESTART_DELAY`). A defeat then restarts the same map; a victory returns to
+  the lobby. A dead
   player can ask to come back with `RESPAWN` while the match is running.
 - **Leaderboard**: after each victory the server adds the time and the number
   of players to the best times of the map (5 per map, `rtype::Leaderboard`),

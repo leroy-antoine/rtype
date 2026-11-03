@@ -7,6 +7,7 @@ add_executable(r-type_client
         game/Rtype/src/Background.cpp
         game/Rtype/src/Font.cpp
         game/Rtype/src/Hud.cpp
+        game/Rtype/src/HudVictory.cpp
         game/Rtype/src/Controls.cpp
         game/Rtype/src/GameView.cpp
         game/Rtype/src/Prediction.cpp

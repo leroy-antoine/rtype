@@ -48,8 +48,8 @@ namespace rtype::config {
 
     constexpr int BOSS_HP = 600;
     constexpr float BOSS_SPEED = 120.f;        // -> Vitesse d'entree
-    constexpr float BOSS_WIDTH = 480.f;
-    constexpr float BOSS_HEIGHT = 264.f;
+    constexpr float BOSS_WIDTH = 336.f;
+    constexpr float BOSS_HEIGHT = 336.f;
     constexpr int BOSS_DAMAGE = 20;
     constexpr float BOSS_FIRE_COOLDOWN = 0.9f;
     constexpr float DASHER_MIN_X = 700.f;
@@ -107,6 +107,29 @@ namespace rtype::config {
     constexpr float SPEED_PERCENT = 100.f;
     constexpr float SCROLL_SPEED = 120.f; //-> Vitesse de défilement de la carte
     constexpr float OBSTACLE_SPEED = SCROLL_SPEED;
+    // Death runs a 120 BPM : un temps dure 0,5 s.
+    constexpr float BEAT = 0.5f;
+    constexpr float LASER_PERIOD = 4.f * BEAT;
+    constexpr float LASER_OFF = 0.6f;
+    constexpr float LASER_WARN = 0.4f;
+    constexpr float LASER_WIDTH = 70.f;
+    constexpr float TURRET_INTERVAL = 2.f * BEAT;
+    constexpr float TURRET_SHOT_SPEED = 380.f;
+    constexpr float TURRET_SHOT_SIZE = 26.f;
+    constexpr float TURRET_MUZZLE = 64.f;      // -> Distance du centre de la tourelle ou le tir apparait (hors du bloc)
+    constexpr int TURRET_DAMAGE = 15;
+    constexpr float MINE_SIZE = 56.f;
+    constexpr int SPAWN_SEARCH = 8;          // -> Essais au-dessus et en dessous pour trouver un passage libre
+    constexpr float SPAWN_STEP = 60.f;
+    constexpr float SPAWN_RETRY = 0.1f;
+    constexpr float METEOR_SIZE = 30.f;
+    constexpr float METEOR_SPEED = 760.f;
+    constexpr int METEOR_DAMAGE = 20;
+    constexpr float HAZARD_LASER_SLOW = 8.f;  // -> Delai entre deux lasers de boss (premier boss)
+    constexpr float HAZARD_LASER_FAST = 3.2f; // -> ... et pour le dernier boss
+    constexpr float HAZARD_METEOR_SLOW = 2.f;
+    constexpr float HAZARD_METEOR_FAST = 0.55f;
+    constexpr float RESTART_LEAD = 800.f;  // -> x du premier obstacle apres une mort en death run
     constexpr float BOSS_SPAWN_SCROLL = 2400.f;  // -> Distance defilee (2400 / 120 = 20 s de jeu) a laquelle le boss arrive.
 
     constexpr std::size_t COIN_MIN_VALUE = 1;

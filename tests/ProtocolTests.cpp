@@ -75,7 +75,7 @@ TEST(a_status_with_invalid_fields_is_rejected)
     payload[14] = 5;
     CHECK(!protocol::decodeStatus(payload).has_value());
     payload = protocol::encode(sampleStatus());
-    payload[15] = 5;
+    payload[17] = 5;
     CHECK(!protocol::decodeStatus(payload).has_value());
     payload = protocol::encode(sampleStatus());
     payload[protocol::STATUS_HEADER_SIZE] = 7;
@@ -261,4 +261,14 @@ TEST(a_pause_message_survives_a_round_trip)
     CHECK(protocol::decodePause(protocol::encodePause(false)) == false);
     CHECK(!protocol::decodePause({2}).has_value());
     CHECK(!protocol::decodePause({}).has_value());
+}
+
+TEST(the_deaths_survive_a_status_round_trip)
+{
+    GameStatus status;
+
+    status.deaths = 300;
+    const auto decoded = protocol::decodeStatus(protocol::encode(status));
+    CHECK(decoded.has_value());
+    CHECK(decoded->deaths == 300);
 }

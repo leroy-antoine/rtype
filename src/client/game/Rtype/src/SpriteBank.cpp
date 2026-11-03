@@ -52,15 +52,15 @@ namespace client {
 
     void SpriteBank::loadBosses()
     {
-        add(Id::Boss, "r-typesheet32.gif",
-            {.firstFrame = {0, 430, 260, 143}, .frameCount = 2, .step = 260,
-                .frameDuration = 0.35f});
-        add(Id::DasherBoss, "r-typesheet21.gif",
-            {.firstFrame = {25, 138, 65, 50}, .frameCount = 7, .step = 65,
-                .frameDuration = 0.07f});
-        add(Id::SummonerBoss, "r-typesheet40.gif",
-            {.firstFrame = {0, 0, 66, 60}, .frameCount = 8,
+        add(Id::Boss, "standard_sheet.png",
+            {.firstFrame = {0, 0, 96, 96}, .frameCount = 4,
                 .frameDuration = 0.2f});
+        add(Id::DasherBoss, "dasher_sheet.png",
+            {.firstFrame = {0, 0, 64, 48}, .frameCount = 6,
+                .frameDuration = 0.08f});
+        add(Id::SummonerBoss, "summoner_sheet.png",
+            {.firstFrame = {0, 0, 64, 64}, .frameCount = 8,
+                .frameDuration = 0.12f});
         add(Id::FortressBoss, "r-typesheet37.gif",
             {.firstFrame = {0, 0, 594, 178}, .frameCount = 1});
     }
@@ -110,6 +110,20 @@ namespace client {
         add(Id::NormalPortal, "portal_normal.png",
             {.firstFrame = {0, 0, 90, 64}, .frameCount = 8,
              .frameDuration = 0.12f});
+        add(Id::TurretBlock, "obstacle_turret.png",
+            {.firstFrame = {0, 0, 64, 64}, .frameCount = 4,
+             .frameDuration = 0.25f});
+        add(Id::MineBall, "obstacle_mine.png",
+            {.firstFrame = {0, 0, 64, 64}, .frameCount = 4,
+             .frameDuration = 0.25f});
+        add(Id::Meteor, "meteor.png",
+            {.firstFrame = {0, 0, 32, 32}, .frameCount = 1});
+        add(Id::LaserPost, "obstacle_spike.png",
+            {.firstFrame = {0, 0, 64, 64}, .frameCount = 1});
+        add(Id::BeamOn, "obstacle_spike.png",
+            {.firstFrame = {0, 0, 64, 64}, .frameCount = 1});
+        add(Id::BeamWarn, "obstacle_spike.png",
+            {.firstFrame = {0, 0, 64, 64}, .frameCount = 1});
     }
 
     void SpriteBank::addBackdrop(const BackdropId id, const char *file,

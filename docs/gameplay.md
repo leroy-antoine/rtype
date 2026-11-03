@@ -33,7 +33,7 @@ the highlighted map; the other players wait for them.
 |---|---|
 | **CAMPAIGN** | 20 levels with a growing difficulty, more and more bosses, rocks and two full death runs |
 | **BOSS RUSH** | 5 short levels, one to three bosses each, ending with the Fortress, the Summoner and the Dasher |
-| **DEATH RUNS** | 4 relentless levels of spike gates, with portals, without a single enemy, then two bosses |
+| **DEATH RUNS** | 4 relentless levels of about a minute, then two bosses. Gates, lasers, mines and turrets are mixed in the same course, without any monster, with portals |
 
 The level number is shown at the top centre of the screen.
 
@@ -73,6 +73,8 @@ Leaving the screen with your ship, or touching an enemy, destroys it.
 The level stops scrolling while a boss is alive, and its health bar is shown
 at the bottom of the screen. Monsters called by the Summoner drop no coin.
 
+**The arena is dangerous.** While a boss is alive, lasers cross the screen on the beat and **meteors** (small fast balls with a red trail) fly diagonally across it. A meteor hurts the player it touches (20 damage) and explodes on any obstacle. The fight gets denser with every boss of the map: the last boss brings a laser about every 3 s and a meteor about every half second.
+
 ## Walls
 
 Walls scroll with the background.
@@ -84,6 +86,9 @@ Walls scroll with the background.
   screen, the ship is **crushed**.
 - **Spikes** are steel stars with glowing red tips. Touching one **destroys**
   your ship at once. The gates of the *death runs* are made of spikes.
+- **Mines** are small dark balls with a red light; touching one destroys the ship. They often drift together up and down.
+- **Lasers** are full-height beams that switch on and off on the beat (120 BPM). A blinking red column warns you for about half a second, then the beam is deadly for one second: cross while it is off.
+- **Turrets** are fixed on the top and bottom edges and shoot at the nearest player every second. They cannot be destroyed.
 - Some gates **swing** up and down while they come: follow the gap.
 - Some gates **pinch**: the two walls close on the gap and open again.
 - **Sweepers** are spike blocks that sweep up and down very fast between two
@@ -91,7 +96,9 @@ Walls scroll with the background.
 - In the death runs the walls come **faster than the scrolling** (up to twice
   as fast) and follow each other closely.
 
-Enemies fly through walls. Every gate leaves a gap wide enough for a ship.
+In the normal levels of the campaign, about ten obstacles are spread along the whole level: asteroids (some of them fly faster than the scrolling and drift up and down) and, from the third level on, lasers. Lasers only hurt the players: they do not stop the bullets, and the monsters ignore them.
+
+Enemies fly through walls, but they never *appear* inside one: a monster that would spawn in a wall is moved to the nearest free height, or waits a moment. Every gate leaves a gap wide enough for a ship.
 
 ## Portals
 
@@ -106,15 +113,13 @@ They appear in the death runs.
 
 The effects stop at the end of the level. The text `CONTROLS REVERSED` or
 `SPEED UP` reminds you of them at the bottom left of the screen. Every death
-run can be crossed, but only by a player who keeps moving: the gates of the
-last levels of the *Death runs* map need a ship at least 1.2 times faster than
-the normal speed, which is what the fast portal gives.
+run is meant to be crossed by a player who keeps moving, with the speed that
+the fast portal at its start gives.
 
 ## Music and scenery
 
-Each boss has its own music (a march for the Standard boss, a frantic
-arpeggio for the Dasher, an eerie drone for the Summoner, a heavy slow beat for
-the Fortress), the death runs have a driving track of their own, and the
+Each boss has its own music (a march for the Standard boss, the
+Dasher theme, the Summoner theme, a heavy slow beat for the Fortress), the death runs have a driving track of their own at 120 BPM, the tempo of the lasers, and the
 levels share a lighter one.
 
 The scenery changes with the part of the map: deep blue space, a purple nebula,
@@ -146,7 +151,7 @@ time.
 ## Winning and losing
 
 - **Victory**: every boss of the map is beaten.
-- **Defeat**: every player is destroyed at the same time. As long as one
+- **Defeat**: every player is destroyed at the same time. In a **death run**, the first death of any player sends the whole team back to the start of that level: nobody is left behind. As long as one
   teammate is alive, the others can come back with Enter.
 
-After the end screen, the game returns to the lobby.
+After a defeat the same map restarts from its first level when the countdown ends. After a victory the game shows a summary (deaths, coins, time) and returns to the lobby. The time is green when it is the best of the map, red otherwise.

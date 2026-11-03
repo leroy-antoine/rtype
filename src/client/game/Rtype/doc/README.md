@@ -242,7 +242,7 @@ A level can contain obstacles (`ObstacleStep`: distance, height on the map,
 size, kind, and optionally a swing). An obstacle appears at the right edge when
 the level reaches its distance and then moves left at the speed of the
 scrolling, so it stays still against the background. A wall that has left the
-map is removed. There are five kinds (`ObstacleKind`):
+map is removed. There are nine kinds (`ObstacleKind`):
 
 | Kind | Effect on a player | Bullets | Monsters |
 |---|---|---|---|
@@ -251,6 +251,9 @@ map is removed. There are five kinds (`ObstacleKind`):
 | `ReversePortal` | inverts the four keys; crossing a second one gives them back | cross | cross |
 | `FastPortal` | the ship moves `FAST_SPEED_FACTOR` (1.5) times faster | cross | cross |
 | `NormalPortal` | back to the normal speed | cross | cross |
+| `Laser` | a *post*: it makes a full-height beam appear and disappear on the beat (`laserSystem`, 120 BPM). The beam is a `BeamWarn` for 0.4 s (harmless, blinking), then a `Beam` for 1 s (**deadly**), then nothing for 0.6 s | beam absorbed | fly through |
+| `Turret` | fires a shot at the nearest player every second (`turretSystem`); it cannot be destroyed | absorbed | fly through |
+| `Mine` | **deadly** like a spike, small, often drifting up and down | absorbed | fly through |
 
 A **portal** has the whole height of the map (`portal()` in `LevelBuilder.hpp`),
 so it cannot be avoided. It acts once on each player that crosses it
@@ -274,6 +277,38 @@ amplitude, so the gap stays the only hole while it moves. A **pinching** gate
 (`GateSpec::pinch`) moves its two walls in opposite directions, so the gap
 closes and opens; the tests keep its smallest opening above 2.5 ship heights.
 `addSweepers` puts fast swinging spike blocks between two gates of a run.
+`Scatter.hpp` fills the normal levels of the campaign: `scatter()` adds, up to
+about ten obstacles per level, asteroids (a seeded random size and height,
+half of them drifting and flying faster than the scrolling) and, from level 3,
+1 to 3 lasers. It never places an obstacle within 180 units of another one nor
+in the last 200 units before a boss. A monster that would spawn inside a wall
+(`isWall`) is moved up or down by steps of `SPAWN_STEP` (`clearSpawnY`), or
+retried after `SPAWN_RETRY` seconds.
+
+`BossHazards.hpp` runs during a boss fight (the level does not scroll then):
+`bossHazardSystem` makes a laser appear every 8 s down to 3.2 s and a meteor
+every 2 s down to 0.55 s, depending on the intensity (the number of bosses
+already spawned divided by the number of bosses of the map). A meteor is a
+projectile of the monster team (`SpriteId::Meteor`, 30 units, 760 units/s, 20
+damage), so the existing rules apply: it hurts a player and the obstacles
+absorb it with an explosion.
+
+`DeathRuns.hpp` builds a death run from a **course**: a string where every
+letter is a piece (`G` gate, `B` laser, `M` mines, `T` turret, `F` fast portal,
+`R` reversed keys, `N` normal speed), so that the traps are mixed in the same
+segment. All the pieces of a course move at the same speed. The gates narrow
+from `gapFrom` to `gapTo`, the lasers have a phase set from their position in
+the level (they all pulse together), the mines of a column drift together so
+the passages keep their size, and the turrets alternate between the top and the
+bottom of the screen. A death run has no monster.
+
+A level can be a **death run** (`LevelDef::deathRun`, stored in
+`Segments::deathRuns`). While one is played and no boss is alive, the first
+death of any player puts the whole team back at the start of the level
+(`restartDeathRun`): the obstacles and monsters are removed and every player respawns with full
+health. The level scroll is set so that the first obstacle is already close
+(`RESTART_LEAD`): there is no waiting after a death. The kill
+bonus that skips the level is disabled there.
 
 In `LevelBuilder.hpp`, `wall()` writes one wall, `portal()` one portal and
 `addGate(walls, GateSpec)` the top and the bottom wall around a gap.
@@ -294,7 +329,7 @@ There are three maps (`MAPS` in `Builder.hpp`, names in `MapList.hpp`):
 |---|---|---|
 | 0 | CAMPAIGN | the 20 levels described below |
 | 1 | BOSS RUSH | 5 short levels, one to three bosses each, ending with the Fortress, the Summoner and the Dasher |
-| 2 | DEATH RUNS | 4 relentless levels of spike gates, then a level with the Fortress and the Dasher: *Chain* (14 narrowing gates in a row, zigzag), *Sweepers* (fast spike blocks between the gates), *Pinch* (gates that close and open) and *Gauntlet* (16 gates 1.6 s apart, swinging, with reversed keys). Every level starts with a fast portal and the walls come 1.4 to 2 times faster than the scrolling |
+| 2 | DEATH RUNS | 4 courses of about a minute, then a level with the Fortress and the Dasher: *Rhythm* (speed 1.3), *Minefield* (1.5), *Pinch* (1.7, gates that close and open) and *Gauntlet* (2.0, swinging gates). Each one mixes gates, lasers, mines and turrets, with a fast portal at the start and two reversed stretches |
 
 `Game` has a `Lobby` phase, entered with `openLobby()` (the server does it at
 startup). In the lobby nothing is simulated except the movement of the ships.
@@ -321,17 +356,17 @@ dead).
 | 7 | Cave | a tunnel of rocks above and below |
 | 8 | Rocket battery | columns of rocket launchers |
 | 9 | Summoner | Tanks, then the Summoner boss |
-| 10 | **Death run I** | spike gates only, no enemy, a fast portal, two stretches with reversed keys, a few swinging gates |
+| 10 | **Death run I** | a course mixing gates, lasers, mines and a reversed stretch, without monster |
 | 11 | Bomber raid | slow bombers and fast Kamikazes |
 | 12 | Crossfire | pillars and a mix of every enemy |
 | 13 | Boss rush | Standard, then Dasher |
 | 14 | Tank wall | lines of Tanks and Bombers, rocks as cover |
-| 15 | **Death run II** | 16 narrower gates, four reversed stretches, five swinging gates |
+| 15 | **Death run II** | a longer course with turrets too, narrower gates, two reversed stretches |
 | 16 | Escorted bosses | Summoner, then Standard |
 | 17 | Gauntlet | rock gates to cross while enemies attack |
 | 18 | Rocket storm | a narrow cave full of rockets and Kamikazes |
 | 19 | Last stand | every enemy, then Standard and Summoner |
-| 20 | Finale | a spike gauntlet with swinging gates and reversed keys, then Summoner, Dasher and Fortress |
+| 20 | Finale | a death run with every trap, then Summoner, Dasher and Fortress |
 
 Every wall pattern was checked with a reachability analysis (a ship moving at
 500 units per second): the death runs can still be crossed by a ship moving at

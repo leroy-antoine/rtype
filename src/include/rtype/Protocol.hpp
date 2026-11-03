@@ -37,7 +37,7 @@ namespace rtype::protocol {
         std::uint8_t speedPercent = 100;
     };
 
-    constexpr std::uint8_t VERSION = 14;
+    constexpr std::uint8_t VERSION = 17;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
@@ -70,9 +70,9 @@ namespace rtype::protocol {
         (Engine::Protocol::MAX_PAYLOAD_SIZE - STATES_HEADER_SIZE) / STATE_SIZE;
 
     // STATUS : phase (1), boss hp (2), boss max hp (2), pieces (4), temps
-    // en ms (4), niveau (1), map (1), nombre de joueurs (1), puis par
-    // joueur : slot (1), hp (2), vivant (1).
-    constexpr std::size_t STATUS_HEADER_SIZE = 16;
+    // en ms (4), morts (2), niveau (1), map (1), nombre de joueurs (1),
+    // puis par joueur : slot (1), hp (2), vivant (1).
+    constexpr std::size_t STATUS_HEADER_SIZE = 18;
     constexpr std::size_t RECORD_SIZE = 5;
     constexpr std::size_t PLAYER_STATUS_SIZE = 4;
 
@@ -338,6 +338,7 @@ namespace rtype::protocol {
         writer.writeU32(status.elapsedMs);
         writer.writeU8(status.level);
         writer.writeU8(status.map);
+        writer.writeU16(status.deaths);
         writer.writeU8(static_cast<std::uint8_t>(status.players.size()));
         for (const PlayerStatus &player : status.players) {
             writer.writeU8(static_cast<std::uint8_t>(player.slot));
@@ -369,6 +370,7 @@ namespace rtype::protocol {
         std::uint32_t elapsedMs = 0;
         std::uint8_t level = 0;
         std::uint8_t map = 0;
+        std::uint16_t deaths = 0;
         std::uint8_t count = 0;
     };
 
@@ -382,14 +384,15 @@ namespace rtype::protocol {
         const std::optional<std::uint32_t> elapsedMs = reader.readU32();
         const std::optional<std::uint8_t> level = reader.readU8();
         const std::optional<std::uint8_t> map = reader.readU8();
+        const std::optional<std::uint16_t> deaths = reader.readU16();
         const std::optional<std::uint8_t> count = reader.readU8();
 
         if (!phase || !bossHp || !bossMaxHp || !coins || !elapsedMs
-            || !level || !map || !count) {
+            || !level || !map || !deaths || !count) {
             return std::nullopt;
         }
         return StatusHeader{*phase, *bossHp, *bossMaxHp, *coins, *elapsedMs,
-            *level, *map, *count};
+            *level, *map, *deaths, *count};
     }
 
     inline bool isValid(const StatusHeader &header, const std::size_t left)
@@ -433,6 +436,7 @@ namespace rtype::protocol {
         status.elapsedMs = header->elapsedMs;
         status.level = header->level;
         status.map = header->map;
+        status.deaths = header->deaths;
         if (!readPlayers(reader, header->count, status.players)) {
             return std::nullopt;
         }

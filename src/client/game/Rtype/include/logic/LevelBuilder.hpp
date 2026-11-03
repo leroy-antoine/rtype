@@ -16,6 +16,7 @@ namespace rtype {
         std::vector<WaveStep> waves;
         std::vector<BossSpawn> bosses;
         std::vector<ObstacleStep> obstacles;
+        bool deathRun = false;
     };
 
     inline WaveStep wave(const float at, const MonsterKind kind,

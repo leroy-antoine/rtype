@@ -312,7 +312,10 @@ TEST(healing_the_players_restores_their_health)
 
 TEST(a_game_built_on_a_map_follows_its_levels)
 {
-    Game game(1, buildMap(0).value());
+    Segments empty = buildMap(0).value();
+
+    empty.obstacles.clear();
+    Game game(1, std::move(empty));
 
     game.addPlayer();
     CHECK(game.level() == 1);
@@ -427,6 +430,9 @@ TEST(the_dasher_roams_the_whole_right_side_of_the_map_and_stays_on_it)
     const Engine::Entity boss = spawnBoss(game.registry(), BossKind::Dasher);
     for (int i = 0; i < 25 * 60; ++i) {
         game.update(config::FIXED_DT);
+        for (const Engine::Entity e : collectObstacles(game.registry())) {
+            game.registry().destroy(e);
+        }
         if (i < 120) {
             continue;
         }
@@ -1158,16 +1164,17 @@ TEST(the_host_is_the_first_connected_player)
     CHECK(game.host() == 1);
 }
 
-TEST(the_game_goes_back_to_the_lobby_after_the_end_screen)
+TEST(the_game_goes_back_to_the_lobby_after_a_victory)
 {
     Game game(1);
 
     game.openLobby();
     game.addPlayer();
     game.startMap(firstLevel(), 0);
-    kill(game, 0);
+    skipToBoss(game);
+    killBoss(game);
     game.update(config::FIXED_DT);
-    CHECK(game.phase() == Phase::Defeat);
+    CHECK(game.phase() == Phase::Victory);
     for (float t = 0.f; t < config::RESTART_DELAY + 1.f; t += config::FIXED_DT) {
         game.update(config::FIXED_DT);
     }
@@ -1259,4 +1266,214 @@ TEST(the_lobby_cannot_be_paused)
     game.openLobby();
     game.setPaused(true);
     CHECK(!game.paused());
+}
+
+TEST(a_defeat_restarts_the_same_map)
+{
+    Game game(1);
+
+    game.addPlayer();
+    game.openLobby();
+    game.startMap(*buildMap(1), 1);
+    game.update(0.1f);
+    for (const Engine::Entity player : collectPlayers(game.registry())) {
+        game.registry().destroy(player);
+    }
+    game.update(0.1f);
+    CHECK(game.phase() == Phase::Defeat);
+    CHECK(game.status().deaths == 1);
+    game.update(rtype::config::RESTART_DELAY + 1.f);
+    CHECK(game.phase() == Phase::Playing);
+    CHECK(game.map() == 1);
+    CHECK(game.status().deaths == 0);
+}
+
+TEST(a_player_who_touches_a_mine_dies)
+{
+    Engine::Registry reg;
+    const Engine::Entity player = createPlayer(reg, 0);
+
+    blockOn(reg, player, ObstacleKind::Mine);
+    obstacleSystem(reg);
+    CHECK(reg.get<Health>(player).hp <= 0);
+}
+
+TEST(a_laser_beam_kills_only_when_it_is_on)
+{
+    Engine::Registry reg;
+    const Engine::Entity player = createPlayer(reg, 0);
+
+    blockOn(reg, player, ObstacleKind::BeamWarn);
+    obstacleSystem(reg);
+    CHECK(reg.get<Health>(player).hp > 0);
+    blockOn(reg, player, ObstacleKind::Beam);
+    obstacleSystem(reg);
+    CHECK(reg.get<Health>(player).hp <= 0);
+}
+
+TEST(a_laser_post_makes_and_removes_its_beam_on_the_beat)
+{
+    Engine::Registry reg;
+    const Engine::Entity post = createObstacle(reg,
+        wall(0.f, 0.f, 70.f, 1080.f, ObstacleKind::Laser));
+
+    laserSystem(reg, 0.1f);
+    CHECK(collectObstacles(reg).size() == 1);
+    laserSystem(reg, config::LASER_OFF);
+    CHECK(collectObstacles(reg).size() == 2);
+    laserSystem(reg, config::LASER_WARN);
+    CHECK(collectObstacles(reg).size() == 2);
+    CHECK(reg.get<LaserCycle>(post).hasBeam);
+    laserSystem(reg, 1.6f);
+    CHECK(reg.get<ObstacleTag>(reg.get<LaserCycle>(post).beam).kind
+        == ObstacleKind::BeamWarn);
+}
+
+TEST(a_turret_shoots_at_the_nearest_player)
+{
+    Engine::Registry reg;
+
+    createPlayer(reg, 0);
+    const Engine::Entity turret = createObstacle(reg,
+        wall(0.f, 0.f, 64.f, 64.f, ObstacleKind::Turret));
+
+    reg.get<gameLogic::Vec2Pos>(turret).x = 1000.f;
+    turretSystem(reg, config::TURRET_INTERVAL + 0.01f);
+    CHECK(collectProjectileEntities(reg).size() == 1);
+}
+
+TEST(everybody_restarts_the_death_run_when_one_player_dies)
+{
+    Game game(1);
+    Segments run = firstLevel();
+
+    run.deathRuns = {1};
+    game.openLobby();
+    game.addPlayer();
+    game.addPlayer();
+    game.startMap(std::move(run), 0);
+    for (int i = 0; i < 120; ++i) {
+        game.update(config::FIXED_DT);
+    }
+    const float before = game.scroll();
+    kill(game, 0);
+    game.update(config::FIXED_DT);
+    CHECK(before > 0.f);
+    CHECK(game.scroll() < before);
+    CHECK(game.isPlayerAlive(0));
+    CHECK(game.isPlayerAlive(1));
+    CHECK(game.phase() == Phase::Playing);
+    CHECK(game.status().deaths == 1);
+}
+
+TEST(after_a_death_the_first_obstacle_comes_back_close_to_the_players)
+{
+    Game game(1);
+
+    game.openLobby();
+    game.addPlayer();
+    game.startMap(*buildMap(2), 2);
+    for (int i = 0; i < 600; ++i) {
+        game.update(config::FIXED_DT);
+    }
+    kill(game, 0);
+    game.update(config::FIXED_DT);
+    game.update(config::FIXED_DT);
+    float nearest = config::MAP_WIDTH;
+    for (const Collider &block : obstacleColliders(game.registry())) {
+        nearest = std::min(nearest, block.pos.x);
+    }
+    CHECK(nearest < 1000.f);
+    CHECK(game.isPlayerAlive(0));
+}
+
+TEST(a_turret_shot_is_not_absorbed_by_its_own_turret)
+{
+    Engine::Registry reg;
+    const Engine::Entity turret = createObstacle(reg,
+        wall(0.f, 0.f, 64.f, 64.f, ObstacleKind::Turret));
+    const Engine::Entity player = createPlayer(reg, 0);
+
+    reg.get<gameLogic::Vec2Pos>(turret) = gameLogic::Vec2Pos{{1000.f, 0.f}};
+    reg.get<gameLogic::Vec2Pos>(player) = gameLogic::Vec2Pos{{300.f, 700.f}};
+    turretSystem(reg, config::TURRET_INTERVAL + 0.01f);
+    obstacleSystem(reg);
+    CHECK(collectProjectileEntities(reg).size() == 1);
+    reg.get<gameLogic::Vec2Pos>(turret) = gameLogic::Vec2Pos{{1000.f, 500.f}};
+    reg.get<gameLogic::Vec2Pos>(player) = gameLogic::Vec2Pos{{300.f, 500.f}};
+    turretSystem(reg, config::TURRET_INTERVAL + 0.01f);
+    obstacleSystem(reg);
+    CHECK(collectProjectileEntities(reg).size() == 2);
+}
+
+TEST(a_monster_does_not_spawn_inside_a_wall)
+{
+    Game game(1);
+    Segments run = firstLevel();
+
+    run.obstacles = {wall(0.f, 0.f, 400.f, 1080.f)};
+    run.waves = {wave(0.f, MonsterKind::Basic, 1, 300.f)};
+    game.addPlayer();
+    game.startMap(std::move(run), 0);
+    game.update(0.02f);
+    for (const Engine::Entity e : collectMonsters(game.registry())) {
+        const Collider body = colliderOf(game.registry(), e);
+        const auto walls = obstacleColliders(game.registry(), isWall);
+
+        CHECK(!touchesAny(body, walls));
+    }
+}
+
+TEST(a_meteor_explodes_on_an_obstacle)
+{
+    Engine::Registry reg;
+    std::mt19937 rng(1);
+
+    spawnMeteor(reg, rng);
+    const Engine::Entity meteor = collectProjectileEntities(reg).front();
+
+    blockOn(reg, meteor, ObstacleKind::Rock);
+    obstacleSystem(reg);
+    CHECK(!reg.alive(meteor));
+}
+
+TEST(a_meteor_hurts_a_player_and_is_gone)
+{
+    Engine::Registry reg;
+    std::mt19937 rng(1);
+    const Engine::Entity player = createPlayer(reg, 0);
+
+    spawnMeteor(reg, rng);
+    const Engine::Entity meteor = collectProjectileEntities(reg).front();
+
+    reg.get<gameLogic::Vec2Pos>(meteor) = reg.get<gameLogic::Vec2Pos>(player);
+    collisionSystem(reg);
+    CHECK(reg.get<Health>(player).hp == config::PLAYER_HP
+        - config::METEOR_DAMAGE);
+    CHECK(!reg.alive(meteor));
+}
+
+TEST(a_boss_fight_brings_lasers_and_meteors)
+{
+    Game game(1);
+
+    game.addPlayer();
+    skipToBoss(game);
+    run(game, 6.f);
+    bool laserSeen = false;
+
+    for (const Engine::Entity e : collectObstacles(game.registry())) {
+        laserSeen |= game.registry().get<ObstacleTag>(e).kind
+            == ObstacleKind::Laser;
+    }
+    CHECK(laserSeen);
+    CHECK(!collectProjectileEntities(game.registry()).empty());
+}
+
+TEST(the_hazards_of_a_boss_fight_get_faster_with_the_intensity)
+{
+    CHECK(hazardInterval(config::HAZARD_LASER_SLOW, config::HAZARD_LASER_FAST, 1.f)
+        < hazardInterval(config::HAZARD_LASER_SLOW, config::HAZARD_LASER_FAST, 0.1f));
+    CHECK(hazardInterval(config::HAZARD_METEOR_SLOW, config::HAZARD_METEOR_FAST, 1.f)
+        < hazardInterval(config::HAZARD_METEOR_SLOW, config::HAZARD_METEOR_FAST, 0.1f));
 }

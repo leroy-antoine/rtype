@@ -13,8 +13,8 @@ namespace client {
             "victory.wav", "defeat.wav", "coin_pickup.mp3"};
 
         constexpr std::array<const char *, 7> MUSIC = {
-            "", "music_level.ogg", "music_boss.ogg", "music_boss_dasher.ogg",
-            "music_boss_summoner.ogg", "music_boss_fortress.ogg",
+            "", "music_level.ogg", "music_boss.ogg", "dasher_theme.ogg",
+            "summoner_theme.ogg", "music_boss_fortress.ogg",
             "music_deathrun.ogg"};
     }
 

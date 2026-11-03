@@ -1,4 +1,6 @@
 #include "logic/Builder.hpp"
+#include "logic/DeathRuns.hpp"
+#include "logic/Scatter.hpp"
 #include "logic/MapHelpers.hpp"
 
 namespace rtype {
@@ -131,19 +133,19 @@ namespace rtype {
                 {{BK::Summoner, 2700.f}}};
         }
 
+        LevelDef deathRun(const Course &course)
+        {
+            LevelDef level{0.f, {}, {}, {}, true};
+            const float last = addCourse(level.obstacles, course);
+
+            level.length = last + 150.f;
+            return level;
+        }
+
         LevelDef level10()
         {
-            LevelDef level{4900.f, {}, {}};
-
-            addRun(level.obstacles,
-                {{540.f, 300.f}, {340.f, 280.f}, {640.f, 280.f},
-                 {300.f, 260.f}, {680.f, 260.f}, {420.f, 240.f},
-                 {260.f, 240.f}, {700.f, 220.f, SLOW_SWING},
-                 {380.f, 200.f, SLOW_SWING}, {620.f, 200.f, SLOW_SWING},
-                 {260.f, 180.f}},
-                {600.f, 380.f, 96.f, ObstacleKind::Spike},
-                {{-1, FAST}, {2, REVERSE}, {5, REVERSE}, {10, NORMAL}});
-            return level;
+            return deathRun({150.f, 1.15f, 280.f,
+                "FGBGMGBMGRBGMGBGRMGBN", 300.f, 230.f, {}, false});
         }
 
         LevelDef level11()
@@ -216,20 +218,8 @@ namespace rtype {
 
         LevelDef level15()
         {
-            LevelDef level{5900.f, {}, {}};
-
-            addRun(level.obstacles,
-                {{540.f, 240.f}, {360.f, 240.f}, {620.f, 230.f},
-                 {280.f, 230.f}, {700.f, 220.f}, {420.f, 220.f},
-                 {300.f, 240.f, SWING}, {560.f, 240.f, SWING},
-                 {700.f, 240.f, SWING}, {400.f, 230.f, SWING},
-                 {640.f, 230.f, SWING}, {300.f, 220.f},
-                 {520.f, 200.f}, {760.f, 190.f}, {420.f, 180.f},
-                 {300.f, 180.f}},
-                {500.f, 320.f, 80.f, ObstacleKind::Spike},
-                {{-1, FAST}, {2, REVERSE}, {5, REVERSE}, {8, REVERSE},
-                 {11, REVERSE}, {15, NORMAL}});
-            return level;
+            return deathRun({150.f, 1.3f, 270.f,
+                "FGBMGTBGMGRBGMGTBGMGRBGMBGN", 260.f, 200.f, {}, false});
         }
 
         LevelDef level16()
@@ -290,29 +280,30 @@ namespace rtype {
 
         LevelDef level20()
         {
-            LevelDef level{5800.f,
-                {wave(3100.f, MK::Elite, 8, RANDOM_Y, 0.f, 0.3f),
-                 wave(3500.f, MK::Bomber, 3, 150.f, 300.f, 0.f),
-                 wave(3800.f, MK::Kamikaze, 8, RANDOM_Y, 0.f, 0.2f)},
-                {{BK::Summoner, 5000.f}, {BK::Dasher, 5200.f},
-                 {BK::Fortress, 5400.f}}};
+            LevelDef level = deathRun({150.f, 1.5f, 260.f,
+                "FGBMGTBGMGBRGMBTGBGMGRBGMGBN", 230.f, 185.f, {}, false});
+            const float last = level.length - 150.f;
 
-            addRun(level.obstacles,
-                {{540.f, 240.f}, {300.f, 240.f}, {720.f, 230.f},
-                 {360.f, 240.f, SWING}, {640.f, 240.f, SWING},
-                 {320.f, 230.f, SWING}, {700.f, 220.f},
-                 {500.f, 200.f}},
-                {400.f, 340.f, 88.f, ObstacleKind::Spike},
-                {{-1, FAST}, {1, REVERSE}, {3, REVERSE}, {7, NORMAL}});
+            level.length = last + 800.f;
+            level.bosses = {{BK::Summoner, last + 200.f},
+                {BK::Dasher, last + 400.f}, {BK::Fortress, last + 600.f}};
             return level;
         }
     }
 
     std::vector<LevelDef> map1()
     {
-        return {level1(), level2(), level3(), level4(), level5(),
-            level6(), level7(), level8(), level9(), level10(),
-            level11(), level12(), level13(), level14(), level15(),
-            level16(), level17(), level18(), level19(), level20()};
+        std::vector<LevelDef> levels = {level1(), level2(), level3(),
+            level4(), level5(), level6(), level7(), level8(), level9(),
+            level10(), level11(), level12(), level13(), level14(),
+            level15(), level16(), level17(), level18(), level19(),
+            level20()};
+
+        for (std::size_t i = 0; i < levels.size(); ++i) {
+            if (!levels[i].deathRun) {
+                scatter(levels[i], static_cast<unsigned>(i + 1));
+            }
+        }
+        return levels;
     }
 }

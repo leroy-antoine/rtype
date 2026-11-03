@@ -27,7 +27,7 @@ A new client can be written from these two pages alone.
 | Direction | the client sends keys, the server sends the world |
 | Datagram | at most **1200 bytes**, carries one or several messages |
 | Byte order | **big-endian** for every integer and float |
-| Protocol version | `14` (`rtype::protocol::VERSION`), checked at connection |
+| Protocol version | `17` (`rtype::protocol::VERSION`), checked at connection |
 | Tick | the server simulates at 60 Hz and sends the states every tick |
 
 The server is the authority. A client never sends a position, a hit or a
@@ -188,8 +188,14 @@ to a client that has just connected, then one for each new entity.
 | 20 | reverse portal |
 | 21 | fast portal |
 | 22 | normal portal |
+| 23 | laser post |
+| 24 | turret |
+| 25 | mine |
+| 26 | laser beam (deadly) |
+| 27 | laser warning |
+| 28 | meteor |
 
-A value of 23 or more is invalid, and so is a player slot of 4 or more.
+A value of 29 or more is invalid, and so is a player slot of 4 or more.
 
 ### `DESTROY` (0x21)
 
@@ -225,13 +231,14 @@ What the HUD shows, sent about 10 times per second.
 | 9 | elapsed time | `u32` | milliseconds since the start of the match, frozen when it ends |
 | 13 | level | `u8` | number of the level being played, starting at 1 |
 | 14 | map | `u8` | index of the map being played (or last played), 0 to 2 |
-| 15 | count `n` | `u8` | number of players, at most 4 |
-| 16 + 4 × i | slot | `u8` | 0 to 3 |
-| 17 + 4 × i | hp | `u16` | |
-| 19 + 4 × i | alive | `u8` | `0` or `1` |
+| 15 | deaths | `u16` | number of times a player was destroyed in this match |
+| 17 | count `n` | `u8` | number of players, at most 4 |
+| 18 + 4 × i | slot | `u8` | 0 to 3 |
+| 19 + 4 × i | hp | `u16` | |
+| 21 + 4 × i | alive | `u8` | `0` or `1` |
 
 The server is in the **lobby** phase when it starts, and again after the end
-screen of a match (or when every player has left). The players are listed in
+screen of a victory (or when every player has left). After a defeat, the same map restarts from its first level. The players are listed in
 increasing slot order, so the first one is the host.
 
 ### `YOU` (0x24)

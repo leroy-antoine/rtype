@@ -181,18 +181,23 @@ namespace rtype {
             case ObstacleKind::ReversePortal: return SpriteId::ReversePortal;
             case ObstacleKind::FastPortal: return SpriteId::FastPortal;
             case ObstacleKind::NormalPortal: return SpriteId::NormalPortal;
+            case ObstacleKind::Laser: return SpriteId::LaserPost;
+            case ObstacleKind::Turret: return SpriteId::TurretBlock;
+            case ObstacleKind::Mine: return SpriteId::MineBall;
+            case ObstacleKind::Beam: return SpriteId::BeamOn;
+            case ObstacleKind::BeamWarn: return SpriteId::BeamWarn;
             default: return SpriteId::RockWall;
         }
     }
 
     inline void addObstacleMotion(Engine::Registry &reg, const Engine::Entity e,
-        const ObstacleStep &step)
+        const ObstacleStep &step, const float age = 0.f)
     {
         constexpr float TWO_PI = 6.2831853f;
 
         if (step.amplitude != 0.f && step.period > 0.f) {
             reg.add(e, ObstacleMotion{step.y, step.amplitude,
-                TWO_PI / step.period, 0.f});
+                TWO_PI / step.period, age});
         }
     }
 
@@ -200,15 +205,23 @@ namespace rtype {
         const ObstacleStep &step, const float overshoot = 0.f)
     {
         const Engine::Entity e = reg.create();
+        const float age = overshoot / config::SCROLL_SPEED;
 
         reg.add(e, ObstacleTag{step.kind});
-        reg.add(e, gameLogic::Vec2Pos{{config::MAP_WIDTH - overshoot,
-            step.y}});
+        reg.add(e, gameLogic::Vec2Pos{{config::MAP_WIDTH
+            - overshoot * step.speed, step.y}});
         reg.add(e, gameLogic::Vec2Hitbox{{step.width, step.height}});
         reg.add(e, gameLogic::Vec2Velocity{{
             -config::OBSTACLE_SPEED * step.speed, 0.f}});
         reg.add(e, Renderable{obstacleSprite(step.kind)});
-        addObstacleMotion(reg, e, step);
+        addObstacleMotion(reg, e, step, age);
+        if (step.kind == ObstacleKind::Laser) {
+            reg.add(e, LaserCycle{step.period + age});
+        }
+        if (step.kind == ObstacleKind::Turret) {
+            reg.add(e, TurretFire{config::TURRET_INTERVAL,
+                config::TURRET_INTERVAL});
+        }
         return e;
     }
 

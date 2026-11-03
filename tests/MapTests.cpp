@@ -101,15 +101,15 @@ TEST(everything_happens_before_the_end_of_its_level)
     }
 }
 
-TEST(the_death_runs_have_walls_and_no_enemies)
+TEST(the_campaign_death_runs_are_flagged_and_full_of_traps)
 {
     const std::vector<LevelDef> levels = map1();
 
-    for (const std::size_t index : {9u, 14u}) {
-        CHECK(levels[index].waves.empty());
-        CHECK(levels[index].bosses.empty());
-        CHECK(levels[index].obstacles.size() >= 20);
+    for (const std::size_t index : {9u, 14u, 19u}) {
+        CHECK(levels[index].deathRun);
+        CHECK(levels[index].obstacles.size() >= 30);
     }
+    CHECK(!levels[0].deathRun);
 }
 
 TEST(a_gate_always_leaves_room_for_a_ship)
@@ -163,7 +163,7 @@ TEST(a_shifted_wall_moves_along_the_distance_only)
     CHECK(moved.width == 80.f);
 }
 
-TEST(no_wall_is_still_on_screen_when_a_boss_appears)
+TEST(no_wall_appears_just_before_a_boss)
 {
     const std::optional<Segments> run = buildMap(0);
 
@@ -171,9 +171,8 @@ TEST(no_wall_is_still_on_screen_when_a_boss_appears)
     for (const auto &boss : run->bossSpawn) {
         for (const ObstacleStep &step : run->obstacles) {
             const bool before = step.at < boss.second;
-            const float gone = step.at + config::MAP_WIDTH + step.width;
 
-            CHECK(!before || gone <= boss.second);
+            CHECK(!before || step.at <= boss.second - 200.f);
         }
     }
 }
@@ -236,29 +235,28 @@ TEST(every_map_ends_with_a_boss_and_keeps_its_gates_passable)
     }
 }
 
-TEST(no_wall_is_on_screen_when_a_boss_appears_in_any_map)
+TEST(no_wall_appears_just_before_a_boss_in_any_map)
 {
     for (std::size_t id = 0; id < MAPS.size(); ++id) {
         const std::optional<Segments> run = buildMap(id);
 
         for (const auto &boss : run->bossSpawn) {
             for (const ObstacleStep &step : run->obstacles) {
-                const float gone = step.at + config::MAP_WIDTH + step.width;
-
-                CHECK(step.at >= boss.second || gone <= boss.second);
+                CHECK(step.at >= boss.second
+                    || step.at <= boss.second - 200.f);
             }
         }
     }
 }
 
-TEST(the_death_runs_map_has_only_walls_before_its_boss_level)
+TEST(the_death_runs_map_has_only_death_runs_before_its_boss_level)
 {
     const std::vector<LevelDef> levels = map3();
 
     for (std::size_t i = 0; i + 1 < levels.size(); ++i) {
-        CHECK(levels[i].waves.empty());
+        CHECK(levels[i].deathRun);
         CHECK(levels[i].bosses.empty());
-        CHECK(levels[i].obstacles.size() >= 12);
+        CHECK(levels[i].obstacles.size() >= 30);
     }
 }
 
@@ -377,4 +375,75 @@ TEST(a_gate_can_pinch_and_come_faster)
     CHECK(walls[0].amplitude == 50.f);
     CHECK(walls[1].amplitude == -50.f);
     CHECK(walls[0].speed == 1.5f);
+}
+
+TEST(the_death_runs_have_no_monster)
+{
+    const std::vector<LevelDef> campaign = map1();
+    const std::vector<LevelDef> runs = map3();
+
+    for (const std::size_t index : {9u, 14u, 19u}) {
+        CHECK(campaign[index].waves.empty());
+    }
+    for (std::size_t i = 0; i + 1 < runs.size(); ++i) {
+        CHECK(runs[i].waves.empty());
+    }
+}
+
+TEST(a_death_run_mixes_every_kind_of_trap)
+{
+    for (std::size_t i = 0; i + 1 < map3().size(); ++i) {
+        bool kinds[static_cast<std::size_t>(ObstacleKind::Count)] = {};
+
+        for (const ObstacleStep &step : map3()[i].obstacles) {
+            kinds[static_cast<std::size_t>(step.kind)] = true;
+        }
+        CHECK(kinds[static_cast<std::size_t>(ObstacleKind::Spike)]);
+        CHECK(kinds[static_cast<std::size_t>(ObstacleKind::Laser)]);
+        CHECK(kinds[static_cast<std::size_t>(ObstacleKind::Mine)]);
+        CHECK(kinds[static_cast<std::size_t>(ObstacleKind::Turret)]);
+    }
+}
+
+TEST(a_death_run_has_no_long_pause_between_two_obstacles)
+{
+    for (std::size_t i = 0; i + 1 < map3().size(); ++i) {
+        const auto walls = map3()[i].obstacles;
+
+        for (std::size_t j = 1; j < walls.size(); ++j) {
+            CHECK(walls[j].at - walls[j - 1].at <= 300.f);
+        }
+    }
+}
+
+TEST(every_normal_campaign_level_has_obstacles_all_along)
+{
+    const std::vector<LevelDef> levels = map1();
+
+    for (std::size_t i = 0; i < levels.size(); ++i) {
+        if (levels[i].deathRun) {
+            continue;
+        }
+        const auto &walls = levels[i].obstacles;
+
+        CHECK(walls.size() >= 5);
+        CHECK(walls.size() <= 20);
+        CHECK(walls.front().at < 1200.f);
+    }
+}
+
+TEST(the_campaign_has_asteroids_and_lasers)
+{
+    bool laserSeen = false;
+    bool movingRock = false;
+
+    for (const LevelDef &level : map1()) {
+        for (const ObstacleStep &step : level.obstacles) {
+            laserSeen |= step.kind == ObstacleKind::Laser;
+            movingRock |= step.kind == ObstacleKind::Rock
+                && step.amplitude != 0.f;
+        }
+    }
+    CHECK(laserSeen);
+    CHECK(movingRock);
 }

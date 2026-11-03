@@ -73,8 +73,10 @@ namespace client {
         drawPlayers(*status);
         drawCoins(*status, elapsed);
         drawBossBar(*status);
-        if (status->phase != rtype::Phase::Playing) {
-            drawEndScreen(*status, elapsed);
+        if (status->phase == rtype::Phase::Victory) {
+            drawVictoryScreen(*status, replica, elapsed);
+        } else if (status->phase != rtype::Phase::Playing) {
+            drawEndScreen(elapsed);
         } else if (!status->paused) {
             drawRespawnHint(*status, replica.slot(), elapsed);
             drawMenuHint(replica);
@@ -228,21 +230,14 @@ namespace client {
         }
     }
 
-    void Hud::drawEndScreen(const rtype::GameStatus &status,
-        const float elapsed)
+    void Hud::drawEndScreen(const float elapsed)
     {
         const float left = rtype::config::RESTART_DELAY - (elapsed - _phaseSince);
         const int seconds = std::max(0, static_cast<int>(std::ceil(left)));
-        std::string title = "GAME OVER";
-        Color color = RED;
 
-        if (status.phase == rtype::Phase::Victory) {
-            title = "VICTORY";
-            color = GREEN;
-        }
         _renderer.drawRect({0.f, 0.f}, {_width, _height}, {0, 0, 0, 150});
-        _font.drawCentered(title, _width / 2.f, _height / 2.f - 50.f, 10.f,
-            color);
+        _font.drawCentered("GAME OVER", _width / 2.f, _height / 2.f - 50.f,
+            10.f, RED);
         _font.drawCentered("NEW GAME IN " + std::to_string(seconds),
             _width / 2.f, _height / 2.f + 50.f, 3.f, WHITE);
     }

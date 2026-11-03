@@ -4,6 +4,7 @@
 
 #pragma once
 #include <algorithm>
+#include <limits>
 #include <cstddef>
 #include <utility>
 #include <vector>
@@ -18,6 +19,7 @@ namespace rtype {
         std::vector<std::pair<BossKind, float>> bossSpawn;
         std::vector<std::pair<std::size_t, float>> levels; //where size_t is the id of the level
         std::vector<ObstacleStep> obstacles;
+        std::vector<std::size_t> deathRuns;
     };
 
     inline Segments firstLevel()
@@ -40,6 +42,14 @@ namespace rtype {
         return level;
     }
 
+    inline bool isDeathRun(const Segments &segments, const float scroll)
+    {
+        const std::size_t number = levelAt(segments, scroll);
+
+        return std::ranges::find(segments.deathRuns, number)
+            != segments.deathRuns.end();
+    }
+
     inline float levelStart(const Segments &segments, const float scroll)
     {
         float start = 0.f;
@@ -50,6 +60,18 @@ namespace rtype {
             }
         }
         return start;
+    }
+
+    inline float levelEnd(const Segments &segments, const float start)
+    {
+        float end = std::numeric_limits<float>::max();
+
+        for (const auto &[number, from] : segments.levels) {
+            if (from > start) {
+                end = std::min(end, from);
+            }
+        }
+        return end;
     }
 
     inline float lastSpawnPoint(const Segments &segments)

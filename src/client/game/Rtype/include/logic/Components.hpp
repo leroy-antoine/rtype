@@ -39,6 +39,19 @@ namespace rtype {
         ObstacleKind kind = ObstacleKind::Rock;
     };
 
+    // Un emetteur laser cree et detruit son faisceau au rythme de la musique.
+    struct LaserCycle {
+        float age = 0.f;
+        bool hasBeam = false;
+        Engine::Entity beam{};
+    };
+
+    // Une tourelle tire sur le joueur le plus proche toutes les interval s.
+    struct TurretFire {
+        float interval = 1.f;
+        float timer = 0.f;
+    };
+
     // Va-et-vient vertical d'un obstacle autour de sa hauteur de depart.
     struct ObstacleMotion {
         float baseY = 0.f;
@@ -93,7 +106,8 @@ namespace rtype {
         Tank, Kamikaze, Elite, Rocket, Bomber,
         DasherBoss, SummonerBoss, FortressBoss,
         RocketMissile, Bomb, AlienShard, RockWall, SpikeWall,
-        ReversePortal, FastPortal, NormalPortal, Count
+        ReversePortal, FastPortal, NormalPortal, LaserPost, TurretBlock, MineBall, BeamOn, BeamWarn, Meteor,
+        Count
     };
 
     constexpr bool isBossSprite(const SpriteId id)

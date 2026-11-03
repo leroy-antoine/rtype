@@ -50,6 +50,11 @@ namespace client {
         void drawLayer(Engine::Registry &reg, float elapsed, bool effects);
         void drawEntity(const Engine::Registry &reg, Engine::Entity e, const gameLogic::Vec2Pos &pos,
             const gameLogic::Vec2Hitbox &box, rtype::SpriteId id, float elapsed);
+        void drawMeteor(const Engine::Registry &reg, Engine::Entity e,
+            const gameLogic::Vec2Pos &pos, const gameLogic::Vec2Hitbox &box);
+        void drawLaserPost(Engine::Vector2f at, Engine::Vector2f size);
+        void drawLaser(rtype::SpriteId id, const gameLogic::Vec2Pos &pos,
+            const gameLogic::Vec2Hitbox &box, float elapsed);
         void drawTiled(const Engine::Sprite &sprite, const Engine::IntRect &frame,
             Engine::Vector2f tile, const Area &area);
         void drawTile(const Engine::Sprite &sprite, const Engine::IntRect &frame,

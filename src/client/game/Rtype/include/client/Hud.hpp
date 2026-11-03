@@ -46,8 +46,16 @@ namespace client {
         void drawBossBar(const rtype::GameStatus &status);
         void drawRespawnHint(const rtype::GameStatus &status,
             std::optional<int> self, float elapsed);
-        void drawEndScreen(const rtype::GameStatus &status, float elapsed);
+        void drawEndScreen(float elapsed);
         void drawLobby(const Replica &replica);
+        void drawVictoryScreen(const rtype::GameStatus &status,
+            const Replica &replica, float elapsed);
+        void drawConfetti(float age);
+        void drawVictoryTitle(float age);
+        void drawVictoryStats(const rtype::GameStatus &status,
+            const Replica &replica, float age);
+        [[nodiscard]] Engine::Color timeColor(const rtype::GameStatus &status,
+            const Replica &replica) const;
         void drawMenuHint(const Replica &replica);
         void drawPauseMenu(const Replica &replica);
         void drawMapList(rtype::MapId cursor);

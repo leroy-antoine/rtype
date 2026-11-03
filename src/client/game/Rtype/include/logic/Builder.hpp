@@ -30,6 +30,9 @@ namespace rtype {
             segments.obstacles.push_back(shifted(step, offset));
         }
         segments.levels.emplace_back(number, offset);
+        if (level.deathRun) {
+            segments.deathRuns.push_back(number);
+        }
     }
 
     inline Segments buildRun(const std::vector<LevelDef> &levels)

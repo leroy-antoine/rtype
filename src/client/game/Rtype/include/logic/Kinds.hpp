@@ -6,7 +6,7 @@ namespace rtype {
     };
 
     enum class ObstacleKind {
-        Rock, Spike, ReversePortal, FastPortal, NormalPortal, Count
+        Rock, Spike, ReversePortal, FastPortal, NormalPortal, Laser, Turret, Mine, Beam, BeamWarn, Count
     };
 
     constexpr bool isPortal(const ObstacleKind kind)

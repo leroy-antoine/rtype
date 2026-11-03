@@ -20,12 +20,12 @@ namespace rtype {
 
     inline constexpr MonsterDef DASHER_BOSS{
         .hp = 280, .speed = 400.f, .damage = 4, .fireCooldown = 1.4f,
-        .width = 143.f, .height = 110.f, .sprite = SpriteId::DasherBoss,
+        .width = 147.f, .height = 110.f, .sprite = SpriteId::DasherBoss,
         .projectile = {SpriteId::AlienShard, 30.f, 10.f, 520.f, 9, 0.16f}};
 
     inline constexpr MonsterDef SUMMONER_BOSS{
         .hp = 500, .speed = 100.f, .damage = 10, .fireCooldown = 1.2f,
-        .width = 264.f, .height = 240.f, .sprite = SpriteId::SummonerBoss,
+        .width = 240.f, .height = 240.f, .sprite = SpriteId::SummonerBoss,
         .projectile = {SpriteId::MonsterBullet, 32.f, 32.f, 420.f, 3, 0.25f}};
 
     inline constexpr MonsterDef FORTRESS_BOSS{

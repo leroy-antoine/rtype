@@ -15,6 +15,7 @@
 #include <vector>
 #include "Augments.hpp"
 #include "Boss.hpp"
+#include "BossHazards.hpp"
 #include "Components.hpp"
 #include "Config.hpp"
 #include "Events.hpp"
@@ -52,6 +53,7 @@ namespace rtype {
                 return std::nullopt;
             }
             spawnPlayer(*slot);
+            ++_alive;
             _usedSlots[static_cast<std::size_t>(*slot)] = true;
             return slot;
         }
@@ -63,6 +65,7 @@ namespace rtype {
 
             if (player) {
                 _reg.destroy(*player);
+                --_alive;
             }
             if (isUsedSlot(slot)) {
                 _usedSlots[static_cast<std::size_t>(slot)] = false;
@@ -78,6 +81,7 @@ namespace rtype {
                 return false;
             }
             spawnPlayer(slot);
+            ++_alive;
             return true;
         }
 
@@ -266,6 +270,7 @@ namespace rtype {
         {
             status.phase = _phase;
             status.paused = _paused;
+            status.deaths = _deaths;
             status.map = _map;
             status.coins = static_cast<std::uint32_t>(
                 _reg.get<CoinCounter>(_coinCounter).total);
@@ -304,8 +309,11 @@ namespace rtype {
             lifetimeSystem(_reg, dt);
             playerControlSystem(_reg);
             advanceLevel(dt);
+            bossHazards(dt);
             monsterSystem(_reg, dt);
             obstacleMotionSystem(_reg, dt);
+            turretSystem(_reg, dt);
+            laserSystem(_reg, dt);
             bossSystem(_reg, dt);
             shootingSystem(_reg);
             movementSystem(_reg, dt);
@@ -316,7 +324,36 @@ namespace rtype {
             deleteUnitsOutOfBounds(_reg);
             protectPlayers();
             skipLevel(deathSystem(_reg, _rng));
+            failRun(countDeaths());
             updatePhase();
+        }
+
+        void bossHazards(const float dt)
+        {
+            if (collectWith<BossTag>(_reg).empty()) {
+                clearBossHazards();
+                return;
+            }
+            bossHazardSystem(_reg, _hazards, _rng, bossIntensity(), dt);
+        }
+
+        void clearBossHazards()
+        {
+            if (_hazards.time > 0.f) {
+                destroyAll(collectObstacles(_reg));
+            }
+            _hazards = HazardClock{};
+        }
+
+        // Plus on avance dans les boss de la map, plus le combat est dense.
+        [[nodiscard]] float bossIntensity() const
+        {
+            const std::size_t total = _segments.bossSpawn.size();
+
+            if (total == 0) {
+                return 1.f;
+            }
+            return static_cast<float>(_nextBoss) / static_cast<float>(total);
         }
 
         // Partie finie : les joueurs volent encore, puis tout recommence.
@@ -335,12 +372,109 @@ namespace rtype {
             return Phase::Playing;
         }
 
+        void leaveEndScreen()
+        {
+            const bool retry = _phase == Phase::Defeat;
+
+            reset();
+            if (retry) {
+                _phase = Phase::Playing;
+            }
+        }
+
+        int aliveCount()
+        {
+            int count = 0;
+
+            for (int slot = 0; slot < SLOTS; ++slot) {
+                if (isUsedSlot(slot) && isPlayerAlive(slot)) {
+                    ++count;
+                }
+            }
+            return count;
+        }
+
+        int countDeaths()
+        {
+            const int now = aliveCount();
+            const int lost = std::max(0, _alive - now);
+
+            _deaths = static_cast<std::uint16_t>(_deaths + lost);
+            _alive = now;
+            return lost;
+        }
+
+        [[nodiscard]] bool inDeathRun()
+        {
+            return isDeathRun(_segments, _scroll)
+                && collectWith<BossTag>(_reg).empty();
+        }
+
+        // Une mort en death run : toute l equipe repart du debut du niveau.
+        void restartDeathRun()
+        {
+            const float start = levelStart(_segments, _scroll);
+
+            destroyAll(collectMonsters(_reg));
+            destroyAll(collectProjectileEntities(_reg));
+            destroyAll(collectObstacles(_reg));
+            _pending.clear();
+            _nextWave = countBefore(_segments.waves, start);
+            _nextObstacle = countBefore(_segments.obstacles, start);
+            _scroll = restartScroll(start);
+            _effectLevel = level();
+            respawnEveryone();
+        }
+
+        // Le premier obstacle repart deja pres du joueur : pas d attente.
+        [[nodiscard]] float restartScroll(const float start) const
+        {
+            if (_nextObstacle >= _segments.obstacles.size()) {
+                return start;
+            }
+            const ObstacleStep &first = _segments.obstacles[_nextObstacle];
+            const float travel = (config::MAP_WIDTH - config::RESTART_LEAD)
+                / first.speed;
+
+            return std::clamp(first.at + travel, start,
+                levelEnd(_segments, start));
+        }
+
+        template <typename Step>
+        static std::size_t countBefore(const std::vector<Step> &steps,
+            const float start)
+        {
+            return static_cast<std::size_t>(std::ranges::count_if(steps,
+                [start](const Step &step) { return step.at < start; }));
+        }
+
+        void respawnEveryone()
+        {
+            for (int slot = 0; slot < SLOTS; ++slot) {
+                if (!isUsedSlot(slot)) {
+                    continue;
+                }
+                if (const auto player = findPlayerBySlot(_reg, slot)) {
+                    _reg.destroy(*player);
+                }
+                spawnPlayer(slot);
+            }
+            _alive = aliveCount();
+        }
+
+        void failRun(const int lost)
+        {
+            if (lost > 0 && inDeathRun()) {
+                restartDeathRun();
+            }
+        }
+
         void updateEnded(const float dt)
         {
             flyPlayers(dt);
             _phaseTimer -= dt;
             if (_phaseTimer <= 0.f) {
-                reset();
+                leaveEndScreen();
             }
         }
 
@@ -360,7 +494,8 @@ namespace rtype {
 
         void skipLevel(const int kills)
         {
-            if (kills > 0 && collectWith<BossTag>(_reg).empty()) {
+            if (kills > 0 && collectWith<BossTag>(_reg).empty()
+                && !inDeathRun()) {
                 _scroll += grantSkip(_segments, _skip, _scroll, kills);
             }
         }
@@ -436,18 +571,68 @@ namespace rtype {
             }
         }
 
+        // Hauteur testee au rang `step` autour de y : haut, bas, haut...
+        static float probeTop(const float y, const int step,
+            const float maxY)
+        {
+            float side = 1.f;
+
+            if (step % 2 == 0) {
+                side = -1.f;
+            }
+            return std::clamp(y + side * config::SPAWN_STEP * ((step + 1) / 2),
+                config::MAP_ORIGIN, maxY);
+        }
+
+        // Cherche une hauteur libre pres de y : on ne nait pas dans un mur.
+        static std::optional<float> clearSpawnY(const float y,
+            const MonsterDef &def, const std::vector<Collider> &walls)
+        {
+            const float x = config::MAP_WIDTH + config::SPAWN_MARGIN;
+            const float maxY = config::MAP_HEIGHT - def.height;
+
+            for (int step = 0; step <= 2 * config::SPAWN_SEARCH; ++step) {
+                const float top = probeTop(y, step, maxY);
+                const Collider body{Engine::Entity{}, {{x, top}},
+                    {{def.width, def.height}}, Team{}};
+
+                if (!touchesAny(body, walls)) {
+                    return top;
+                }
+            }
+            return std::nullopt;
+        }
+
+        bool spawnClear(const PendingSpawn &spawn,
+            const std::vector<Collider> &walls)
+        {
+            const std::optional<float> y = clearSpawnY(spawn.y,
+                monsterDef(spawn.kind), walls);
+
+            if (y) {
+                spawnMonster(_reg, *y, spawn.kind);
+            }
+            return y.has_value();
+        }
+
         // Les monstres d'une vague arrivent les uns apres les autres.
         void spawnPending(const float dt)
         {
             std::vector<PendingSpawn> waiting;
+            std::vector<Collider> walls;
 
+            if (!_pending.empty()) {
+                walls = obstacleColliders(_reg, isWall);
+            }
             for (PendingSpawn &spawn : _pending) {
                 spawn.delay -= dt;
                 if (spawn.delay <= 0.f) {
-                    spawnMonster(_reg, spawn.y, spawn.kind);
-                } else {
-                    waiting.push_back(spawn);
+                    if (spawnClear(spawn, walls)) {
+                        continue;
+                    }
+                    spawn.delay = config::SPAWN_RETRY;
                 }
+                waiting.push_back(spawn);
             }
             _pending = std::move(waiting);
         }
@@ -508,6 +693,8 @@ namespace rtype {
             _skip = SkipBank{};
             _effectLevel = 0;
             _paused = false;
+            _hazards = HazardClock{};
+            _deaths = 0;
             _phase = restingPhase();
             _phaseTimer = 0.f;
             _elapsed = 0.f;
@@ -517,6 +704,7 @@ namespace rtype {
                     spawnPlayer(slot);
                 }
             }
+            _alive = aliveCount();
         }
 
         void spawnPlayer(const int slot)
@@ -559,6 +747,9 @@ namespace rtype {
         Phase _phase = Phase::Playing;
         bool _lobby = false;
         bool _paused = false;
+        std::uint16_t _deaths = 0;
+        HazardClock _hazards;
+        int _alive = 0;
         MapId _map = 0;
         float _phaseTimer = 0.f;
         float _elapsed = 0.f;

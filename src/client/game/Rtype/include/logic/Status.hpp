@@ -22,6 +22,7 @@ namespace rtype {
         std::uint32_t elapsedMs = 0;
         std::uint8_t level = 0;
         std::uint8_t map = 0;
+        std::uint16_t deaths = 0;
         std::vector<PlayerStatus> players;
     };
 }
