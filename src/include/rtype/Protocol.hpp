@@ -1,11 +1,13 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <span>
+#include <utility>
 #include <vector>
 #include "engine/network/BinaryReader.hpp"
 #include "engine/network/BinaryWriter.hpp"
@@ -15,6 +17,7 @@
 #include "logic/Config.hpp"
 #include "logic/Events.hpp"
 #include "logic/Status.hpp"
+#include "logic/Augments.hpp"
 
 namespace rtype::protocol {
     using Payload = std::vector<std::uint8_t>;
@@ -33,7 +36,7 @@ namespace rtype::protocol {
         gameLogic::Vec2Pos pos;
     };
 
-    constexpr std::uint8_t VERSION = 5;
+    constexpr std::uint8_t VERSION = 6;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
@@ -64,6 +67,12 @@ namespace rtype::protocol {
     // joueurs (1), puis par joueur : slot (1), hp (2), vivant (1).
     constexpr std::size_t STATUS_HEADER_SIZE = 10;
     constexpr std::size_t PLAYER_STATUS_SIZE = 4;
+
+    constexpr Engine::MessageType AUGMENTS = 0x26;
+    constexpr Engine::MessageType SHOP = 0x27;
+    constexpr std::size_t MAX_OWNED_AUGMENTS = 32;
+
+    using OwnedAugment = std::array<std::vector<AugmentId>, config::MAX_PLAYERS>;
 
     inline void writeVec2(Engine::BinaryWriter &writer,
         const gameLogic::Vec2 &v)
@@ -358,5 +367,123 @@ namespace rtype::protocol {
             status.players.push_back(*player);
         }
         return status;
+    }
+
+    inline std::optional<AugmentId> readAugmentId(Engine::BinaryReader &reader)
+    {
+        const std::optional<std::uint8_t> id = reader.readU8();
+
+        if (!id || *id >= static_cast<std::uint8_t>(AugmentId::Count)) {
+            return std::nullopt;
+        }
+        return static_cast<AugmentId>(*id);
+    }
+
+    // Ecrit au plus max ids, pour ne jamais produire un message que
+    // readAugmentIds refuserait.
+    inline void writeAugmentIds(Engine::BinaryWriter &writer,
+        const std::vector<AugmentId> &ids, const std::size_t max)
+    {
+        const std::size_t count = std::min(ids.size(), max);
+
+        writer.writeU8(static_cast<std::uint8_t>(count));
+        for (std::size_t i = 0; i < count; ++i) {
+            writer.writeU8(static_cast<std::uint8_t>(ids[i]));
+        }
+    }
+
+    // Lit "n (1), puis n ids (1 chacun)" en refusant plus de max ids.
+    inline std::optional<std::vector<AugmentId>> readAugmentIds(
+        Engine::BinaryReader &reader, const std::size_t max)
+    {
+        const std::optional<std::uint8_t> count = reader.readU8();
+        std::vector<AugmentId> ids;
+
+        if (!count || *count > max || reader.remaining() < *count) {
+            return std::nullopt;
+        }
+        for (std::size_t i = 0; i < *count; ++i) {
+            const std::optional<AugmentId> id = readAugmentId(reader);
+
+            if (!id) {
+                return std::nullopt;
+            }
+            ids.push_back(*id);
+        }
+        return ids;
+    }
+
+    // SHOP : n (1), puis n ids d'augments en vente.
+    inline Payload encodeShop(const std::vector<AugmentId> &offers)
+    {
+        Engine::BinaryWriter writer;
+
+        writeAugmentIds(writer, offers, config::SHOP_OFFER_COUNT);
+        return writer.data();
+    }
+
+    inline std::optional<std::vector<AugmentId>> decodeShop(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+        std::optional<std::vector<AugmentId>> offers =
+            readAugmentIds(reader, config::SHOP_OFFER_COUNT);
+
+        if (!offers || reader.remaining() != 0) {
+            return std::nullopt;
+        }
+        return offers;
+    }
+
+    // AUGMENTS : nombre de joueurs (1), puis par joueur qui possede au moins
+    // un augment : slot (1), n (1), n ids (1 chacun).
+    inline Payload encodeAugments(const OwnedAugment &owned)
+    {
+        Engine::BinaryWriter writer;
+        std::uint8_t players = 0;
+
+        for (const std::vector<AugmentId> &ids : owned) {
+            if (!ids.empty()) {
+                ++players;
+            }
+        }
+        writer.writeU8(players);
+        for (std::size_t slot = 0; slot < owned.size(); ++slot) {
+            if (!owned[slot].empty()) {
+                writer.writeU8(static_cast<std::uint8_t>(slot));
+                writeAugmentIds(writer, owned[slot], MAX_OWNED_AUGMENTS);
+            }
+        }
+        return writer.data();
+    }
+
+    inline std::optional<OwnedAugment> decodeAugments(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+        const std::optional<std::uint8_t> players = reader.readU8();
+        std::array<bool, config::MAX_PLAYERS> seen{};
+        OwnedAugment owned{};
+
+        if (!players || *players > config::MAX_PLAYERS) {
+            return std::nullopt;
+        }
+        for (std::size_t i = 0; i < *players; ++i) {
+            const std::optional<std::uint8_t> slot = reader.readU8();
+
+            if (!slot || *slot >= config::MAX_PLAYERS || seen[*slot]) {
+                return std::nullopt;
+            }
+            std::optional<std::vector<AugmentId>> ids =
+                readAugmentIds(reader, MAX_OWNED_AUGMENTS);
+
+            if (!ids) {
+                return std::nullopt;
+            }
+            seen[*slot] = true;
+            owned[*slot] = std::move(*ids);
+        }
+        if (reader.remaining() != 0) {
+            return std::nullopt;
+        }
+        return owned;
     }
 }
