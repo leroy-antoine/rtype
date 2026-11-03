@@ -379,8 +379,6 @@ namespace rtype::protocol {
         return static_cast<AugmentId>(*id);
     }
 
-    // Ecrit au plus max ids, pour ne jamais produire un message que
-    // readAugmentIds refuserait.
     inline void writeAugmentIds(Engine::BinaryWriter &writer,
         const std::vector<AugmentId> &ids, const std::size_t max)
     {
@@ -392,7 +390,6 @@ namespace rtype::protocol {
         }
     }
 
-    // Lit "n (1), puis n ids (1 chacun)" en refusant plus de max ids.
     inline std::optional<std::vector<AugmentId>> readAugmentIds(
         Engine::BinaryReader &reader, const std::size_t max)
     {
@@ -413,7 +410,6 @@ namespace rtype::protocol {
         return ids;
     }
 
-    // SHOP : n (1), puis n ids d'augments en vente.
     inline Payload encodeShop(const std::vector<AugmentId> &offers)
     {
         Engine::BinaryWriter writer;
@@ -434,8 +430,6 @@ namespace rtype::protocol {
         return offers;
     }
 
-    // AUGMENTS : nombre de joueurs (1), puis par joueur qui possede au moins
-    // un augment : slot (1), n (1), n ids (1 chacun).
     inline Payload encodeAugments(const OwnedAugment &owned)
     {
         Engine::BinaryWriter writer;

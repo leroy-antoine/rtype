@@ -23,7 +23,6 @@ namespace client {
             {90, 170, 255, 255}, {255, 90, 90, 255},
             {110, 230, 110, 255}, {255, 220, 80, 255}}};
 
-        // Abreviation affichee pour chaque augment.
         std::string augmentLabel(const rtype::AugmentId id)
         {
             switch (id) {
@@ -89,7 +88,7 @@ namespace client {
         }
     }
 
-    // Une ligne par joueur : son nom (P1...), sa barre de vie et ses augments.
+    // Une ligne par joueur : son nom (P1...) et sa barre de vie.
     void Hud::drawPlayers(const rtype::GameStatus &status,
         const rtype::protocol::OwnedAugment &augments)
     {
@@ -110,8 +109,6 @@ namespace client {
         }
     }
 
-    // Une pastille par augment, a droite de la barre de vie, coloree selon
-    // la rarete.
     void Hud::drawAugments(const std::vector<rtype::AugmentId> &ids,
         const float top)
     {

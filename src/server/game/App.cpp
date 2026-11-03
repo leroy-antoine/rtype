@@ -187,8 +187,6 @@ namespace server {
         return owned;
     }
 
-    // Les augments changent rarement : on ne les envoie (en fiable) que
-    // lorsqu'ils different de ce qui a deja ete envoye.
     void App::syncAugments()
     {
         rtype::protocol::OwnedAugment owned = ownedAugments();
