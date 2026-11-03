@@ -16,9 +16,36 @@ namespace client {
 
     void GameView::draw(Replica &replica, const float elapsed)
     {
+        trackBossHurt(replica, elapsed);
         _background.draw(_renderer, sceneOf(replica), elapsed);
         drawWorld(replica.registry(), elapsed);
         _hud.draw(replica, elapsed);
+    }
+
+    void GameView::trackBossHurt(const Replica &replica, const float elapsed)
+    {
+        const auto &status = replica.status();
+        int hp = 0;
+
+        if (status) {
+            hp = status->bossHp;
+        }
+        if (hp > 0 && hp < _lastBossHp) {
+            _hurtUntil = elapsed + HURT_DURATION;
+        }
+        _lastBossHp = hp;
+    }
+
+    Engine::Vector2f GameView::shakeOf(const rtype::SpriteId id,
+        const float elapsed) const
+    {
+        if (id != rtype::SpriteId::FortressBoss || elapsed >= _hurtUntil) {
+            return {0.f, 0.f};
+        }
+        const float left = (_hurtUntil - elapsed) / HURT_DURATION;
+
+        return {std::sin(elapsed * 90.f) * HURT_SHAKE * left,
+            std::cos(elapsed * 110.f) * HURT_SHAKE * left};
     }
 
     bool GameView::isBlock(const rtype::SpriteId id)
@@ -107,8 +134,11 @@ namespace client {
                 {pos, box});
             return;
         }
+        const Engine::Vector2f shake = shakeOf(id, elapsed);
+
         _renderer.drawResized(sprite.texture,
-            {pos.x * _worldToScreen, pos.y * _worldToScreen},
+            {pos.x * _worldToScreen + shake.x,
+                pos.y * _worldToScreen + shake.y},
             frameFor(reg, e, sprite.animation, elapsed),
             {box.x * _worldToScreen, box.y * _worldToScreen});
     }
@@ -131,9 +161,22 @@ namespace client {
             }
         } else {
             _renderer.drawRect(at, size, {255, 40, 90, 140});
-            _renderer.drawRect({at.x + size.x * 0.25f, at.y},
-                {size.x * 0.5f, size.y}, {255, 255, 255, 235});
+            drawBeamCore(at, size);
         }
+    }
+
+    void GameView::drawBeamCore(const Engine::Vector2f at,
+        const Engine::Vector2f size)
+    {
+        const Engine::Color white{255, 255, 255, 235};
+
+        if (size.x > size.y) {
+            _renderer.drawRect({at.x, at.y + size.y * 0.25f},
+                {size.x, size.y * 0.5f}, white);
+            return;
+        }
+        _renderer.drawRect({at.x + size.x * 0.25f, at.y},
+            {size.x * 0.5f, size.y}, white);
     }
 
     void GameView::drawMeteor(const Engine::Registry &reg,

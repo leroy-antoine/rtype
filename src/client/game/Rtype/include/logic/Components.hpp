@@ -46,6 +46,32 @@ namespace rtype {
         Engine::Entity beam{};
     };
 
+    // Une frappe annoncee : zone rouge inoffensive, puis rayon mortel.
+    struct StrikeSpec {
+        float x = 0.f;
+        float y = 0.f;
+        float width = 0.f;
+        float height = 0.f;
+        float warn = 1.f;
+        float active = 0.f;
+        float vy = 0.f;
+    };
+
+    struct Strike {
+        float time = 0.f;
+        StrikeSpec spec;
+        bool deadly = false;
+    };
+
+    enum class LeviathanMove { Rest, Columns, Sweep, Aim, Windup, Dash, Return };
+
+    struct LeviathanState {
+        LeviathanMove move = LeviathanMove::Rest;
+        float timer = 1.5f;
+        float swing = 0.f;
+        int step = 0;
+    };
+
     // Une tourelle tire sur le joueur le plus proche toutes les interval s.
     struct TurretFire {
         float interval = 1.f;
@@ -107,6 +133,7 @@ namespace rtype {
         DasherBoss, SummonerBoss, FortressBoss,
         RocketMissile, Bomb, AlienShard, RockWall, SpikeWall,
         ReversePortal, FastPortal, NormalPortal, LaserPost, TurretBlock, MineBall, BeamOn, BeamWarn, Meteor,
+        LeviathanBolt,
         Count
     };
 

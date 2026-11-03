@@ -25,7 +25,8 @@ namespace client {
         enum class Sound { Shoot, Hit, Explosion, BossAlert, Victory, Defeat,
             Coin, Count };
         enum class Track { None, Level, BossStandard, BossDasher,
-            BossSummoner, BossFortress, DeathRun, Count };
+            BossSummoner, BossFortress, DeathRun, Nebula, Wreckage, Core,
+            Count };
 
         static constexpr std::size_t SOUND_COUNT =
             static_cast<std::size_t>(Sound::Count);
@@ -35,6 +36,7 @@ namespace client {
         void playMusic(Track track);
         void playCue(Cue cue);
         void onPhase(rtype::Phase phase);
+        [[nodiscard]] static Track trackOfZone(rtype::Zone zone);
         [[nodiscard]] static Track trackFor(Replica &replica);
 
         std::filesystem::path _dir;

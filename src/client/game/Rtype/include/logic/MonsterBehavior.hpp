@@ -95,7 +95,8 @@ namespace rtype {
 
     inline constexpr std::array<MonsterBehavior,
         static_cast<std::size_t>(MonsterKind::Count)> MONSTER_BEHAVIORS = {
-        flyStraight, flyStraight, dive, zigzag, chargeRocket, flyStraight};
+        flyStraight, flyStraight, dive, zigzag, chargeRocket, flyStraight,
+        flyStraight, zigzag, flyStraight};
 
     inline bool hasEntered(const Engine::Registry &reg, const Engine::Entity e)
     {

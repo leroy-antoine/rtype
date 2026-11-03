@@ -2,7 +2,8 @@
 
 namespace rtype {
     enum class MonsterKind {
-        Basic, Tank, Kamikaze, Elite, Rocket, Bomber, Count
+        Basic, Tank, Kamikaze, Elite, Rocket, Bomber, MiniTank, MiniElite,
+        MiniBomber, Count
     };
 
     enum class ObstacleKind {

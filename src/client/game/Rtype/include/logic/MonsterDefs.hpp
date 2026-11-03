@@ -60,9 +60,23 @@ namespace rtype {
         .width = 96.f, .height = 195.f, .sprite = SpriteId::Bomber,
         .projectile = {SpriteId::Bomb, 40.f, 33.f, 220.f, 1, 0.f, true}};
 
+    // Un mini-boss : un monstre normal en plus gros, avec le triple de vie.
+    constexpr MonsterDef strengthened(MonsterDef base)
+    {
+        base.hp *= config::MINI_HP_FACTOR;
+        base.damage = static_cast<int>(static_cast<float>(base.damage)
+            * config::MINI_DAMAGE_FACTOR);
+        base.fireCooldown *= config::MINI_COOLDOWN_FACTOR;
+        base.width *= config::MINI_SIZE_FACTOR;
+        base.height *= config::MINI_SIZE_FACTOR;
+        base.projectile.shots += 1;
+        return base;
+    }
+
     inline constexpr std::array<MonsterDef,
         static_cast<std::size_t>(MonsterKind::Count)> MONSTERS = {{
-        BASIC, TANK, KAMIKAZE, ELITE, ROCKET, BOMBER}};
+        BASIC, TANK, KAMIKAZE, ELITE, ROCKET, BOMBER, strengthened(TANK),
+        strengthened(ELITE), strengthened(BOMBER)}};
 
     inline const MonsterDef &monsterDef(const MonsterKind kind)
     {

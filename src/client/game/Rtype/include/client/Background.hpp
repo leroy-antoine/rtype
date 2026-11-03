@@ -66,7 +66,6 @@ namespace client {
         void drawBars(Engine::Renderer &renderer, float elapsed) const;
         [[nodiscard]] float rumble(float elapsed) const;
         [[nodiscard]] float warpFactor() const;
-        void drawRings(Engine::Renderer &renderer, float elapsed) const;
         void drawFade(Engine::Renderer &renderer) const;
 
         const SpriteBank &_sprites;

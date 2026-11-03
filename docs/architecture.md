@@ -27,7 +27,7 @@ The subject asks for visible and decoupled layers for **rendering**,
 
 | Target | Folder | Role |
 |---|---|---|
-| `engine::core` | `engine/core` | ECS: `Registry`, `Scheduler`, `CommandBuffer`, `FixedTimestep` |
+| `engine::core` | `engine/core` | ECS: `Registry`, `CommandBuffer`, `FixedTimestep` |
 | `engine::window` | `engine/window` | window, events, textures, renderer (wraps SFML) |
 | `engine::audio` | `engine/audio` | sounds and music (wraps SFML) |
 | `engine::network` | `engine/network` | UDP transport: sessions, ping, reliability, binary reader and writer (wraps Asio) |

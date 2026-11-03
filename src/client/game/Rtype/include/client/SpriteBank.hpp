@@ -11,7 +11,7 @@
 namespace client {
     enum class BackdropId {
         NebulaBlue, NebulaPurple, NebulaRed, NebulaGreen, NebulaOrange,
-        Rocks, Girders, Ring, Count
+        Rocks, Girders, Count
     };
 
     class SpriteBank {

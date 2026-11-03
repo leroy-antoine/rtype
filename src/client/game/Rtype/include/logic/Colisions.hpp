@@ -93,7 +93,9 @@ namespace rtype {
             return;
         }
         reg.get<Health>(player.entity).hp = 0;
-        applyDamages(monster.entity, player.entity, reg);
+        if (!reg.has<BossTag>(monster.entity)) {
+            applyDamages(monster.entity, player.entity, reg);
+        }
     }
 
     inline bool isFarOutOfBounds(const Collider &entity)

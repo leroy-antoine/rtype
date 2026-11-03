@@ -183,10 +183,14 @@ zigzag, bombs, summoning...) are not coded yet.
 | Elite | `r-typesheet19.gif` (red drone) | 100 x 100 | 60 | 280 | 15 |
 | Rocket | `r-typesheet11.gif` (missile launcher) | 105 x 108 | 45 | 140 | 35 |
 | Bomber | `r-typesheet17.gif` (armoured giant) | 96 x 195 | 150 | 90 | 25 |
+| MiniTank, MiniElite, MiniBomber | same sprites as their base monster | 1.6 x | 3 x | same | 1.5 x |
+
+A mini-boss is `strengthened(base)` in `MonsterDefs.hpp`: three times the health, 1.6 times the size, 1.5 times the damage, a fire cooldown of 0.7 and one more shot per volley. It is an ordinary monster (no `BossTag`): the level keeps scrolling. The factors are `MINI_*` in `Config.hpp`.
+
 | Standard boss | `r-typesheet32.gif` | 480 x 264 | 600 | 120 | 20 |
 | Dasher boss | `r-typesheet21.gif` (clawed alien) | 143 x 110 | 280 | 400 | 4 |
 | Summoner boss | `r-typesheet40.gif` (dome turret) | 264 x 240 | 500 | 100 | 10 |
-| Fortress boss | `r-typesheet37.gif` (battleship) | 700 x 210 | 1200 | 60 | 12 |
+| Fortress boss (the Leviathan) | `leviathan_sheet.png` (8 frames of 192 x 128) | 480 x 320 | 2400 | 200 | 12 |
 
 All the sheets are the official R-Type sprites of the `assets` folder. A boss
 stops against the right edge of the map whatever its width.
@@ -224,11 +228,11 @@ Bosses have their own table, `BOSS_BEHAVIORS` (`Boss.hpp`):
 | Standard | vertical sway against the right edge |
 | Dasher | roams the right side of the map on a Lissajous curve |
 | Summoner | sways like the Standard boss and, every `SUMMON_INTERVAL` seconds, calls `SUMMON_COUNT` Kamikazes at its own position, spread vertically. Nothing is summoned while the minions alive would exceed `SUMMON_MAX_ALIVE`. Summoned monsters (`MonsterState::summoned`) drop no coin, so they cannot be farmed |
-| Fortress | slow, wide sway; during the last `FORTRESS_BURST_DURATION` seconds of every `FORTRESS_BURST_PERIOD` it fires every `FORTRESS_BURST_COOLDOWN` seconds instead of its normal cooldown |
+| Fortress (Leviathan) | see `Leviathan.hpp`: state machine Rest, Columns, Sweep, Aim, Windup, Dash, Return, three phases by health (`leviathanPhase`), `Strike` entities (red `BeamWarn` zone, then deadly `Beam`), immune to contact damage; the barrage bursts below remain: during the last `LEVIATHAN_BURST_DURATION` seconds of every `LEVIATHAN_BURST_PERIOD` it fires every `LEVIATHAN_BURST_COOLDOWN` seconds instead of its normal cooldown |
 | Standard boss | orange fireballs | fan of 5 |
 | Dasher boss | small blue alien shards (`r-typesheet9.gif`) | fan of 9 |
 | Summoner boss | orange fireballs | fan of 3 |
-| Fortress boss | orange fireballs | fan of 9 |
+| Fortress boss | blue bolts (`leviathan_laser_sheet.png`) | fan of 9 |
 
 The Dasher does not sway like the other bosses: after its entrance it follows a
 fast Lissajous curve over the whole right side of the map (`roamBoss`). Each
@@ -656,3 +660,14 @@ Ideas for later:
 - destroyable tiles and power-ups of the original game
 - spending the purse (the augments exist in `Augments.hpp`, without a shop)
 - maps loaded from a data file instead of C++ tables
+
+
+## Variety by zone
+
+`CAMPAIGN_ZONES` (`Zones.hpp`) gives each campaign level a `Zone`. The zone
+selects the music (`Audio::trackOfZone`), the scenery, the hazards
+(`stormInterval` for the Nebula meteors, `placeScattered` for the mines and
+turrets of the Wreckage, five lasers per level in the Core) and the wave
+formations: `shapeWaves` (in `Scatter.hpp`) sets `WaveStep::shape`, and
+`formationSlot` (`Formations.hpp`) gives the delay and the height of each
+monster of an arrowhead, a wall or a snake.

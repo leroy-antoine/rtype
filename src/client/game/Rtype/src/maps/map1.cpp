@@ -20,8 +20,9 @@ namespace rtype {
                 {wave(240.f, MK::Basic, 4, RANDOM_Y, 0.f, 0.7f),
                  wave(840.f, MK::Basic, 3, 300.f, 250.f, 0.f),
                  wave(1320.f, MK::Basic, 5),
-                 wave(1800.f, MK::Basic, 4, 200.f, 220.f, 0.f)},
-                {{BK::Standard, 2400.f}}};
+                 wave(1800.f, MK::Basic, 4, 200.f, 220.f, 0.f),
+                 wave(2200.f, MK::MiniTank, 1, 400.f, 0.f, 0.f)},
+                {}};
         }
 
         LevelDef level2()
@@ -80,7 +81,7 @@ namespace rtype {
                  wave(800.f, MK::Basic, 5, 150.f, 150.f, 0.f),
                  wave(1400.f, MK::Kamikaze, 6, RANDOM_Y, 0.f, 0.25f),
                  wave(2000.f, MK::Basic, 8, RANDOM_Y, 0.f, 0.3f)},
-                {{BK::Dasher, 2800.f}}};
+                {{BK::Standard, 2800.f}}};
         }
 
         LevelDef level6()
@@ -129,8 +130,19 @@ namespace rtype {
                 {wave(300.f, MK::Tank, 2, 250.f, 400.f, 0.f),
                  wave(800.f, MK::Basic, 8, RANDOM_Y, 0.f, 0.3f),
                  wave(1400.f, MK::Tank, 3, 150.f, 300.f, 0.f),
-                 wave(1900.f, MK::Elite, 4)},
-                {{BK::Summoner, 2700.f}}};
+                 wave(1900.f, MK::Elite, 4),
+                 wave(2500.f, MK::MiniElite, 1, 450.f, 0.f, 0.f)},
+                {}};
+        }
+
+        // Le boss arrive juste apres la fin du parcours.
+        LevelDef closeWith(LevelDef level, const BK boss)
+        {
+            const float last = level.length - 150.f;
+
+            level.length = last + 500.f;
+            level.bosses = {{boss, last + 200.f}};
+            return level;
         }
 
         LevelDef deathRun(const Course &course)
@@ -144,8 +156,9 @@ namespace rtype {
 
         LevelDef level10()
         {
-            return deathRun({150.f, 1.15f, 280.f,
-                "FGBGMGBMGRBGMGBGRMGBN", 300.f, 230.f, {}, false});
+            return closeWith(deathRun({150.f, 1.15f, 280.f,
+                "FGBGMGBMGRBGMGBGRMGBN", 300.f, 230.f, {}, false}),
+                BK::Dasher);
         }
 
         LevelDef level11()
@@ -191,8 +204,10 @@ namespace rtype {
                 {wave(200.f, MK::Basic, 8, RANDOM_Y, 0.f, 0.3f),
                  wave(700.f, MK::Elite, 5),
                  wave(1200.f, MK::Kamikaze, 8, RANDOM_Y, 0.f, 0.2f),
-                 wave(1800.f, MK::Tank, 2, 300.f, 300.f, 0.f)},
-                {{BK::Standard, 2700.f}, {BK::Dasher, 3300.f}}};
+                 wave(1800.f, MK::Tank, 2, 300.f, 300.f, 0.f),
+                 wave(2500.f, MK::MiniTank, 1, 250.f, 0.f, 0.f),
+                 wave(3200.f, MK::MiniBomber, 1, 400.f, 0.f, 0.f)},
+                {}};
         }
 
         Walls tankCover()
@@ -218,8 +233,9 @@ namespace rtype {
 
         LevelDef level15()
         {
-            return deathRun({150.f, 1.3f, 270.f,
-                "FGBMGTBGMGRBGMGTBGMGRBGMBGN", 260.f, 200.f, {}, false});
+            return closeWith(deathRun({150.f, 1.3f, 270.f,
+                "FGBMGTBGMGRBGMGTBGMGRBGMBGN", 260.f, 200.f, {}, false}),
+                BK::Summoner);
         }
 
         LevelDef level16()
@@ -229,8 +245,10 @@ namespace rtype {
                  wave(700.f, MK::Rocket, 4, 100.f, 240.f, 0.f),
                  wave(1200.f, MK::Kamikaze, 8, RANDOM_Y, 0.f, 0.2f),
                  wave(1800.f, MK::Bomber, 3, 150.f, 300.f, 0.f),
-                 wave(2300.f, MK::Elite, 8, RANDOM_Y, 0.f, 0.3f)},
-                {{BK::Summoner, 3000.f}, {BK::Standard, 3500.f}}};
+                 wave(2300.f, MK::Elite, 8, RANDOM_Y, 0.f, 0.3f),
+                 wave(2800.f, MK::MiniElite, 1, 300.f, 0.f, 0.f),
+                 wave(3400.f, MK::MiniBomber, 1, 450.f, 0.f, 0.f)},
+                {}};
         }
 
         LevelDef level17()
@@ -274,20 +292,17 @@ namespace rtype {
                  wave(1000.f, MK::Kamikaze, 10, RANDOM_Y, 0.f, 0.15f),
                  wave(1500.f, MK::Bomber, 3, 150.f, 300.f, 0.f),
                  wave(2000.f, MK::Rocket, 5, RANDOM_Y, 0.f, 0.6f),
-                 wave(2600.f, MK::Elite, 8, RANDOM_Y, 0.f, 0.25f)},
-                {{BK::Standard, 3300.f}, {BK::Summoner, 3700.f}}};
+                 wave(2600.f, MK::Elite, 8, RANDOM_Y, 0.f, 0.25f),
+                 wave(3200.f, MK::MiniTank, 1, 200.f, 0.f, 0.f),
+                 wave(3700.f, MK::MiniElite, 1, 500.f, 0.f, 0.f)},
+                {}};
         }
 
         LevelDef level20()
         {
-            LevelDef level = deathRun({150.f, 1.5f, 260.f,
-                "FGBMGTBGMGBRGMBTGBGMGRBGMGBN", 230.f, 185.f, {}, false});
-            const float last = level.length - 150.f;
-
-            level.length = last + 800.f;
-            level.bosses = {{BK::Summoner, last + 200.f},
-                {BK::Dasher, last + 400.f}, {BK::Fortress, last + 600.f}};
-            return level;
+            return closeWith(deathRun({150.f, 1.5f, 260.f,
+                "FGBMGTBGMGBRGMBTGBGMGRBGMGBN", 230.f, 185.f, {}, false}),
+                BK::Fortress);
         }
     }
 
@@ -302,6 +317,7 @@ namespace rtype {
         for (std::size_t i = 0; i < levels.size(); ++i) {
             if (!levels[i].deathRun) {
                 scatter(levels[i], static_cast<unsigned>(i + 1));
+                shapeWaves(levels[i], static_cast<unsigned>(i + 1));
             }
         }
         return levels;

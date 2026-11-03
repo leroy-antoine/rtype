@@ -9,12 +9,23 @@ namespace rtype {
         DeepSpace, Nebula, Asteroids, Wreckage, Core, Warp, Arena, Count
     };
 
+    // Quatre ambiances de cinq niveaux, une par boss ; les death runs
+    // (10, 15) ont la leur.
     inline constexpr std::array<Zone, 20> CAMPAIGN_ZONES = {
         Zone::DeepSpace, Zone::DeepSpace, Zone::DeepSpace, Zone::DeepSpace,
-        Zone::Nebula, Zone::Nebula, Zone::Nebula, Zone::Nebula,
-        Zone::Asteroids, Zone::Warp, Zone::Asteroids, Zone::Asteroids,
-        Zone::Wreckage, Zone::Wreckage, Zone::Warp, Zone::Wreckage,
+        Zone::DeepSpace, Zone::Nebula, Zone::Nebula, Zone::Nebula,
+        Zone::Nebula, Zone::Warp, Zone::Wreckage, Zone::Wreckage,
+        Zone::Wreckage, Zone::Wreckage, Zone::Warp, Zone::Core,
         Zone::Core, Zone::Core, Zone::Core, Zone::Core};
+
+    // Dans la nebuleuse, des meteorites tombent entre les vagues.
+    inline float stormInterval(const Zone zone)
+    {
+        if (zone == Zone::Nebula) {
+            return 2.5f;
+        }
+        return 0.f;
+    }
 
     constexpr std::size_t DEATH_RUN_LEVELS = 4;
 

@@ -12,6 +12,7 @@
 #include "Monsters.hpp"
 #include "MonsterBehavior.hpp"
 #include "Queries.hpp"
+#include "Leviathan.hpp"
 
 namespace rtype {
     struct DashTarget {
@@ -81,27 +82,6 @@ namespace rtype {
         summonMinions(reg, e);
     }
 
-    inline bool inBurst(const float age)
-    {
-        const float phase = std::fmod(age, config::FORTRESS_BURST_PERIOD);
-
-        return phase >= config::FORTRESS_BURST_PERIOD
-            - config::FORTRESS_BURST_DURATION;
-    }
-
-    inline void fortressBoss(Engine::Registry &reg, const Engine::Entity e,
-        const float dt)
-    {
-        swayAround(reg, e, dt, config::FORTRESS_SWAY_AMPLITUDE,
-            config::FORTRESS_SWAY_FREQUENCY);
-        if (inBurst(reg.get<BossTag>(e).age)) {
-            Weapon &weapon = reg.get<Weapon>(e);
-
-            weapon.timer = std::min(weapon.timer,
-                config::FORTRESS_BURST_COOLDOWN);
-        }
-    }
-
     inline DashTarget dasherTarget(const gameLogic::Vec2Hitbox &box,
         const float age)
     {
@@ -143,7 +123,7 @@ namespace rtype {
 
     inline constexpr std::array<BossBehavior,
         static_cast<std::size_t>(BossKind::Count)> BOSS_BEHAVIORS = {
-        swayBoss, roamBoss, summonerBoss, fortressBoss};
+        swayBoss, roamBoss, summonerBoss, leviathanBoss};
 
     // Le boss entre par la droite, s'arrete contre le bord droit, puis suit le
     // comportement de son type en continuant a tirer.

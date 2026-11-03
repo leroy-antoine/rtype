@@ -61,8 +61,9 @@ namespace client {
         add(Id::SummonerBoss, "summoner_sheet.png",
             {.firstFrame = {0, 0, 64, 64}, .frameCount = 8,
                 .frameDuration = 0.12f});
-        add(Id::FortressBoss, "r-typesheet37.gif",
-            {.firstFrame = {0, 0, 594, 178}, .frameCount = 1});
+        add(Id::FortressBoss, "leviathan_sheet.png",
+            {.firstFrame = {0, 0, 192, 128}, .frameCount = 8,
+                .frameDuration = 0.12f});
     }
 
     void SpriteBank::loadShots()
@@ -116,6 +117,9 @@ namespace client {
         add(Id::MineBall, "obstacle_mine.png",
             {.firstFrame = {0, 0, 64, 64}, .frameCount = 4,
              .frameDuration = 0.25f});
+        add(Id::LeviathanBolt, "leviathan_laser_sheet.png",
+            {.firstFrame = {0, 0, 24, 8}, .frameCount = 4,
+                .frameDuration = 0.08f});
         add(Id::Meteor, "meteor.png",
             {.firstFrame = {0, 0, 32, 32}, .frameCount = 1});
         add(Id::LaserPost, "obstacle_spike.png",
@@ -144,7 +148,6 @@ namespace client {
         addBackdrop(B::NebulaOrange, "bg_nebula_orange.png", 640, 360);
         addBackdrop(B::Rocks, "bg_rocks.png", 512, 256);
         addBackdrop(B::Girders, "bg_girders.png", 512, 128);
-        addBackdrop(B::Ring, "bg_ring.png", 256, 256);
     }
 
     const Engine::Sprite &SpriteBank::backdrop(const BackdropId id) const

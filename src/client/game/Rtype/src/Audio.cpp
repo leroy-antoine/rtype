@@ -12,10 +12,11 @@ namespace client {
             "shoot.wav", "hit.wav", "explosion.wav", "boss_alert.wav",
             "victory.wav", "defeat.wav", "coin_pickup.mp3"};
 
-        constexpr std::array<const char *, 7> MUSIC = {
+        constexpr std::array<const char *, 10> MUSIC = {
             "", "music_level.ogg", "music_boss.ogg", "dasher_theme.ogg",
             "summoner_theme.ogg", "music_boss_fortress.ogg",
-            "music_deathrun.ogg"};
+            "music_deathrun.ogg", "music_nebula.ogg", "music_wreckage.ogg",
+            "music_core.ogg"};
     }
 
     Audio::Audio(const std::filesystem::path &assets) : _dir(assets / "sounds")
@@ -109,6 +110,17 @@ namespace client {
         playMusic(trackFor(replica));
     }
 
+    Audio::Track Audio::trackOfZone(const rtype::Zone zone)
+    {
+        switch (zone) {
+            case rtype::Zone::Warp: return Track::DeathRun;
+            case rtype::Zone::Nebula: return Track::Nebula;
+            case rtype::Zone::Wreckage: return Track::Wreckage;
+            case rtype::Zone::Core: return Track::Core;
+            default: return Track::Level;
+        }
+    }
+
     Audio::Track Audio::trackFor(Replica &replica)
     {
         switch (replica.bossSprite().value_or(rtype::SpriteId::Count)) {
@@ -120,10 +132,7 @@ namespace client {
         }
         const auto &status = replica.status();
 
-        if (rtype::zoneOf(status->map, status->level) == rtype::Zone::Warp) {
-            return Track::DeathRun;
-        }
-        return Track::Level;
+        return trackOfZone(rtype::zoneOf(status->map, status->level));
     }
 
     void Audio::onPhase(const rtype::Phase phase)

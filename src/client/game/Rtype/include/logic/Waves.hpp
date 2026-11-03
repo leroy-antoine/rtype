@@ -5,6 +5,8 @@
 #include "Kinds.hpp"
 
 namespace rtype {
+    enum class Shape { Line, Wedge, Column, Sine };
+
     // Une vague : count monstres lances quand le niveau a defile de at.
     // Le i-eme monstre apparait i * interval secondes apres le premier, a la
     // hauteur y + i * dy. Si y < 0, chaque monstre a sa propre hauteur tiree
@@ -17,6 +19,7 @@ namespace rtype {
         float dy;
         float interval;
         MonsterKind kind = MonsterKind::Basic;
+        Shape shape = Shape::Line;
     };
 
     // Instant (en secondes de jeu) converti en distance defilee.

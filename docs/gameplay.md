@@ -31,9 +31,9 @@ the highlighted map; the other players wait for them.
 
 | Map | Content |
 |---|---|
-| **CAMPAIGN** | 20 levels with a growing difficulty, more and more bosses, rocks and two full death runs |
-| **BOSS RUSH** | 5 short levels, one to three bosses each, ending with the Fortress, the Summoner and the Dasher |
-| **DEATH RUNS** | 4 relentless levels of about a minute, then two bosses. Gates, lasers, mines and turrets are mixed in the same course, without any monster, with portals |
+| **CAMPAIGN** | 20 levels with a growing difficulty, rocks and two full death runs. A real boss every five levels (Standard, Dasher, Summoner, then the Leviathan), mini-bosses in between |
+| **BOSS RUSH** | 5 short levels: the Standard boss, the Dasher, the Summoner, a pause level with three mini-bosses, then the Leviathan |
+| **DEATH RUNS** | 4 relentless levels of about a minute, then the Leviathan. Gates, lasers, mines and turrets are mixed in the same course, without any monster, with portals |
 
 The level number is shown at the top centre of the screen.
 
@@ -61,6 +61,23 @@ Leaving the screen with your ship, or touching an enemy, destroys it.
 | Rocket | stops for a moment before it fires a fast missile: that pause is your warning |
 | Bomber | tall and slow; its bombs fall towards the player who is nearest |
 
+## Zones
+
+The campaign has four moods of five levels, one per boss, plus a warp for the
+death runs (10 and 15). Each mood has its own scenery, music, formations and
+hazard:
+
+| Levels | Zone | Music | Waves | Hazard |
+|---|---|---|---|---|
+| 1-5 | Deep space | calm 120 BPM loop | straight lines | rocks and a few lasers |
+| 6-9 | Nebula | slow 90 BPM pads | snakes and arrowheads | meteors fall between the waves |
+| 11-14 | Wreckage | heavy 108 BPM industrial beat | walls and arrowheads | mines and turrets between the rocks |
+| 16-20 | Core | fast 144 BPM | arrowheads, walls and snakes | five lasers per level |
+
+A wave can be a line, an **arrowhead** (the leader first), a **wall** (all at
+once, with gaps) or a **snake** that undulates. Tanks, Bombers and mini-bosses
+keep their own placement.
+
 ## Bosses
 
 | Boss | What it does |
@@ -68,7 +85,9 @@ Leaving the screen with your ship, or touching an enemy, destroys it.
 | Standard | stops against the right edge, sways up and down and fires a fan of bullets |
 | Dasher | a small alien that roams the whole right side of the screen and fires a wide fan of shards |
 | Summoner | sways and calls three Kamikazes every few seconds (at most six at once) |
-| Fortress | huge and slow; alternates calm phases with two-second barrages |
+| Fortress (the Leviathan) | the final boss, 2400 HP and **immune to collisions** (ramming it only kills you). It sways fast, and chains four moves: **lightning columns** (red zones, then four to six vertical beams), a **charge** (it aims at you, a red lane shows its path, then it rushes across the screen), a **sweeping beam** (two walls of beams with a moving gap you must follow) and another charge. Every attack is announced. Under two thirds and one third of its health it gets faster, rests less and adds columns |
+
+A type of boss appears only once in a map. **Mini-bosses** fill the levels between them: a Tank, an Elite or a Bomber with three times the health, 1.6 times the size, more damage and an extra shot. They are ordinary monsters: the level keeps scrolling.
 
 The level stops scrolling while a boss is alive, and its health bar is shown
 at the bottom of the screen. Monsters called by the Summoner drop no coin.
@@ -126,8 +145,8 @@ The scenery changes with the part of the map: deep blue space, a purple nebula,
 an asteroid belt, the wreckage of a station, the red heart of the Bydo core,
 and streaks of light in the warp of the death runs. While a boss is on screen
 the scenery takes its colour: a pulsing red glow for the Standard boss, fast
-cyan streaks for the Dasher, expanding violet rings for the Summoner, a heavy
-red vignette and a rumble for the Fortress. Nothing flashes.
+cyan streaks for the Dasher, a violet tint for the Summoner, a heavy
+red vignette and a rumble for the Fortress. The Leviathan shakes for a quarter of a second every time it is hit. Nothing flashes.
 
 ## Coins, time and level skip
 

@@ -87,6 +87,9 @@ namespace rtype {
 
         reg.add(e, BossTag{});
         reg.add(e, BossType{kind});
+        if (kind == BossKind::Fortress) {
+            reg.add(e, LeviathanState{});
+        }
         setBossStats(reg, e, bossDef(kind));
         return e;
     }

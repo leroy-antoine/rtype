@@ -29,9 +29,9 @@ namespace rtype {
         .projectile = {SpriteId::MonsterBullet, 32.f, 32.f, 420.f, 3, 0.25f}};
 
     inline constexpr MonsterDef FORTRESS_BOSS{
-        .hp = 1200, .speed = 60.f, .damage = 12, .fireCooldown = 1.6f,
-        .width = 700.f, .height = 210.f, .sprite = SpriteId::FortressBoss,
-        .projectile = {SpriteId::MonsterBullet, 36.f, 36.f, 380.f, 9, 0.18f}};
+        .hp = 2400, .speed = 200.f, .damage = 12, .fireCooldown = 1.6f,
+        .width = 480.f, .height = 320.f, .sprite = SpriteId::FortressBoss,
+        .projectile = {SpriteId::LeviathanBolt, 72.f, 24.f, 380.f, 9, 0.18f}};
 
     inline constexpr std::array<MonsterDef,
         static_cast<std::size_t>(BossKind::Count)> BOSSES = {{

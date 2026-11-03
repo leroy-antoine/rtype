@@ -19,6 +19,7 @@
 #include "Components.hpp"
 #include "Config.hpp"
 #include "Events.hpp"
+#include "Formations.hpp"
 #include "Factories.hpp"
 #include "LevelSkip.hpp"
 #include "Levels.hpp"
@@ -30,6 +31,7 @@
 #include "Status.hpp"
 #include "Systems.hpp"
 #include "Waves.hpp"
+#include "Zones.hpp"
 #include "engine/core/Registry.hpp"
 
 namespace rtype {
@@ -314,6 +316,7 @@ namespace rtype {
             obstacleMotionSystem(_reg, dt);
             turretSystem(_reg, dt);
             laserSystem(_reg, dt);
+            strikeSystem(_reg, dt);
             bossSystem(_reg, dt);
             shootingSystem(_reg);
             movementSystem(_reg, dt);
@@ -332,9 +335,25 @@ namespace rtype {
         {
             if (collectWith<BossTag>(_reg).empty()) {
                 clearBossHazards();
+                storm(dt);
                 return;
             }
             bossHazardSystem(_reg, _hazards, _rng, bossIntensity(), dt);
+        }
+
+        // La meteo de la zone : une meteorite de temps en temps.
+        void storm(const float dt)
+        {
+            const float every = stormInterval(zoneOf(_map, level()));
+
+            if (every <= 0.f) {
+                return;
+            }
+            _storm -= dt;
+            if (_storm <= 0.f) {
+                spawnMeteor(_reg, _rng);
+                _storm = every;
+            }
         }
 
         void clearBossHazards()
@@ -561,8 +580,28 @@ namespace rtype {
             return wave.y + index * wave.dy;
         }
 
+        void queueFormation(const WaveStep &wave)
+        {
+            std::uniform_real_distribution<float> randomY(
+                config::WAVE_MIN_Y + 300.f, config::WAVE_MAX_Y - 300.f);
+            float base = wave.y;
+
+            if (base < 0.f) {
+                base = randomY(_rng);
+            }
+            for (int i = 0; i < wave.count; ++i) {
+                const Slot slot = formationSlot(wave, i, base);
+
+                _pending.push_back({slot.delay, slot.y, wave.kind});
+            }
+        }
+
         void queueWave(const WaveStep &wave)
         {
+            if (wave.shape != Shape::Line) {
+                queueFormation(wave);
+                return;
+            }
             for (int i = 0; i < wave.count; ++i) {
                 const auto n = static_cast<float>(i);
 
@@ -694,6 +733,7 @@ namespace rtype {
             _effectLevel = 0;
             _paused = false;
             _hazards = HazardClock{};
+            _storm = 2.f;
             _deaths = 0;
             _phase = restingPhase();
             _phaseTimer = 0.f;
@@ -749,6 +789,7 @@ namespace rtype {
         bool _paused = false;
         std::uint16_t _deaths = 0;
         HazardClock _hazards;
+        float _storm = 2.f;
         int _alive = 0;
         MapId _map = 0;
         float _phaseTimer = 0.f;

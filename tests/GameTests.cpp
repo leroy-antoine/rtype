@@ -335,6 +335,9 @@ TEST(a_game_built_on_a_map_follows_its_levels)
 
 TEST(every_monster_kind_has_its_own_sprite_and_valid_stats)
 {
+    constexpr std::size_t MINI_FIRST =
+        static_cast<std::size_t>(MonsterKind::MiniTank);
+
     for (std::size_t i = 0; i < static_cast<std::size_t>(MonsterKind::Count);
         ++i) {
         const MonsterDef &def = monsterDef(static_cast<MonsterKind>(i));
@@ -343,7 +346,7 @@ TEST(every_monster_kind_has_its_own_sprite_and_valid_stats)
         CHECK(def.speed > 0.f);
         CHECK(def.width > 0.f);
         CHECK(def.height > 0.f);
-        for (std::size_t j = 0; j < i; ++j) {
+        for (std::size_t j = 0; j < i && i < MINI_FIRST; ++j) {
             CHECK(def.sprite != monsterDef(static_cast<MonsterKind>(j)).sprite);
         }
     }
@@ -1028,9 +1031,9 @@ TEST(the_fortress_fires_faster_during_its_barrage)
     reg.get<Weapon>(boss).timer = 1.6f;
     bossSystem(reg, config::FIXED_DT);
     CHECK(reg.get<Weapon>(boss).timer > 1.f);
-    reg.get<BossTag>(boss).age = config::FORTRESS_BURST_PERIOD - 1.f;
+    reg.get<BossTag>(boss).age = config::LEVIATHAN_BURST_PERIOD - 1.f;
     bossSystem(reg, config::FIXED_DT);
-    CHECK(reg.get<Weapon>(boss).timer <= config::FORTRESS_BURST_COOLDOWN);
+    CHECK(reg.get<Weapon>(boss).timer <= config::LEVIATHAN_BURST_COOLDOWN);
 }
 
 TEST(the_fortress_stays_on_the_map_while_it_sways)
@@ -1476,4 +1479,153 @@ TEST(the_hazards_of_a_boss_fight_get_faster_with_the_intensity)
         < hazardInterval(config::HAZARD_LASER_SLOW, config::HAZARD_LASER_FAST, 0.1f));
     CHECK(hazardInterval(config::HAZARD_METEOR_SLOW, config::HAZARD_METEOR_FAST, 1.f)
         < hazardInterval(config::HAZARD_METEOR_SLOW, config::HAZARD_METEOR_FAST, 0.1f));
+}
+
+namespace {
+    bool strikeOfKind(Engine::Registry &reg, const ObstacleKind kind)
+    {
+        for (const Engine::Entity e : collectObstacles(reg)) {
+            if (reg.has<Strike>(e) && reg.get<ObstacleTag>(e).kind == kind) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+TEST(the_leviathan_takes_no_damage_from_a_collision)
+{
+    Engine::Registry reg;
+    const Engine::Entity boss = enteredBoss(reg, BossKind::Fortress);
+    const Engine::Entity player = createPlayer(reg, 0);
+    const int before = reg.get<Health>(boss).hp;
+
+    reg.get<gameLogic::Vec2Pos>(player) = reg.get<gameLogic::Vec2Pos>(boss);
+    contactSystem(reg);
+    CHECK(reg.get<Health>(boss).hp == before);
+    CHECK(reg.get<Health>(player).hp <= 0);
+}
+
+TEST(the_leviathan_warns_then_strikes_with_lightning_columns)
+{
+    Engine::Registry reg;
+
+    enteredBoss(reg, BossKind::Fortress);
+    spawnColumns(reg, 0, 0);
+    CHECK(strikeOfKind(reg, ObstacleKind::BeamWarn));
+    CHECK(!strikeOfKind(reg, ObstacleKind::Beam));
+    for (float t = 0.f; t < config::LEVIATHAN_WARN[0] + 0.1f;
+        t += config::FIXED_DT) {
+        strikeSystem(reg, config::FIXED_DT);
+    }
+    CHECK(strikeOfKind(reg, ObstacleKind::Beam));
+    for (float t = 0.f; t < config::COLUMN_ACTIVE + 0.1f;
+        t += config::FIXED_DT) {
+        strikeSystem(reg, config::FIXED_DT);
+    }
+    CHECK(collectObstacles(reg).empty());
+}
+
+TEST(a_sweep_always_leaves_a_gap_for_the_player)
+{
+    Engine::Registry reg;
+
+    spawnSweep(reg, 2, 0);
+    for (const Engine::Entity e : collectObstacles(reg)) {
+        const auto pos = reg.get<gameLogic::Vec2Pos>(e);
+        const auto box = reg.get<gameLogic::Vec2Hitbox>(e);
+        const bool above = pos.y + box.y <= config::MAP_HEIGHT / 2.f;
+        const bool below = pos.y >= config::SWEEP_MARGIN;
+
+        CHECK(above || below);
+    }
+    CHECK(collectObstacles(reg).size() == 2);
+}
+
+TEST(the_leviathan_charges_and_comes_back)
+{
+    Engine::Registry reg;
+    const Engine::Entity boss = enteredBoss(reg, BossKind::Fortress);
+    float leftmost = config::MAP_WIDTH;
+
+    for (int i = 0; i < 60 * 14; ++i) {
+        bossSystem(reg, config::FIXED_DT);
+        strikeSystem(reg, config::FIXED_DT);
+        movementSystem(reg, config::FIXED_DT);
+        leftmost = std::min(leftmost, reg.get<gameLogic::Vec2Pos>(boss).x);
+    }
+    CHECK(leftmost < 400.f);
+    CHECK(reg.get<gameLogic::Vec2Pos>(boss).x > 400.f);
+}
+
+TEST(the_leviathan_gets_angrier_as_it_loses_health)
+{
+    Engine::Registry reg;
+    const Engine::Entity boss = enteredBoss(reg, BossKind::Fortress);
+    const int max = reg.get<Health>(boss).hp;
+
+    CHECK(leviathanPhase(reg, boss) == 0);
+    reg.get<Health>(boss).hp = max / 2;
+    CHECK(leviathanPhase(reg, boss) == 1);
+    reg.get<Health>(boss).hp = max / 5;
+    CHECK(leviathanPhase(reg, boss) == 2);
+}
+
+TEST(the_summoner_keeps_calling_monsters_during_the_whole_fight)
+{
+    Engine::Registry reg;
+    const Engine::Entity boss = enteredBoss(reg, BossKind::Summoner);
+    int peak = 0;
+    int waves = 0;
+    int before = 0;
+
+    for (float t = 0.f; t < 30.f; t += config::FIXED_DT) {
+        bossSystem(reg, config::FIXED_DT);
+        movementSystem(reg, config::FIXED_DT);
+        const int now = countMinions(reg);
+
+        if (now > before) {
+            ++waves;
+        }
+        before = now;
+        peak = std::max(peak, now);
+        for (const Engine::Entity m : collectMonsters(reg)) {
+            if (m != boss && reg.get<MonsterState>(m).summoned
+                && reg.get<gameLogic::Vec2Pos>(m).x < 1000.f) {
+                reg.destroy(m);
+            }
+        }
+    }
+    CHECK(waves >= 4);
+    CHECK(peak >= config::SUMMON_COUNT);
+    CHECK(peak <= config::SUMMON_MAX_ALIVE);
+}
+
+TEST(the_nebula_rains_meteors_between_the_waves)
+{
+    Segments segments;
+
+    CHECK(stormInterval(Zone::Nebula) > 0.f);
+    CHECK(stormInterval(Zone::DeepSpace) == 0.f);
+
+    segments.levels.emplace_back(6, 0.f);
+    segments.bossSpawn.emplace_back(BossKind::Standard, 99999.f);
+    Game nebula(1, segments);
+
+    nebula.addPlayer();
+    run(nebula, 6.f);
+    CHECK(!collectProjectileEntities(nebula.registry()).empty());
+}
+
+TEST(a_blocked_leviathan_still_leaves_its_charge)
+{
+    Engine::Registry reg;
+    const Engine::Entity boss = enteredBoss(reg, BossKind::Fortress);
+
+    reg.get<LeviathanState>(boss) = {LeviathanMove::Dash, 0.01f, 0.f, 0};
+    bossSystem(reg, config::FIXED_DT * 2.f);
+    CHECK(reg.get<LeviathanState>(boss).move == LeviathanMove::Return);
+    reg.get<LeviathanState>(boss).timer = 0.01f;
+    bossSystem(reg, config::FIXED_DT * 2.f);
+    CHECK(reg.get<LeviathanState>(boss).move != LeviathanMove::Return);
 }

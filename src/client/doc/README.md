@@ -176,7 +176,7 @@ changes, the screen fades to black and back in about a second.
 | Fortress | a heavy red vignette, red bars and a slight rumble |
 
 The textures are plain png files of the `assets` folder (`bg_nebula_*.png`,
-`bg_rocks.png`, `bg_girders.png`, `bg_ring.png`), drawn for the project.
+`bg_rocks.png`, `bg_girders.png`), drawn for the project.
 
 ## Sound
 

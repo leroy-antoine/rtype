@@ -23,6 +23,8 @@ namespace client {
         static constexpr int PLAYER_FRAME_IDLE = 2;
         static constexpr int PLAYER_FRAME_UP = 4;
         static constexpr float ANIMATION_PHASE = 0.13f;
+        static constexpr float HURT_DURATION = 0.25f;
+        static constexpr float HURT_SHAKE = 10.f;
 
         struct Area {
             gameLogic::Vec2Pos pos;
@@ -46,12 +48,15 @@ namespace client {
         static Engine::IntRect frameFor(const Engine::Registry &reg, Engine::Entity e,
             const Engine::Animation &animation, float elapsed);
 
+        void trackBossHurt(const Replica &replica, float elapsed);
+        Engine::Vector2f shakeOf(rtype::SpriteId id, float elapsed) const;
         void drawWorld(Engine::Registry &reg, float elapsed);
         void drawLayer(Engine::Registry &reg, float elapsed, bool effects);
         void drawEntity(const Engine::Registry &reg, Engine::Entity e, const gameLogic::Vec2Pos &pos,
             const gameLogic::Vec2Hitbox &box, rtype::SpriteId id, float elapsed);
         void drawMeteor(const Engine::Registry &reg, Engine::Entity e,
             const gameLogic::Vec2Pos &pos, const gameLogic::Vec2Hitbox &box);
+        void drawBeamCore(Engine::Vector2f at, Engine::Vector2f size);
         void drawLaserPost(Engine::Vector2f at, Engine::Vector2f size);
         void drawLaser(rtype::SpriteId id, const gameLogic::Vec2Pos &pos,
             const gameLogic::Vec2Hitbox &box, float elapsed);
@@ -67,5 +72,7 @@ namespace client {
         float _screenHeight;
         Background _background;
         Hud _hud;
+        int _lastBossHp = 0;
+        float _hurtUntil = 0.f;
     };
 }

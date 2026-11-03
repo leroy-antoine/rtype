@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <cstddef>
 #include "logic/Builder.hpp"
+#include "logic/Formations.hpp"
 #include "logic/Levels.hpp"
 #include "logic/Zones.hpp"
 #include "TestHarness.hpp"
@@ -20,7 +22,6 @@ TEST(the_first_level_of_the_first_map_is_the_original_level)
         CHECK(run->waves[i].dy == original.waves[i].dy);
         CHECK(run->waves[i].interval == original.waves[i].interval);
     }
-    CHECK(run->bossSpawn[0] == original.bossSpawn[0]);
 }
 
 TEST(the_levels_of_a_map_follow_each_other)
@@ -128,17 +129,57 @@ TEST(a_gate_always_leaves_room_for_a_ship)
     }
 }
 
-TEST(the_last_levels_have_more_bosses_than_the_first_ones)
+namespace {
+    std::vector<BossKind> bossesOf(const std::vector<LevelDef> &levels)
+    {
+        std::vector<BossKind> kinds;
+
+        for (const LevelDef &level : levels) {
+            for (const BossSpawn &boss : level.bosses) {
+                kinds.push_back(boss.first);
+            }
+        }
+        return kinds;
+    }
+
+    bool allDifferent(std::vector<BossKind> kinds)
+    {
+        std::ranges::sort(kinds);
+        return std::ranges::adjacent_find(kinds) == kinds.end();
+    }
+}
+
+TEST(a_type_of_boss_appears_only_once_in_a_map)
+{
+    CHECK(allDifferent(bossesOf(map1())));
+    CHECK(allDifferent(bossesOf(map2())));
+    CHECK(allDifferent(bossesOf(map3())));
+}
+
+TEST(the_campaign_has_a_boss_every_five_levels_ending_with_the_leviathan)
 {
     const std::vector<LevelDef> levels = map1();
-    std::size_t first = 0;
-    std::size_t last = 0;
 
-    for (std::size_t i = 0; i < 5; ++i) {
-        first += levels[i].bosses.size();
-        last += levels[levels.size() - 1 - i].bosses.size();
+    for (std::size_t i = 0; i < levels.size(); ++i) {
+        CHECK(levels[i].bosses.empty() == ((i + 1) % 5 != 0));
     }
-    CHECK(last > first);
+    CHECK(levels.back().bosses.front().first == BossKind::Fortress);
+    CHECK(levels[4].bosses.front().first == BossKind::Standard);
+}
+
+TEST(the_levels_without_a_boss_have_a_mini_boss_in_the_campaign)
+{
+    const std::vector<LevelDef> levels = map1();
+    std::size_t minis = 0;
+
+    for (const LevelDef &level : levels) {
+        for (const WaveStep &wave : level.waves) {
+            if (wave.kind >= MonsterKind::MiniTank) {
+                ++minis;
+            }
+        }
+    }
+    CHECK(minis >= 5);
 }
 
 TEST(a_gate_has_a_wall_above_and_below_its_gap)
@@ -328,6 +369,10 @@ TEST(each_zone_has_a_theme_and_the_death_runs_are_in_the_warp)
     CHECK(zoneOf(0, 15) == Zone::Warp);
     CHECK(zoneOf(0, 20) == Zone::Core);
     CHECK(zoneOf(0, 99) == Zone::Core);
+    CHECK(zoneOf(0, 5) == Zone::DeepSpace);
+    CHECK(zoneOf(0, 6) == Zone::Nebula);
+    CHECK(zoneOf(0, 11) == Zone::Wreckage);
+    CHECK(zoneOf(0, 16) == Zone::Core);
     CHECK(zoneOf(1, 3) == Zone::Arena);
     CHECK(zoneOf(2, 1) == Zone::Warp);
     CHECK(zoneOf(2, 5) == Zone::Core);
@@ -446,4 +491,60 @@ TEST(the_campaign_has_asteroids_and_lasers)
     }
     CHECK(laserSeen);
     CHECK(movingRock);
+}
+
+TEST(a_wedge_sends_its_leader_first_and_a_column_arrives_together)
+{
+    WaveStep wedge = wave(0.f, MonsterKind::Basic, 5, 540.f, 0.f, 0.4f);
+    WaveStep column = wedge;
+
+    wedge.shape = Shape::Wedge;
+    column.shape = Shape::Column;
+    CHECK(formationSlot(wedge, 2, 540.f).delay == 0.f);
+    CHECK(formationSlot(wedge, 0, 540.f).delay > 0.f);
+    CHECK(formationSlot(wedge, 0, 540.f).delay
+        == formationSlot(wedge, 4, 540.f).delay);
+    CHECK(formationSlot(column, 0, 540.f).delay
+        == formationSlot(column, 4, 540.f).delay);
+    CHECK(formationSlot(column, 0, 540.f).y
+        < formationSlot(column, 4, 540.f).y);
+}
+
+TEST(the_advanced_zones_have_their_own_formations_and_hazards)
+{
+    const std::vector<LevelDef> levels = map1();
+    bool nebula = false;
+    bool core = false;
+    bool mines = false;
+
+    for (const WaveStep &w : levels[6].waves) {
+        nebula |= w.shape != Shape::Line;
+    }
+    for (const WaveStep &w : levels[17].waves) {
+        core |= w.shape != Shape::Line;
+    }
+    for (const ObstacleStep &o : levels[12].obstacles) {
+        mines |= o.kind == ObstacleKind::Mine || o.kind == ObstacleKind::Turret;
+    }
+    CHECK(nebula);
+    CHECK(core);
+    CHECK(mines);
+    for (const WaveStep &w : levels[1].waves) {
+        CHECK(w.shape == Shape::Line);
+    }
+}
+
+TEST(a_big_formation_never_stacks_its_monsters)
+{
+    WaveStep wall = wave(0.f, MonsterKind::Basic, 8, 150.f, 0.f, 0.f);
+
+    wall.shape = Shape::Column;
+    for (int i = 1; i < wall.count; ++i) {
+        const Slot before = formationSlot(wall, i - 1, 150.f);
+        const Slot now = formationSlot(wall, i, 150.f);
+
+        CHECK(now.y > before.y);
+        CHECK(now.y >= config::WAVE_MIN_Y);
+        CHECK(now.y <= config::WAVE_MAX_Y);
+    }
 }

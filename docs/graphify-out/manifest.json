@@ -324,9 +324,9 @@
     "semantic_hash": ""
   },
   "src/include/rtype/Protocol.hpp": {
-    "mtime": 1793721359.5969782,
-    "seen": 1793721840.3689728,
-    "ast_hash": "847a819283479902555f5389b4e1fbd0",
+    "mtime": 1793727863.1390913,
+    "seen": 1793727980.203873,
+    "ast_hash": "0c9df115d7bcb23def988bce93b632e9",
     "semantic_hash": ""
   },
   "src/include/rtype/ReturnCodes.hpp": {
@@ -360,15 +360,15 @@
     "semantic_hash": "c2e29a418822826e1150e71b9d50c18c"
   },
   "tests/GameTests.cpp": {
-    "mtime": 1793721385.8206336,
-    "seen": 1793721840.3690002,
-    "ast_hash": "3a660ddf68b2af46cf6d1602510233f2",
+    "mtime": 1793727903.916047,
+    "seen": 1793727980.2038991,
+    "ast_hash": "ca71ff3acb9bb1902b129c11b30082ee",
     "semantic_hash": ""
   },
   "tests/ProtocolTests.cpp": {
-    "mtime": 1793721385.8226337,
-    "seen": 1793721840.3690069,
-    "ast_hash": "9c91df1b1330950943f22716dedd6cfe",
+    "mtime": 1793722558.966714,
+    "seen": 1793727980.203905,
+    "ast_hash": "5bcfda5fa1a5d93f1ff34d3d1d728cf5",
     "semantic_hash": ""
   },
   "tests/TestHarness.hpp": {
@@ -426,9 +426,9 @@
     "semantic_hash": ""
   },
   "src/client/CMakeLists.txt": {
-    "mtime": 1793227033.195667,
-    "seen": 1793379305.4238782,
-    "ast_hash": "ebc67ab992ea96078cac89b39a7a37f6",
+    "mtime": 1793722484.005262,
+    "seen": 1793727980.2039886,
+    "ast_hash": "c08dbe22453867d72f69ce6a8da14b24",
     "semantic_hash": ""
   },
   "src/client/doc/README.md": {
@@ -444,9 +444,9 @@
     "semantic_hash": ""
   },
   "src/server/doc/README.md": {
-    "mtime": 1793721423.091973,
-    "seen": 1793721840.3691516,
-    "ast_hash": "546d04e6148b2b4279d3b98c0e4f0503",
+    "mtime": 1793722589.6335018,
+    "seen": 1793727980.204004,
+    "ast_hash": "76bfc76b5c68596c3606f132288cc1f2",
     "semantic_hash": ""
   },
   "tests/CMakeLists.txt": {
@@ -498,9 +498,9 @@
     "semantic_hash": ""
   },
   "docs/protocol.md": {
-    "mtime": 1793721423.0839932,
-    "seen": 1793721840.3690953,
-    "ast_hash": "eb7ac481e0173d4d5d47840238755d58",
+    "mtime": 1793727255.9543517,
+    "seen": 1793727980.2039595,
+    "ast_hash": "c73e7c78b5633a5ce41fcbca1851074c",
     "semantic_hash": ""
   },
   "CMakePresets.json": {
@@ -540,15 +540,15 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/client/GameView.hpp": {
-    "mtime": 1793661013.4536452,
-    "seen": 1793721840.3687618,
-    "ast_hash": "b8996b16108747bcc7928c64028f8cef",
+    "mtime": 1793727141.2688005,
+    "seen": 1793727980.2036626,
+    "ast_hash": "2dc23a5ad7a6110f422aa66462c77c24",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/client/Hud.hpp": {
-    "mtime": 1793721370.1794796,
-    "seen": 1793721840.3687654,
-    "ast_hash": "2c40e9eeee17ddb653994b51d18f082d",
+    "mtime": 1793727863.1388583,
+    "seen": 1793727980.203668,
+    "ast_hash": "09cb1e803e9e981638b4889af3d2c03b",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/client/Prediction.hpp": {
@@ -606,15 +606,15 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Components.hpp": {
-    "mtime": 1793661114.852445,
-    "seen": 1793721840.3688126,
-    "ast_hash": "58ed0a6cbbd5321dc7e1069939fddf1c",
+    "mtime": 1793727097.0389915,
+    "seen": 1793727980.2037182,
+    "ast_hash": "9c490c9c1975f9d5b385a0f94480b165",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Config.hpp": {
-    "mtime": 1793721410.4903924,
-    "seen": 1793721840.3688166,
-    "ast_hash": "88e97413dd077c98a9adeb967080f182",
+    "mtime": 1793727920.8786983,
+    "seen": 1793727980.2037213,
+    "ast_hash": "03d2809982aa9b9b25b788c76b40d537",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Damages.hpp": {
@@ -630,15 +630,15 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Factories.hpp": {
-    "mtime": 1793662543.254734,
-    "seen": 1793721840.3688288,
-    "ast_hash": "8007196104aebd6d20dd8164e5007269",
+    "mtime": 1793725771.7219067,
+    "seen": 1793727980.2037356,
+    "ast_hash": "da19430981672cf54bb8db8e7e52d556",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Game.hpp": {
-    "mtime": 1793721341.9910216,
-    "seen": 1793721840.368832,
-    "ast_hash": "c901baf658069c63af32f768e206a792",
+    "mtime": 1793727853.7079356,
+    "seen": 1793727980.2037382,
+    "ast_hash": "b8cc23ae3f95f773c151792aedb21b89",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Monsters.hpp": {
@@ -666,9 +666,9 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Status.hpp": {
-    "mtime": 1793721341.9851964,
-    "seen": 1793721840.3688986,
-    "ast_hash": "41edf13d4e34c2a2fe7739b6d07700cf",
+    "mtime": 1793722463.1567838,
+    "seen": 1793727980.2037945,
+    "ast_hash": "b1d0ed368cdac4ad2302e06a5a5e10ca",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Systems.hpp": {
@@ -690,9 +690,9 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/src/Audio.cpp": {
-    "mtime": 1793661110.9424198,
-    "seen": 1793721840.368918,
-    "ast_hash": "24e9f5d36fee0e2c26bc5d4a8c910f26",
+    "mtime": 1793723635.963643,
+    "seen": 1793727980.2038128,
+    "ast_hash": "42536c6de6acf2a37fe2214a172982c8",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/src/Background.cpp": {
@@ -714,15 +714,15 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/src/GameView.cpp": {
-    "mtime": 1793661013.4537215,
-    "seen": 1793721840.3689332,
-    "ast_hash": "a82166efff5f2d1d71f96948899801d7",
+    "mtime": 1793727141.2708166,
+    "seen": 1793727980.2038276,
+    "ast_hash": "282b4061dfad9a8d3ba48594bb98113d",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/src/Hud.cpp": {
-    "mtime": 1793721385.8192873,
-    "seen": 1793721840.3689365,
-    "ast_hash": "01bb3626b8cfa6d84c48cc3e8e6666f3",
+    "mtime": 1793727863.138948,
+    "seen": 1793727980.2038312,
+    "ast_hash": "9eddddee2e3ac07fe990c3da278fd86e",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/src/Prediction.cpp": {
@@ -738,9 +738,9 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/src/SpriteBank.cpp": {
-    "mtime": 1793660944.825669,
-    "seen": 1793721840.3689468,
-    "ast_hash": "653893b17e0d3206cc0a748630aa41f6",
+    "mtime": 1793727141.2618494,
+    "seen": 1793727980.203846,
+    "ast_hash": "5bab499a93c67015aed27493d655981a",
     "semantic_hash": ""
   },
   "tests/AugmentTests.cpp": {
@@ -792,9 +792,9 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/doc/README.md": {
-    "mtime": 1793662763.2179077,
-    "seen": 1793721840.3691447,
-    "ast_hash": "7063edbe043731ab4054360f1abc388f",
+    "mtime": 1793727255.9627306,
+    "seen": 1793727980.203998,
+    "ast_hash": "753f92f21a34a0b392221345fab5ea8e",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/assets/coin_spin_sheet.png": {
@@ -1110,27 +1110,27 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/BossDefs.hpp": {
-    "mtime": 1793651778.0203092,
-    "seen": 1793659751.5220368,
-    "ast_hash": "7913ea86bb1919038ccdb4a9fca17c61",
+    "mtime": 1793723500.8221374,
+    "seen": 1793727980.2036934,
+    "ast_hash": "88c498e044924e9a308f529bd93fe0b6",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Kinds.hpp": {
-    "mtime": 1793660569.2991104,
-    "seen": 1793721840.3688357,
-    "ast_hash": "b8d4950cc28744fba94eedf8782a1eeb",
+    "mtime": 1793724190.4168127,
+    "seen": 1793727980.2037406,
+    "ast_hash": "4413233bc62e83df8124abd95426d408",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/LevelBuilder.hpp": {
-    "mtime": 1793662543.254956,
-    "seen": 1793721840.3688438,
-    "ast_hash": "f8396ccb1dc6f33efdfd3945a091d347",
+    "mtime": 1793724002.9619253,
+    "seen": 1793727980.2037477,
+    "ast_hash": "ae15f1f4d619322deea6a612a1f69b7a",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Levels.hpp": {
-    "mtime": 1793656030.185011,
-    "seen": 1793659751.5220652,
-    "ast_hash": "630b4b521e9edad49ee97f17f4047584",
+    "mtime": 1793727943.8225799,
+    "seen": 1793727980.203755,
+    "ast_hash": "9d7a9796c9a8c4299f3f14f19c9abf03",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/MonsterDefs.hpp": {
@@ -1140,21 +1140,21 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Builder.hpp": {
-    "mtime": 1793656313.8665524,
-    "seen": 1793659751.5220385,
-    "ast_hash": "6575fbb1b3677afe262a084a0cb3d4a6",
+    "mtime": 1793724002.9623797,
+    "seen": 1793727980.2037039,
+    "ast_hash": "8e4877d8eda8242023a67cb2138c5d0c",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/src/maps/map1.cpp": {
-    "mtime": 1793661073.9503798,
-    "seen": 1793721840.3689504,
-    "ast_hash": "eb3ea0eee30674764e969b8855898664",
+    "mtime": 1793727853.7086625,
+    "seen": 1793727980.2038498,
+    "ast_hash": "169db62066cfdc9cfe5a0fabc38a3f80",
     "semantic_hash": ""
   },
   "tests/MapTests.cpp": {
-    "mtime": 1793662718.0509312,
-    "seen": 1793721840.3690035,
-    "ast_hash": "ada4baa3fc3894c5901843aa6fade904",
+    "mtime": 1793726710.2483983,
+    "seen": 1793727980.203902,
+    "ast_hash": "ef5f255bc4a50dece502cf1e34660b03",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/assets/stopwatch_sheet.png": {
@@ -1200,15 +1200,15 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/src/maps/map3.cpp": {
-    "mtime": 1793662746.314568,
-    "seen": 1793721840.368958,
-    "ast_hash": "8b705b449e0d7a6c4398a9c5740d8ca1",
+    "mtime": 1793725847.4055815,
+    "seen": 1793727980.2038574,
+    "ast_hash": "a3bb93accdd7f60ceffd5d3c05fabfde",
     "semantic_hash": ""
   },
   "docs/gameplay.md": {
-    "mtime": 1793721423.0879157,
-    "seen": 1793721840.3690882,
-    "ast_hash": "8d050b11f777db3e3678aa8abd927bdd",
+    "mtime": 1793727255.959375,
+    "seen": 1793727980.2039535,
+    "ast_hash": "593caf922a9159c1e53b0717cb0a2baf",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/assets/obstacle_rock.png": {
@@ -1218,9 +1218,9 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Obstacles.hpp": {
-    "mtime": 1793660611.4303854,
-    "seen": 1793721840.368882,
-    "ast_hash": "5c79288ca52aa784409836316c7f7ad0",
+    "mtime": 1793727853.708555,
+    "seen": 1793727980.2037783,
+    "ast_hash": "d83a30012dea64c197fdf795e678b957",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Solids.hpp": {
@@ -1236,9 +1236,9 @@
     "semantic_hash": ""
   },
   "roadmap.md": {
-    "mtime": 1793721672.4673986,
-    "seen": 1793721840.369124,
-    "ast_hash": "57e90bf6b9ac2b7bd2835eb5dff00861",
+    "mtime": 1793727259.8689325,
+    "seen": 1793727980.2039828,
+    "ast_hash": "e5d14a1ce4ac0c79b0615b999c179afd",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/assets/bg_girders.png": {
@@ -1313,28 +1313,94 @@
     "ast_hash": "c5f98c380d17b36c31ed36cab32fe737",
     "semantic_hash": ""
   },
-  "src/client/game/Rtype/assets/sounds/music_boss_dasher.ogg": {
-    "mtime": 1793662289.8327484,
-    "seen": 1793721840.3693974,
-    "ast_hash": "a26aa69d193784ef14f5629a5e163eea",
-    "semantic_hash": ""
-  },
   "src/client/game/Rtype/assets/sounds/music_boss_fortress.ogg": {
     "mtime": 1793662290.3737435,
     "seen": 1793721840.3694005,
     "ast_hash": "b86a98129025e000afa4c40e953188fe",
     "semantic_hash": ""
   },
-  "src/client/game/Rtype/assets/sounds/music_boss_summoner.ogg": {
-    "mtime": 1793662290.107746,
-    "seen": 1793721840.3694036,
-    "ast_hash": "549187b6ae899cabee74756a4f593db8",
+  "src/client/game/Rtype/assets/sounds/music_deathrun.ogg": {
+    "mtime": 1793724481.2215164,
+    "seen": 1793727980.2043078,
+    "ast_hash": "49fcd95e5a67bdf182bfd799c456faaa",
     "semantic_hash": ""
   },
-  "src/client/game/Rtype/assets/sounds/music_deathrun.ogg": {
-    "mtime": 1793662290.7117405,
-    "seen": 1793721840.3694067,
-    "ast_hash": "29d2056b5cd4ec5bfcb6d95c2f3c2ee6",
+  "src/client/game/Rtype/include/logic/BossHazards.hpp": {
+    "mtime": 1793727853.7083397,
+    "seen": 1793727980.2036984,
+    "ast_hash": "946f3742e8d180c2bc656bdb36364929",
+    "semantic_hash": ""
+  },
+  "src/client/game/Rtype/include/logic/DeathRuns.hpp": {
+    "mtime": 1793727863.1398668,
+    "seen": 1793727980.2037282,
+    "ast_hash": "b296237d8a36e4e9839279c3522d9082",
+    "semantic_hash": ""
+  },
+  "src/client/game/Rtype/include/logic/Scatter.hpp": {
+    "mtime": 1793726671.908579,
+    "seen": 1793727980.2037876,
+    "ast_hash": "fe592cbc8a286f880df587a7ec3f55bf",
+    "semantic_hash": ""
+  },
+  "src/client/game/Rtype/src/HudVictory.cpp": {
+    "mtime": 1793727863.1391792,
+    "seen": 1793727980.2038343,
+    "ast_hash": "4e76d9e58abf595f11378e89f4403b48",
+    "semantic_hash": ""
+  },
+  "Clean Code en C++ Moderne (Optimis\u00e9 IA).pdf": {
+    "mtime": 1793727768.9166925,
+    "seen": 1793727980.204012,
+    "ast_hash": "163884f3c3f834fd7943ba6618223f0b",
+    "semantic_hash": ""
+  },
+  "src/client/game/Rtype/assets/dasher_sheet.png": {
+    "mtime": 1793722018.8010106,
+    "seen": 1793727980.2041447,
+    "ast_hash": "5219443d683594c5109eeee8dc8e8da1",
+    "semantic_hash": ""
+  },
+  "src/client/game/Rtype/assets/meteor.png": {
+    "mtime": 1793727133.4213428,
+    "seen": 1793727980.2041497,
+    "ast_hash": "dfe99391f9b6b80b8923d6faf5c3fee6",
+    "semantic_hash": ""
+  },
+  "src/client/game/Rtype/assets/obstacle_mine.png": {
+    "mtime": 1793724132.6029327,
+    "seen": 1793727980.2041523,
+    "ast_hash": "4f904404608902cf183e9b7c4a6a9f53",
+    "semantic_hash": ""
+  },
+  "src/client/game/Rtype/assets/obstacle_turret.png": {
+    "mtime": 1793724132.605735,
+    "seen": 1793727980.2041621,
+    "ast_hash": "912ceb118585fdaa4e99a7d2b9b4b18f",
+    "semantic_hash": ""
+  },
+  "src/client/game/Rtype/assets/standard_sheet.png": {
+    "mtime": 1793722092.7117052,
+    "seen": 1793727980.204279,
+    "ast_hash": "e160ec60f418d78bc4d170bf05239948",
+    "semantic_hash": ""
+  },
+  "src/client/game/Rtype/assets/summoner_sheet.png": {
+    "mtime": 1793722047.8101666,
+    "seen": 1793727980.2042842,
+    "ast_hash": "c7bc1064f03a7d256cca2586c374693a",
+    "semantic_hash": ""
+  },
+  "src/client/game/Rtype/assets/sounds/dasher_theme.ogg": {
+    "mtime": 1793723628.3629568,
+    "seen": 1793727980.2042918,
+    "ast_hash": "004c7ed7558a18c5e2ecb2dfbe9ce353",
+    "semantic_hash": ""
+  },
+  "src/client/game/Rtype/assets/sounds/summoner_theme.ogg": {
+    "mtime": 1793723630.5529194,
+    "seen": 1793727980.204315,
+    "ast_hash": "54c3f067fee332fb2739c083d130706b",
     "semantic_hash": ""
   }
 }

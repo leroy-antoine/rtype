@@ -37,7 +37,7 @@ namespace rtype::protocol {
         std::uint8_t speedPercent = 100;
     };
 
-    constexpr std::uint8_t VERSION = 17;
+    constexpr std::uint8_t VERSION = 18;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;

@@ -27,7 +27,7 @@ A new client can be written from these two pages alone.
 | Direction | the client sends keys, the server sends the world |
 | Datagram | at most **1200 bytes**, carries one or several messages |
 | Byte order | **big-endian** for every integer and float |
-| Protocol version | `17` (`rtype::protocol::VERSION`), checked at connection |
+| Protocol version | `18` (`rtype::protocol::VERSION`), checked at connection |
 | Tick | the server simulates at 60 Hz and sends the states every tick |
 
 The server is the authority. A client never sends a position, a hit or a
@@ -194,8 +194,9 @@ to a client that has just connected, then one for each new entity.
 | 26 | laser beam (deadly) |
 | 27 | laser warning |
 | 28 | meteor |
+| 29 | Leviathan bolt |
 
-A value of 29 or more is invalid, and so is a player slot of 4 or more.
+A value of 30 or more is invalid, and so is a player slot of 4 or more.
 
 ### `DESTROY` (0x21)
 

@@ -49,6 +49,6 @@ namespace rtype {
     std::vector<LevelDef> map3()
     {
         return {rhythm(), minefield(), pinch(), gauntlet(),
-            {2500.f, {}, {{BK::Fortress, 1900.f}, {BK::Dasher, 2100.f}}, {}}};
+            {2500.f, {}, {{BK::Fortress, 1900.f}}, {}}};
     }
 }

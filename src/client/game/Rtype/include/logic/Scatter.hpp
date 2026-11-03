@@ -5,7 +5,9 @@
 #include <cstdint>
 #include <random>
 #include "DeathRuns.hpp"
+#include "Formations.hpp"
 #include "LevelBuilder.hpp"
+#include "Zones.hpp"
 
 namespace rtype {
     // Les niveaux normaux : de l'ordre d'une dizaine d'obstacles, repartis sur
@@ -55,7 +57,32 @@ namespace rtype {
         if (number < 3) {
             return 0;
         }
+        if (zoneOf(0, static_cast<std::size_t>(number)) == Zone::Core) {
+            return 5;
+        }
         return std::min(3, 1 + (number - 3) / 6);
+    }
+
+    // Dans l'epave, des mines et des tourelles remplacent une partie des
+    // asteroides.
+    inline void wreckage(std::vector<ObstacleStep> &walls, const float at,
+        const int index)
+    {
+        if (index % 3 == 1) {
+            placeMines(walls, at, 1.f, index % 2 == 0);
+        } else {
+            placeTurret(walls, at, 1.f, index);
+        }
+    }
+
+    inline void placeScattered(std::vector<ObstacleStep> &walls,
+        const Zone zone, const float at, std::mt19937 &rng, const int index)
+    {
+        if (zone == Zone::Wreckage && index % 3 != 0) {
+            wreckage(walls, at, index);
+            return;
+        }
+        walls.push_back(asteroid(rng, at));
     }
 
     inline void scatter(LevelDef &level, const unsigned number)
@@ -66,6 +93,7 @@ namespace rtype {
             - static_cast<int>(level.obstacles.size());
         const int lasers = scatterLasers(static_cast<int>(number));
         const int every = std::max(1, missing / (lasers + 1));
+        const Zone zone = zoneOf(0, number);
         int placed = 0;
 
         for (int i = 0; i < missing && limit > SCATTER_FROM; ++i) {
@@ -79,9 +107,43 @@ namespace rtype {
                 level.obstacles.push_back(laser(at));
                 ++placed;
             } else {
-                level.obstacles.push_back(asteroid(rng, at));
+                placeScattered(level.obstacles, zone, at, rng, i);
             }
         }
         sortWalls(level.obstacles);
+    }
+
+    inline bool canTakeFormation(const WaveStep &wave)
+    {
+        return wave.count >= 3 && wave.kind != MonsterKind::Tank
+            && wave.kind != MonsterKind::Bomber
+            && wave.kind < MonsterKind::MiniTank;
+    }
+
+    inline std::vector<Shape> shapesOf(const Zone zone)
+    {
+        if (zone == Zone::Nebula) {
+            return {Shape::Sine, Shape::Wedge};
+        }
+        if (zone == Zone::Wreckage) {
+            return {Shape::Column, Shape::Wedge};
+        }
+        if (zone == Zone::Core) {
+            return {Shape::Wedge, Shape::Column, Shape::Sine};
+        }
+        return {};
+    }
+
+    // Les vagues des niveaux avances prennent des formes propres a la zone.
+    inline void shapeWaves(LevelDef &level, const unsigned number)
+    {
+        const std::vector<Shape> shapes = shapesOf(zoneOf(0, number));
+
+        for (std::size_t i = 0; i < level.waves.size() && !shapes.empty();
+            ++i) {
+            if (canTakeFormation(level.waves[i])) {
+                level.waves[i].shape = shapes[(i + number) % shapes.size()];
+            }
+        }
     }
 }

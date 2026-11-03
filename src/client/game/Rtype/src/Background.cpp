@@ -299,22 +299,6 @@ namespace client {
         }
     }
 
-    void Background::drawRings(Engine::Renderer &renderer,
-        const float elapsed) const
-    {
-        const Engine::Sprite &ring = _sprites.backdrop(BackdropId::Ring);
-
-        for (int i = 0; i < 3; ++i) {
-            const float phase = wrap(elapsed * 0.16f
-                + static_cast<float>(i) / 3.f, 1.f);
-            const float size = 90.f + phase * 1300.f;
-
-            renderer.drawResized(ring.texture,
-                {_width * 0.72f - size / 2.f, _height / 2.f - size / 2.f},
-                ring.animation.firstFrame, {size, size});
-        }
-    }
-
     void Background::drawAura(Engine::Renderer &renderer,
         const float elapsed) const
     {
@@ -332,7 +316,6 @@ namespace client {
         } else if (_aura == Aura::Summoner) {
             renderer.drawRect({0.f, 0.f}, {_width, _height},
                 withAlpha(VIOLET, 22.f * _auraLevel));
-            drawRings(renderer, elapsed);
         } else {
             drawVignette(renderer, RED, 170.f * _auraLevel * pulse);
             drawBars(renderer, elapsed);
