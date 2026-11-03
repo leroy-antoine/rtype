@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include "engine/core/Registry.hpp"
@@ -19,7 +20,7 @@ namespace rtype {
     struct AugmentDef {
         AugmentId id;
         Rarity rarity;
-        int price;
+        std::size_t price;
         AugmentEffect apply;
     };
 
@@ -71,6 +72,16 @@ namespace rtype {
             }
         }
         return std::nullopt;
+    }
+
+    inline std::size_t priceOf(const AugmentId id)
+    {
+        const std::optional<AugmentDef> def = findAugment(id);
+
+        if (!def) {
+            return 0;
+        }
+        return def->price;
     }
 
     inline bool applyAugment(Engine::Registry &reg, const Engine::Entity e,

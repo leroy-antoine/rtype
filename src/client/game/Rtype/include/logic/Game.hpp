@@ -21,6 +21,7 @@
 #include "Monsters.hpp"
 #include "Queries.hpp"
 #include "Replication.hpp"
+#include "Shop.hpp"
 #include "Status.hpp"
 #include "Systems.hpp"
 #include "Waves.hpp"
@@ -104,6 +105,37 @@ namespace rtype {
                 return {};
             }
             return owned->second;
+        }
+
+        void restockShop(const ShopTier &tier)
+        {
+            _shopOffers = rollOffers(_rng, config::SHOP_OFFER_COUNT, tier,
+                _purchased);
+        }
+
+        [[nodiscard]] const std::vector<AugmentId> &shopOffers() const
+        {
+            return _shopOffers;
+        }
+
+        bool buyAugment(const int slot, const AugmentId id)
+        {
+            const auto offer = std::ranges::find(_shopOffers, id);
+            std::size_t &coins = _reg.get<CoinCounter>(_coinCounter).total;
+
+            if (!isUsedSlot(slot) || offer == _shopOffers.end()
+                || coins < priceOf(id)) {
+                return false;
+            }
+            coins -= priceOf(id);
+            _shopOffers.erase(offer);
+            _purchased.push_back(id);
+            return addAugment(slot, id);
+        }
+
+        [[nodiscard]] std::size_t coins() const
+        {
+            return _reg.get<CoinCounter>(_coinCounter).total;
         }
 
         void setInput(const int slot, const PlayerInput &input)
@@ -353,7 +385,6 @@ namespace rtype {
             _bossSpawned = false;
             _phase = Phase::Playing;
             _phaseTimer = 0.f;
-            _reg.get<CoinCounter>(_coinCounter).total = 0;
             for (int slot = 0; slot < SLOTS; ++slot) {
                 if (isUsedSlot(slot)) {
                     spawnPlayer(slot);
@@ -398,6 +429,8 @@ namespace rtype {
         Engine::Registry _reg;
         SlotTable _usedSlots{};
         std::map<int, std::vector<AugmentId>> _augments;
+        std::vector<AugmentId> _shopOffers;
+        std::vector<AugmentId> _purchased;
         Phase _phase = Phase::Playing;
         float _phaseTimer = 0.f;
         float _scroll = 0.f;
