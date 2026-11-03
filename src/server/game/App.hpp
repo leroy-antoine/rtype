@@ -10,6 +10,7 @@
 #include "engine/network/Server.hpp"
 #include "logic/Config.hpp"
 #include "logic/Game.hpp"
+#include "rtype/Protocol.hpp"
 
 namespace server {
     class App {
@@ -38,11 +39,15 @@ namespace server {
         void handle(const Engine::ServerEvents::Disconnected &event);
         void handle(const Engine::ServerEvents::Message &event);
 
+        void syncAugments();
+        [[nodiscard]] rtype::protocol::OwnedAugment ownedAugments() const;
+
         Engine::Server _server;
         rtype::Game _game;
         Engine::FixedTimestep _timestep{rtype::config::FIXED_DT};
         std::unordered_map<Engine::ClientId, int> _slots;
         std::unordered_map<Engine::ClientId, std::uint32_t> _lastInputs;
         std::size_t _ticks = 0;
+        rtype::protocol::OwnedAugment _sentAugments{};
     };
 }
