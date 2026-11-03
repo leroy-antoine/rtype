@@ -2,7 +2,9 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <optional>
 #include <string>
+#include <vector>
 #include "logic/Config.hpp"
 #include "client/Hud.hpp"
 
@@ -20,6 +22,35 @@ namespace client {
         constexpr std::array<Color, 4> SLOT_COLORS = {{
             {90, 170, 255, 255}, {255, 90, 90, 255},
             {110, 230, 110, 255}, {255, 220, 80, 255}}};
+
+        // Abreviation affichee pour chaque augment.
+        std::string augmentLabel(const rtype::AugmentId id)
+        {
+            switch (id) {
+                case rtype::AugmentId::DamageUp: return "DMG";
+                case rtype::AugmentId::SpeedUp: return "SPD";
+                case rtype::AugmentId::MaxHpUp: return "HP";
+                case rtype::AugmentId::FireRateUp: return "FR";
+                case rtype::AugmentId::Count: break;
+            }
+            return "?";
+        }
+
+        Color rarityColor(const rtype::AugmentId id)
+        {
+            const std::optional<rtype::AugmentDef> def = rtype::findAugment(id);
+
+            if (!def) {
+                return WHITE;
+            }
+            switch (def->rarity) {
+                case rtype::Rarity::Common: return {170, 170, 170, 255};
+                case rtype::Rarity::Rare: return {80, 150, 255, 255};
+                case rtype::Rarity::Epic: return {190, 90, 255, 255};
+                case rtype::Rarity::Legendary: return {255, 165, 0, 255};
+            }
+            return WHITE;
+        }
     }
 
     Hud::Hud(Engine::Renderer &renderer, const SpriteBank &sprites,
@@ -39,7 +70,7 @@ namespace client {
             return;
         }
         trackPhase(status->phase, elapsed);
-        drawPlayers(*status);
+        drawPlayers(*status, replica.augments());
         drawCoins(*status, elapsed);
         drawBossBar(*status);
         if (status->phase == rtype::Phase::Playing) {
@@ -58,8 +89,9 @@ namespace client {
         }
     }
 
-    // Une ligne par joueur : son nom (P1...) et sa barre de vie.
-    void Hud::drawPlayers(const rtype::GameStatus &status)
+    // Une ligne par joueur : son nom (P1...), sa barre de vie et ses augments.
+    void Hud::drawPlayers(const rtype::GameStatus &status,
+        const rtype::protocol::OwnedAugment &augments)
     {
         float top = 16.f;
 
@@ -71,7 +103,32 @@ namespace client {
             _font.draw("P" + std::to_string(player.slot + 1), {16.f, top},
                 2.f, SLOT_COLORS[slot]);
             drawBar({BAR_X, top}, {BAR_WIDTH, BAR_HEIGHT}, ratio, GREEN);
+            if (slot < augments.size()) {
+                drawAugments(augments[slot], top);
+            }
             top += ROW_STEP;
+        }
+    }
+
+    // Une pastille par augment, a droite de la barre de vie, coloree selon
+    // la rarete.
+    void Hud::drawAugments(const std::vector<rtype::AugmentId> &ids,
+        const float top)
+    {
+        const float textHeight = Font::height(AUGMENT_TEXT_SCALE);
+        const float textY = top + (BAR_HEIGHT - textHeight) / 2.f;
+        float x = BAR_X + BAR_WIDTH + AUGMENT_GAP;
+
+        for (const rtype::AugmentId id : ids) {
+            const std::string label = augmentLabel(id);
+            const float textWidth = Font::width(label, AUGMENT_TEXT_SCALE);
+
+            _renderer.drawRect({x - AUGMENT_PADDING, textY - AUGMENT_PADDING},
+                {textWidth + 2.f * AUGMENT_PADDING,
+                    textHeight + 2.f * AUGMENT_PADDING}, DARK);
+            _font.draw(label, {x, textY}, AUGMENT_TEXT_SCALE,
+                rarityColor(id));
+            x += textWidth + 2.f * AUGMENT_PADDING + AUGMENT_PADDING;
         }
     }
 

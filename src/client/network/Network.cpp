@@ -91,6 +91,8 @@ namespace client {
             case rtype::protocol::STATES: applyDecoded(replica, rtype::protocol::decodeStates(event.payload)); break;
             case rtype::protocol::STATUS: applyDecoded(replica, rtype::protocol::decodeStatus(event.payload)); break;
             case rtype::protocol::OWN_STATE: applyDecoded(replica, rtype::protocol::decodeOwnState(event.payload)); break;
+            case rtype::protocol::AUGMENTS: applyDecoded(replica, rtype::protocol::decodeAugments(event.payload)); break;
+            case rtype::protocol::SHOP: applyDecoded(replica, rtype::protocol::decodeShop(event.payload)); break;
             case rtype::protocol::YOU: assignSlot(replica, rtype::protocol::decodeYou(event.payload)); break;
             default: break;
         }

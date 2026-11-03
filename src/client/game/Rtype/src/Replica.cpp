@@ -182,6 +182,16 @@ namespace client {
         _status = status;
     }
 
+    void Replica::apply(const rtype::protocol::OwnedAugment &augments)
+    {
+        _augments = augments;
+    }
+
+    void Replica::apply(const std::vector<rtype::AugmentId> &shopOffers)
+    {
+        _shopOffers = shopOffers;
+    }
+
     void Replica::assignSlot(const int slot)
     {
         _slot = slot;
@@ -200,6 +210,16 @@ namespace client {
     std::optional<int> Replica::slot() const
     {
         return _slot;
+    }
+
+    const rtype::protocol::OwnedAugment &Replica::augments() const
+    {
+        return _augments;
+    }
+
+    const std::vector<rtype::AugmentId> &Replica::shopOffers() const
+    {
+        return _shopOffers;
     }
 
     std::vector<Cue> Replica::takeCues()

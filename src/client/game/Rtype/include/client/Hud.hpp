@@ -1,10 +1,12 @@
 #pragma once
 
 #include <optional>
+#include <vector>
 #include "engine/window/Renderer.hpp"
 #include "Font.hpp"
 #include "Replica.hpp"
 #include "SpriteBank.hpp"
+#include "logic/Augments.hpp"
 #include "logic/Status.hpp"
 
 namespace client {
@@ -28,8 +30,13 @@ namespace client {
         static constexpr float COIN_ICON_SIZE = 32.f;
         static constexpr float COIN_ICON_GAP = 10.f;
         static constexpr float COIN_TEXT_SCALE = 4.f;
+        static constexpr float AUGMENT_GAP = 12.f;
+        static constexpr float AUGMENT_TEXT_SCALE = 1.5f;
+        static constexpr float AUGMENT_PADDING = 3.f;
 
-        void drawPlayers(const rtype::GameStatus &status);
+        void drawPlayers(const rtype::GameStatus &status,
+            const rtype::protocol::OwnedAugment &augments);
+        void drawAugments(const std::vector<rtype::AugmentId> &ids, float top);
         void drawCoins(const rtype::GameStatus &status, float elapsed);
         void drawBar(Engine::Vector2f position, Engine::Vector2f size,
             float ratio, Engine::Color fill);
