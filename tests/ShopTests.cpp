@@ -298,6 +298,7 @@ TEST(the_next_level_starts_when_the_countdown_ends)
     CHECK(game.coins() == 1000 - priceOf(bought));
     CHECK(game.ownedAugments(0) == std::vector<AugmentId>{bought});
     CHECK(!game.status().players[0].ready);
+    CHECK(game.shopOffers().empty());
 }
 
 TEST(a_player_who_joins_the_shop_is_not_ready)

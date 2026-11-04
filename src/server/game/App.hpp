@@ -42,6 +42,7 @@ namespace server {
 
         void syncAugments();
         void syncShop();
+        void handleBuy(Engine::ClientId client, int slot, const rtype::protocol::Payload &payload);
         [[nodiscard]] rtype::protocol::OwnedAugment ownedAugments() const;
 
         Engine::Server _server;
@@ -51,6 +52,6 @@ namespace server {
         std::unordered_map<Engine::ClientId, std::uint32_t> _lastInputs;
         std::size_t _ticks = 0;
         rtype::protocol::OwnedAugment _sentAugments{};
-        std::vector<rtype::AugmentId> _sentShop;
+        std::vector<rtype::AugmentId> _sentOffers;
     };
 }

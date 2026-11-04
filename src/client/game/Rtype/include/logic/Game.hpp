@@ -455,6 +455,7 @@ namespace rtype {
             _phaseTimer = 0.f;
             _ready.clear();
             _countdown.reset();
+            _shopOffers.clear();
             for (int slot = 0; slot < SLOTS; ++slot) {
                 if (isUsedSlot(slot)) {
                     spawnPlayer(slot);

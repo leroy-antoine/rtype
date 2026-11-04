@@ -31,12 +31,17 @@ namespace rtype::protocol {
         PlayerInput input;
     };
 
+    struct BuyResult {
+        AugmentId id = AugmentId::DamageUp;
+        bool ok = false;
+    };
+
     struct OwnState {
         std::uint32_t lastInput = 0;
         gameLogic::Vec2Pos pos;
     };
 
-    constexpr std::uint8_t VERSION = 7;
+    constexpr std::uint8_t VERSION = 8;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
@@ -74,6 +79,9 @@ namespace rtype::protocol {
 
     constexpr Engine::MessageType AUGMENTS = 0x26;
     constexpr Engine::MessageType SHOP = 0x27;
+    constexpr Engine::MessageType BUY_RESULT = 0x28;
+    constexpr std::size_t BUY_SIZE = 1;
+    constexpr std::size_t BUY_RESULT_SIZE = 2;
     constexpr std::size_t MAX_OWNED_AUGMENTS = 32;
 
     using OwnedAugment = std::array<std::vector<AugmentId>, config::MAX_PLAYERS>;
@@ -389,22 +397,6 @@ namespace rtype::protocol {
         return static_cast<AugmentId>(*id);
     }
 
-    inline Payload encodeBuy(const AugmentId id)
-    {
-        return {static_cast<std::uint8_t>(id)};
-    }
-
-    inline std::optional<AugmentId> decodeBuy(const Payload &payload)
-    {
-        Engine::BinaryReader reader(payload);
-        const std::optional<AugmentId> id = readAugmentId(reader);
-
-        if (!id || reader.remaining() != 0) {
-            return std::nullopt;
-        }
-        return id;
-    }
-
     inline Payload encodeReady(const bool ready)
     {
         return {ready ? std::uint8_t{1} : std::uint8_t{0}};
@@ -518,5 +510,41 @@ namespace rtype::protocol {
             return std::nullopt;
         }
         return owned;
+    }
+
+    inline Payload encodeBuy(const AugmentId id)
+    {
+        return {static_cast<std::uint8_t>(id)};
+    }
+
+    inline std::optional<AugmentId> decodeBuy(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+
+        if (payload.size() != BUY_SIZE) {
+            return std::nullopt;
+        }
+        return readAugmentId(reader);
+    }
+
+    inline Payload encode(const BuyResult &result)
+    {
+        Engine::BinaryWriter writer;
+
+        writer.writeU8(static_cast<std::uint8_t>(result.id));
+        writer.writeU8(result.ok ? 1 : 0);
+        return writer.data();
+    }
+
+    inline std::optional<BuyResult> decodeBuyResult(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+        const std::optional<AugmentId> id = readAugmentId(reader);
+        const std::optional<std::uint8_t> ok = reader.readU8();
+
+        if (payload.size() != BUY_RESULT_SIZE || !id || !ok || *ok > 1) {
+            return std::nullopt;
+        }
+        return BuyResult{*id, *ok == 1};
     }
 }

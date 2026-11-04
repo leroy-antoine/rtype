@@ -62,7 +62,7 @@ namespace client {
         }
     }
 
-    void Network::requestBuy(const rtype::AugmentId id)
+    void Network::buy(const rtype::AugmentId id)
     {
         if (_client.connected()) {
             _client.send(rtype::protocol::BUY, rtype::protocol::encodeBuy(id), Engine::Delivery::Reliable);
@@ -107,6 +107,7 @@ namespace client {
             case rtype::protocol::OWN_STATE: applyDecoded(replica, rtype::protocol::decodeOwnState(event.payload)); break;
             case rtype::protocol::AUGMENTS: applyDecoded(replica, rtype::protocol::decodeAugments(event.payload)); break;
             case rtype::protocol::SHOP: applyDecoded(replica, rtype::protocol::decodeShop(event.payload)); break;
+            case rtype::protocol::BUY_RESULT: applyDecoded(replica, rtype::protocol::decodeBuyResult(event.payload)); break;
             case rtype::protocol::YOU: assignSlot(replica, rtype::protocol::decodeYou(event.payload)); break;
             default: break;
         }

@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include "logic/Config.hpp"
+#include "client/AugmentStyle.hpp"
 #include "client/Hud.hpp"
 
 namespace client {
@@ -23,37 +24,6 @@ namespace client {
             {90, 170, 255, 255}, {255, 90, 90, 255},
             {110, 230, 110, 255}, {255, 220, 80, 255}}};
 
-        std::string augmentLabel(const rtype::AugmentId id)
-        {
-            switch (id) {
-                case rtype::AugmentId::DamageUp: return "DMG";
-                case rtype::AugmentId::SpeedUp: return "SPD";
-                case rtype::AugmentId::MaxHpUp: return "HP";
-                case rtype::AugmentId::FireRateUp: return "FR";
-                case rtype::AugmentId::Regeneration: return "REG";
-                case rtype::AugmentId::Shield: return "SHD";
-                case rtype::AugmentId::MultiShot: return "MS";
-                case rtype::AugmentId::Count: break;
-            }
-            return "?";
-        }
-
-        Color rarityColor(const rtype::AugmentId id)
-        {
-            const std::optional<rtype::AugmentDef> def = rtype::findAugment(id);
-
-            if (!def) {
-                return WHITE;
-            }
-            switch (def->rarity) {
-                case rtype::Rarity::Common: return {170, 170, 170, 255};
-                case rtype::Rarity::Rare: return {80, 150, 255, 255};
-                case rtype::Rarity::Epic: return {190, 90, 255, 255};
-                case rtype::Rarity::Legendary: return {255, 165, 0, 255};
-            }
-            return WHITE;
-        }
-
         std::string shopHint(const rtype::GameStatus &status,
             const std::optional<int> self)
         {
@@ -65,7 +35,7 @@ namespace client {
             if (ready) {
                 return "WAITING FOR THE OTHER PLAYERS";
             }
-            return "PRESS ENTER WHEN READY";
+            return "PRESS SPACE WHEN READY";
         }
     }
 
@@ -92,7 +62,7 @@ namespace client {
         if (status->phase == rtype::Phase::Playing) {
             drawRespawnHint(*status, replica.slot(), elapsed);
         } else if (status->phase == rtype::Phase::Shop) {
-            drawShopScreen(*status, replica.slot(), elapsed);
+            drawShopScreen(*status, replica, elapsed);
         } else {
             drawEndScreen(*status, elapsed);
         }
@@ -241,19 +211,23 @@ namespace client {
     }
 
     void Hud::drawShopScreen(const rtype::GameStatus &status,
-        const std::optional<int> self, const float elapsed)
+        const Replica &replica, const float elapsed)
     {
-        _font.drawCentered("SHOP", _width / 2.f, _height / 2.f - 50.f, 10.f,
-            YELLOW);
+        const float bottom = _height - SHOP_TEXT_MARGIN;
+
+        if (replica.shopOffers().empty()) {
+            _font.drawCentered("SHOP", _width / 2.f, _height / 2.f - 50.f,
+                10.f, YELLOW);
+        }
         if (status.countdown > 0.f) {
             _font.drawCentered("NEXT LEVEL IN "
                 + std::to_string(std::lround(std::ceil(status.countdown))),
-                _width / 2.f, _height / 2.f + 50.f, 3.f, WHITE);
+                _width / 2.f, bottom, 3.f, WHITE);
             return;
         }
         if (std::fmod(elapsed, 1.f) < 0.5f) {
-            _font.drawCentered(shopHint(status, self), _width / 2.f,
-                _height / 2.f + 50.f, 3.f, WHITE);
+            _font.drawCentered(shopHint(status, replica.slot()), _width / 2.f,
+                bottom, 3.f, WHITE);
         }
     }
 }
