@@ -192,6 +192,12 @@ namespace client {
         _shopOffers = shopOffers;
     }
 
+    void Replica::apply(const rtype::protocol::BuyResult &result)
+    {
+        _buyResult = result;
+        _cues.push_back(result.ok ? Cue::Purchase : Cue::PurchaseRefused);
+    }
+
     void Replica::assignSlot(const int slot)
     {
         _slot = slot;
@@ -225,6 +231,11 @@ namespace client {
     std::vector<Cue> Replica::takeCues()
     {
         return std::exchange(_cues, {});
+    }
+
+    std::optional<rtype::protocol::BuyResult> Replica::takeBuyResult()
+    {
+        return std::exchange(_buyResult, std::nullopt);
     }
 
     void Replica::recordSpawnCue(const rtype::EntitySpawned &spawn)

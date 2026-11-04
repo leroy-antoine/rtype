@@ -139,7 +139,7 @@ TEST(the_assigned_slot_round_trips_and_is_validated)
 
 TEST(the_protocol_version_changed_with_the_new_messages)
 {
-    CHECK(protocol::VERSION >= 6);
+    CHECK(protocol::VERSION >= 7);
 }
 
 TEST(owned_augments_survive_an_encode_decode_round_trip)
@@ -210,4 +210,51 @@ TEST(shop_offers_round_trip_and_are_validated)
         static_cast<std::uint8_t>(AugmentId::Count)}).has_value());
     CHECK(!protocol::decodeShop({static_cast<std::uint8_t>(
         config::SHOP_OFFER_COUNT + 1)}).has_value());
+}
+
+TEST(every_augment_id_survives_a_buy_round_trip)
+{
+    for (const AugmentDef &def : AUGMENTS) {
+        const std::optional<AugmentId> decoded =
+            protocol::decodeBuy(protocol::encodeBuy(def.id));
+
+        CHECK(decoded.has_value());
+        CHECK(*decoded == def.id);
+    }
+}
+
+TEST(a_malformed_buy_is_rejected)
+{
+    CHECK(!protocol::decodeBuy({}).has_value());
+    CHECK(!protocol::decodeBuy({0, 0}).has_value());
+    CHECK(!protocol::decodeBuy({static_cast<std::uint8_t>(AugmentId::Count)})
+        .has_value());
+}
+
+TEST(a_buy_result_survives_an_encode_decode_round_trip)
+{
+    const protocol::BuyResult accepted{AugmentId::Shield, true};
+    const protocol::BuyResult refused{AugmentId::MultiShot, false};
+    const std::optional<protocol::BuyResult> first =
+        protocol::decodeBuyResult(protocol::encode(accepted));
+    const std::optional<protocol::BuyResult> second =
+        protocol::decodeBuyResult(protocol::encode(refused));
+
+    CHECK(first.has_value());
+    CHECK(first->id == AugmentId::Shield);
+    CHECK(first->ok);
+    CHECK(second.has_value());
+    CHECK(second->id == AugmentId::MultiShot);
+    CHECK(!second->ok);
+}
+
+TEST(a_malformed_buy_result_is_rejected)
+{
+    const auto bad = static_cast<std::uint8_t>(AugmentId::Count);
+
+    CHECK(!protocol::decodeBuyResult({}).has_value());
+    CHECK(!protocol::decodeBuyResult({0}).has_value());
+    CHECK(!protocol::decodeBuyResult({0, 1, 0}).has_value());
+    CHECK(!protocol::decodeBuyResult({0, 2}).has_value());
+    CHECK(!protocol::decodeBuyResult({bad, 1}).has_value());
 }

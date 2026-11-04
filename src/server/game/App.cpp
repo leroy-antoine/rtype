@@ -54,6 +54,7 @@ namespace server {
             broadcastStatus();
         }
         syncAugments();
+        syncShop();
         _server.flush();
     }
 
@@ -110,6 +111,8 @@ namespace server {
             _server.send(client, rtype::protocol::SPAWN, rtype::protocol::encode(spawn), Engine::Delivery::Reliable);
         }
         _server.send(client, rtype::protocol::AUGMENTS, rtype::protocol::encodeAugments(ownedAugments()),
+            Engine::Delivery::Reliable);
+        _server.send(client, rtype::protocol::SHOP, rtype::protocol::encodeShop(_game.shopOffers()),
             Engine::Delivery::Reliable);
     }
 
@@ -174,7 +177,24 @@ namespace server {
         }
         if (event.type == rtype::protocol::RESPAWN) {
             _game.respawnPlayer(*slot);
+            return;
         }
+        if (event.type == rtype::protocol::BUY) {
+            handleBuy(event.client, *slot, event.payload);
+        }
+    }
+
+    void App::handleBuy(const Engine::ClientId client, const int slot, const rtype::protocol::Payload &payload)
+    {
+        const std::optional<rtype::AugmentId> id = rtype::protocol::decodeBuy(payload);
+
+        if (!id) {
+            return;
+        }
+        const rtype::protocol::BuyResult result{*id, _game.buyAugment(slot, *id)};
+
+        _server.send(client, rtype::protocol::BUY_RESULT, rtype::protocol::encode(result),
+            Engine::Delivery::Reliable);
     }
 
     rtype::protocol::OwnedAugment App::ownedAugments() const
@@ -195,6 +215,15 @@ namespace server {
             _server.broadcast(rtype::protocol::AUGMENTS, rtype::protocol::encodeAugments(owned),
                 Engine::Delivery::Reliable);
             _sentAugments = std::move(owned);
+        }
+    }
+
+    void App::syncShop()
+    {
+        if (_game.shopOffers() != _sentOffers) {
+            _server.broadcast(rtype::protocol::SHOP, rtype::protocol::encodeShop(_game.shopOffers()),
+                Engine::Delivery::Reliable);
+            _sentOffers = _game.shopOffers();
         }
     }
 }

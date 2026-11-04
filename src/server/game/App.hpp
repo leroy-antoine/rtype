@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <optional>
 #include <unordered_map>
+#include <vector>
 #include "engine/core/FixedTimestep.hpp"
 #include "engine/network/Event.hpp"
 #include "engine/network/Server.hpp"
@@ -40,6 +41,8 @@ namespace server {
         void handle(const Engine::ServerEvents::Message &event);
 
         void syncAugments();
+        void syncShop();
+        void handleBuy(Engine::ClientId client, int slot, const rtype::protocol::Payload &payload);
         [[nodiscard]] rtype::protocol::OwnedAugment ownedAugments() const;
 
         Engine::Server _server;
@@ -49,5 +52,6 @@ namespace server {
         std::unordered_map<Engine::ClientId, std::uint32_t> _lastInputs;
         std::size_t _ticks = 0;
         rtype::protocol::OwnedAugment _sentAugments{};
+        std::vector<rtype::AugmentId> _sentOffers;
     };
 }

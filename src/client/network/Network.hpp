@@ -16,6 +16,7 @@ namespace client {
         bool update(Replica &replica);
         void sendInput(std::uint32_t sequence, const rtype::PlayerInput &input);
         void requestRespawn();
+        void buy(rtype::AugmentId id);
         void flush();
         [[nodiscard]] bool connected() const;
 
