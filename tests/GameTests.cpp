@@ -237,7 +237,22 @@ TEST(the_game_is_not_lost_while_a_teammate_is_alive)
     CHECK(game.phase() == Phase::Playing);
 }
 
-TEST(a_finished_game_restarts_after_the_delay)
+TEST(a_lost_game_restarts_after_the_delay)
+{
+    Game game(1);
+
+    game.addPlayer();
+    run(game, 3.f);
+    kill(game, 0);
+    game.update(config::FIXED_DT);
+    CHECK(game.phase() == Phase::Defeat);
+    run(game, config::RESTART_DELAY + 1.f);
+    CHECK(game.phase() == Phase::Playing);
+    CHECK(game.scroll() < 3.f * config::SCROLL_SPEED);
+    CHECK(game.isPlayerAlive(0));
+}
+
+TEST(a_won_game_opens_the_shop_after_the_delay)
 {
     Game game(1);
 
@@ -247,10 +262,10 @@ TEST(a_finished_game_restarts_after_the_delay)
     game.update(config::FIXED_DT);
     CHECK(game.phase() == Phase::Victory);
     run(game, config::RESTART_DELAY + 1.f);
-    CHECK(game.phase() == Phase::Playing);
-    CHECK(game.scroll() < config::BOSS_SPAWN_SCROLL);
-    CHECK(game.isPlayerAlive(0));
+    CHECK(game.phase() == Phase::Shop);
+    CHECK(game.shopOffers().size() == config::SHOP_OFFER_COUNT);
     CHECK(collectWith<BossTag>(game.registry()).empty());
+    CHECK(collectMonsters(game.registry()).empty());
 }
 
 TEST(the_status_describes_players_and_the_boss)
