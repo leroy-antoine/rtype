@@ -27,14 +27,36 @@ namespace {
         return offers;
     }
 
+    void clearEnemies(Game &game)
+    {
+        for (const Engine::Entity e : collectMonsters(game.registry())) {
+            game.registry().destroy(e);
+        }
+    }
+
+    void reachShop(Game &game)
+    {
+        while (game.phase() != Phase::Shop) {
+            clearEnemies(game);
+            game.update(config::FIXED_DT);
+        }
+    }
+
     Game shopWithCoins(const std::size_t coins)
     {
         Game game(1);
 
         game.addPlayer();
+        reachShop(game);
         addToPurse(game.registry(), coins);
-        game.restockShop(ShopTier{});
         return game;
+    }
+
+    void runFor(Game &game, const float seconds)
+    {
+        for (float t = 0.f; t < seconds; t += config::FIXED_DT) {
+            game.update(config::FIXED_DT);
+        }
     }
 }
 
@@ -190,15 +212,114 @@ TEST(only_offered_augments_can_be_bought)
     CHECK(game.coins() == 1000);
 }
 
-TEST(coins_are_kept_when_the_game_restarts)
+TEST(coins_are_kept_after_a_defeat)
 {
-    Game game = shopWithCoins(100);
+    Game game(1);
 
+    game.addPlayer();
+    addToPurse(game.registry(), 100);
     game.registry().get<Health>(*findPlayerBySlot(game.registry(), 0)).hp = 0;
-    for (float t = 0.f; t < config::RESTART_DELAY + 1.f;
-        t += config::FIXED_DT) {
-        game.update(config::FIXED_DT);
-    }
+    runFor(game, config::RESTART_DELAY + 1.f);
     CHECK(game.phase() == Phase::Playing);
     CHECK(game.coins() == 100);
+}
+
+TEST(a_purchase_is_refused_outside_the_shop)
+{
+    Game game(1);
+
+    game.addPlayer();
+    addToPurse(game.registry(), 1000);
+    game.restockShop(ShopTier{});
+    CHECK(!game.buyAugment(0, game.shopOffers().front()));
+    CHECK(game.coins() == 1000);
+}
+
+TEST(ready_is_refused_outside_the_shop)
+{
+    Game game(1);
+
+    game.addPlayer();
+    CHECK(!game.setReady(0, true));
+    CHECK(!game.status().players[0].ready);
+}
+
+TEST(nobody_is_ready_when_the_shop_opens)
+{
+    Game game = shopWithCoins(0);
+
+    CHECK(!game.status().players[0].ready);
+    CHECK(game.status().countdown == 0.f);
+}
+
+TEST(the_countdown_starts_when_every_player_is_ready)
+{
+    Game game(1);
+
+    game.addPlayer();
+    game.addPlayer();
+    reachShop(game);
+    game.setReady(0, true);
+    runFor(game, 1.f);
+    CHECK(game.status().countdown == 0.f);
+    game.setReady(1, true);
+    game.update(config::FIXED_DT);
+    CHECK(game.status().countdown > 0.f);
+    CHECK(game.phase() == Phase::Shop);
+}
+
+TEST(the_countdown_is_cancelled_when_a_player_is_not_ready)
+{
+    Game game(1);
+
+    game.addPlayer();
+    game.addPlayer();
+    reachShop(game);
+    game.setReady(0, true);
+    game.setReady(1, true);
+    runFor(game, config::SHOP_COUNTDOWN / 2.f);
+    game.setReady(1, false);
+    game.update(config::FIXED_DT);
+    CHECK(game.status().countdown == 0.f);
+    runFor(game, config::SHOP_COUNTDOWN);
+    CHECK(game.phase() == Phase::Shop);
+}
+
+TEST(the_next_level_starts_when_the_countdown_ends)
+{
+    Game game = shopWithCoins(1000);
+    const AugmentId bought = game.shopOffers().front();
+
+    game.buyAugment(0, bought);
+    game.setReady(0, true);
+    runFor(game, config::SHOP_COUNTDOWN + 0.1f);
+    CHECK(game.phase() == Phase::Playing);
+    CHECK(game.isPlayerAlive(0));
+    CHECK(game.coins() == 1000 - priceOf(bought));
+    CHECK(game.ownedAugments(0) == std::vector<AugmentId>{bought});
+    CHECK(!game.status().players[0].ready);
+}
+
+TEST(a_player_who_joins_the_shop_is_not_ready)
+{
+    Game game = shopWithCoins(0);
+
+    game.setReady(0, true);
+    game.addPlayer();
+    game.update(config::FIXED_DT);
+    CHECK(!game.status().players[1].ready);
+    CHECK(game.status().countdown == 0.f);
+}
+
+TEST(a_player_who_leaves_no_longer_blocks_the_countdown)
+{
+    Game game(1);
+
+    game.addPlayer();
+    game.addPlayer();
+    reachShop(game);
+    game.setReady(0, true);
+    game.removePlayer(1);
+    game.update(config::FIXED_DT);
+    CHECK(game.status().countdown > 0.f);
 }

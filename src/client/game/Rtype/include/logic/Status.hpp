@@ -4,13 +4,14 @@
 #include <vector>
 
 namespace rtype {
-    enum class Phase : std::uint8_t { Playing, Victory, Defeat };
+    enum class Phase : std::uint8_t { Playing, Victory, Defeat, Shop };
 
     // Ce que le HUD d'un joueur affiche.
     struct PlayerStatus {
         int slot = 0;
         int hp = 0;
         bool alive = false;
+        bool ready = false;
     };
 
     struct GameStatus {
@@ -19,5 +20,6 @@ namespace rtype {
         int bossMaxHp = 0;
         std::uint32_t coins = 0;
         std::vector<PlayerStatus> players;
+        float countdown = 0.f;
     };
 }

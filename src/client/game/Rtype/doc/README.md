@@ -144,7 +144,13 @@ These come from the engine (`engine/core`, not part of the game logic):
 - nobody connected: `idle()`, which resets the world if it has moved;
 - phase `Playing`: `updatePlaying(dt)`;
 - phase `Victory` or `Defeat`: `updateEnded(dt)`, where the players still fly
-  until the restart timer ends.
+  until the restart timer ends; then a defeat restarts the game, a victory
+  opens the shop;
+- phase `Shop`: `updateShop(dt)`, where the players fly, buy augments and say
+  they are ready. When every connected player is ready, a countdown of
+  `SHOP_COUNTDOWN` seconds starts; it stops as soon as a player is not ready
+  any more. When it ends, the next level starts with the same coins and
+  augments.
 
 At the end, in every case, `trackDestroys()` then `trackSpawns()` turn the
 changes of the world into events for the clients.
@@ -196,7 +202,8 @@ game.removePlayer(*slot);                     // a client disconnects
 | `std::vector<GameEvent> takeEvents()` | the `EntitySpawned` and `EntityDestroyed` since the last call (and empties the list). |
 | `std::vector<EntitySpawned> spawns() const` | the whole world, to send to a client who just connected. |
 | `std::vector<EntityState> states() const` | the position of every moving entity. |
-| `GameStatus status()` | phase, boss health, health of each player, coins of the shared purse. |
+| `GameStatus status()` | phase, boss health, health and ready flag of each player, coins of the shared purse, shop countdown. |
+| `bool setReady(int slot, bool ready)` | in the shop phase, says whether a player is ready; `false` outside the shop or for an unknown slot. |
 | `Phase phase() const`, `float scroll() const` | the phase of the match, the distance scrolled. |
 
 `Game(unsigned seed)` makes the random heights of the waves reproducible, which

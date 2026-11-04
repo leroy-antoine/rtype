@@ -10,6 +10,7 @@
 #include <map>
 #include <optional>
 #include <random>
+#include <set>
 #include <utility>
 #include <vector>
 #include "Augments.hpp"
@@ -64,6 +65,7 @@ namespace rtype {
                 _usedSlots[static_cast<std::size_t>(slot)] = false;
             }
             _augments.erase(slot);
+            _ready.erase(slot);
         }
 
         // Un joueur mort peut revenir tant que la partie n'est pas finie.
@@ -123,14 +125,27 @@ namespace rtype {
             const auto offer = std::ranges::find(_shopOffers, id);
             std::size_t &coins = _reg.get<CoinCounter>(_coinCounter).total;
 
-            if (!isUsedSlot(slot) || offer == _shopOffers.end()
-                || coins < priceOf(id)) {
+            if (_phase != Phase::Shop || !isUsedSlot(slot)
+                || offer == _shopOffers.end() || coins < priceOf(id)) {
                 return false;
             }
             coins -= priceOf(id);
             _shopOffers.erase(offer);
             _purchased.push_back(id);
             return addAugment(slot, id);
+        }
+
+        bool setReady(const int slot, const bool ready)
+        {
+            if (_phase != Phase::Shop || !isUsedSlot(slot)) {
+                return false;
+            }
+            if (ready) {
+                _ready.insert(slot);
+            } else {
+                _ready.erase(slot);
+            }
+            return true;
         }
 
         [[nodiscard]] std::size_t coins() const
@@ -155,6 +170,8 @@ namespace rtype {
                 idle();
             } else if (_phase == Phase::Playing) {
                 updatePlaying(dt);
+            } else if (_phase == Phase::Shop) {
+                updateShop(dt);
             } else {
                 updateEnded(dt);
             }
@@ -189,6 +206,7 @@ namespace rtype {
                 status.bossHp = std::max(0, _reg.get<Health>(boss).hp);
                 status.bossMaxHp = config::BOSS_HP;
             }
+            status.countdown = _countdown.value_or(0.f);
             for (int slot = 0; slot < SLOTS; ++slot) {
                 if (isUsedSlot(slot)) {
                     status.players.push_back(statusOf(slot));
@@ -239,7 +257,7 @@ namespace rtype {
         {
             const std::optional<Engine::Entity> player =
                 findPlayerBySlot(_reg, slot);
-            PlayerStatus status{slot, 0, false};
+            PlayerStatus status{slot, 0, false, _ready.contains(slot)};
 
             if (player) {
                 status.alive = true;
@@ -276,16 +294,64 @@ namespace rtype {
             updatePhase();
         }
 
-        // Partie finie : les joueurs volent encore, puis tout recommence.
+        // Partie finie : les joueurs volent encore, puis le shop apres une
+        // victoire, ou une nouvelle partie apres une defaite.
         void updateEnded(const float dt)
         {
             lifetimeSystem(_reg, dt);
             playerControlSystem(_reg);
             movementSystem(_reg, dt);
             _phaseTimer -= dt;
-            if (_phaseTimer <= 0.f) {
+            if (_phaseTimer > 0.f) {
+                return;
+            }
+            if (_phase == Phase::Victory) {
+                enterShop();
+            } else {
                 reset();
             }
+        }
+
+        void enterShop()
+        {
+            _phase = Phase::Shop;
+            _ready.clear();
+            _countdown.reset();
+            restockShop(ShopTier{_level, true});
+        }
+
+        void updateShop(const float dt)
+        {
+            lifetimeSystem(_reg, dt);
+            playerControlSystem(_reg);
+            movementSystem(_reg, dt);
+            updateCountdown(dt);
+        }
+
+        void updateCountdown(const float dt)
+        {
+            if (!allReady()) {
+                _countdown.reset();
+                return;
+            }
+            if (!_countdown) {
+                _countdown = config::SHOP_COUNTDOWN;
+            }
+            *_countdown -= dt;
+            if (*_countdown <= 0.f) {
+                ++_level;
+                reset();
+            }
+        }
+
+        [[nodiscard]] bool allReady() const
+        {
+            for (int slot = 0; slot < SLOTS; ++slot) {
+                if (isUsedSlot(slot) && !_ready.contains(slot)) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         void advanceLevel(const float dt)
@@ -387,6 +453,8 @@ namespace rtype {
             _bossSpawned = false;
             _phase = Phase::Playing;
             _phaseTimer = 0.f;
+            _ready.clear();
+            _countdown.reset();
             for (int slot = 0; slot < SLOTS; ++slot) {
                 if (isUsedSlot(slot)) {
                     spawnPlayer(slot);
@@ -433,6 +501,9 @@ namespace rtype {
         std::map<int, std::vector<AugmentId>> _augments;
         std::vector<AugmentId> _shopOffers;
         std::vector<AugmentId> _purchased;
+        std::set<int> _ready;
+        std::optional<float> _countdown;
+        int _level = 1;
         Phase _phase = Phase::Playing;
         float _phaseTimer = 0.f;
         float _scroll = 0.f;
