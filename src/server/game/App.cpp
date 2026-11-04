@@ -54,6 +54,7 @@ namespace server {
             broadcastStatus();
         }
         syncAugments();
+        syncShop();
         _server.flush();
     }
 
@@ -110,6 +111,8 @@ namespace server {
             _server.send(client, rtype::protocol::SPAWN, rtype::protocol::encode(spawn), Engine::Delivery::Reliable);
         }
         _server.send(client, rtype::protocol::AUGMENTS, rtype::protocol::encodeAugments(ownedAugments()),
+            Engine::Delivery::Reliable);
+        _server.send(client, rtype::protocol::SHOP, rtype::protocol::encodeShop(_game.shopOffers()),
             Engine::Delivery::Reliable);
     }
 
@@ -172,6 +175,18 @@ namespace server {
             }
             return;
         }
+        if (event.type == rtype::protocol::BUY) {
+            if (const std::optional<rtype::AugmentId> id = rtype::protocol::decodeBuy(event.payload)) {
+                _game.buyAugment(*slot, *id);
+            }
+            return;
+        }
+        if (event.type == rtype::protocol::READY) {
+            if (const std::optional<bool> ready = rtype::protocol::decodeReady(event.payload)) {
+                _game.setReady(*slot, *ready);
+            }
+            return;
+        }
         if (event.type == rtype::protocol::RESPAWN) {
             _game.respawnPlayer(*slot);
         }
@@ -195,6 +210,15 @@ namespace server {
             _server.broadcast(rtype::protocol::AUGMENTS, rtype::protocol::encodeAugments(owned),
                 Engine::Delivery::Reliable);
             _sentAugments = std::move(owned);
+        }
+    }
+
+    void App::syncShop()
+    {
+        if (_game.shopOffers() != _sentShop) {
+            _server.broadcast(rtype::protocol::SHOP, rtype::protocol::encodeShop(_game.shopOffers()),
+                Engine::Delivery::Reliable);
+            _sentShop = _game.shopOffers();
         }
     }
 }
