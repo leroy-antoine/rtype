@@ -12,7 +12,18 @@ namespace Engine {
         Right,
         Space,
         Enter,
-        Escape
+        Escape,
+        Tab,
+        A,
+        Z,
+        E,
+        R,
+        Q,
+        S,
+        D,
+        W,
+        X,
+        C
     };
     // a rajouter des keys pour la suite probablement esc ect ...
 

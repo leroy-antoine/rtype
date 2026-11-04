@@ -52,10 +52,14 @@ namespace client {
     void Controls::applyKey(const Engine::Key key, const bool pressed)
     {
         switch (key) {
-            case Engine::Key::Up: _input.up = pressed; break;
-            case Engine::Key::Down: _input.down = pressed; break;
-            case Engine::Key::Left: _input.left = pressed; break;
-            case Engine::Key::Right: _input.right = pressed; break;
+            case Engine::Key::Up:
+            case Engine::Key::Z: _input.up = pressed; break;
+            case Engine::Key::Down:
+            case Engine::Key::S: _input.down = pressed; break;
+            case Engine::Key::Left:
+            case Engine::Key::Q: _input.left = pressed; break;
+            case Engine::Key::Right:
+            case Engine::Key::D: _input.right = pressed; break;
             case Engine::Key::Space: _input.fire = pressed; break;
             default: break;
         }

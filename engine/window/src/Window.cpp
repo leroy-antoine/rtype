@@ -14,6 +14,17 @@ namespace Engine {
                 case sf::Keyboard::Key::Space: return Key::Space;
                 case sf::Keyboard::Key::Enter: return Key::Enter;
                 case sf::Keyboard::Key::Escape: return Key::Escape;
+                case sf::Keyboard::Key::Tab: return Key::Tab;
+                case sf::Keyboard::Key::A: return Key::A;
+                case sf::Keyboard::Key::Z: return Key::Z;
+                case sf::Keyboard::Key::E: return Key::E;
+                case sf::Keyboard::Key::R: return Key::R;
+                case sf::Keyboard::Key::Q: return Key::Q;
+                case sf::Keyboard::Key::S: return Key::S;
+                case sf::Keyboard::Key::D: return Key::D;
+                case sf::Keyboard::Key::W: return Key::W;
+                case sf::Keyboard::Key::X: return Key::X;
+                case sf::Keyboard::Key::C: return Key::C;
                 default: return Key::Unknown;
             }
         }
