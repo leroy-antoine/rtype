@@ -35,6 +35,8 @@ namespace client {
         void playSounds(Audio &audio);
         bool listening();
         void sendControls(float dt);
+        void pressEnter();
+        [[nodiscard]] bool isReady(const rtype::GameStatus &status) const;
         float advance();
         [[nodiscard]] float elapsed() const;
 
