@@ -55,6 +55,20 @@ namespace client {
         }
     }
 
+    void Network::requestReady(const bool ready)
+    {
+        if (_client.connected()) {
+            _client.send(rtype::protocol::READY, rtype::protocol::encodeReady(ready), Engine::Delivery::Reliable);
+        }
+    }
+
+    void Network::requestBuy(const rtype::AugmentId id)
+    {
+        if (_client.connected()) {
+            _client.send(rtype::protocol::BUY, rtype::protocol::encodeBuy(id), Engine::Delivery::Reliable);
+        }
+    }
+
     void Network::flush()
     {
         _client.flush();

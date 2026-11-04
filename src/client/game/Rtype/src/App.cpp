@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <utility>
 #include <vector>
 #include "engine/window/Renderer.hpp"
@@ -73,10 +74,31 @@ namespace client {
     void App::sendControls(const float dt)
     {
         if (_controls.respawnRequested()) {
-            _network.requestRespawn();
+            pressEnter();
         }
         _network.sendInput(_replica.predict(_controls.input(), dt), _controls.input());
         _network.flush();
+    }
+
+    void App::pressEnter()
+    {
+        const std::optional<rtype::GameStatus> &status = _replica.status();
+
+        if (!status || status->phase != rtype::Phase::Shop) {
+            _network.requestRespawn();
+            return;
+        }
+        _network.requestReady(!isReady(*status));
+    }
+
+    bool App::isReady(const rtype::GameStatus &status) const
+    {
+        const std::optional<int> self = _replica.slot();
+
+        return std::ranges::any_of(status.players,
+            [&self](const rtype::PlayerStatus &player) {
+                return self && player.slot == *self && player.ready;
+            });
     }
 
     float App::advance()
