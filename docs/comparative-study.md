@@ -58,13 +58,14 @@ The packet layout, the sequence numbers and the reliability rules are in
 
 ## Storage
 
-The game keeps its whole state in memory and has no persistence in Part 1: a
-match lasts one level and is lost when the server stops.
+The state of a match is kept in memory and is lost when the server stops. Only
+the best times of each map are persisted, in a small text file
+(`leaderboard.txt`).
 
 | Option | Persistence | Reliability | Constraint | Verdict |
 |---|---|---|---|---|
 | In memory only | none | lost on crash | none, fastest | **chosen** |
-| Flat file (JSON / binary) | yes | simple, can corrupt on crash without atomic write | trivial to add | for a high-score list, if needed |
+| Flat file (text / JSON / binary) | yes | simple, can corrupt on crash without atomic write | trivial to add | **chosen for the leaderboard** (one `map time players` line per record) |
 | Embedded database (SQLite) | yes | transactions, crash safe | extra dependency | if scores or accounts are added |
 | Server database (PostgreSQL) | yes | very reliable | deployment cost, overkill | not justified here |
 

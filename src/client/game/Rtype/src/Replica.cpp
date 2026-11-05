@@ -10,7 +10,7 @@ namespace client {
             if (size <= rtype::config::HIT_EXPLOSION_SIZE) {
                 return Cue::Hit;
             }
-            if (size >= rtype::config::BOSS_WIDTH * 0.8f) {
+            if (size >= rtype::config::BOSS_EXPLOSION_MIN_SIZE) {
                 return Cue::BossExplosion;
             }
             return Cue::Explosion;
@@ -144,6 +144,7 @@ namespace client {
 
     std::uint32_t Replica::predict(const rtype::PlayerInput &input, const float dt)
     {
+        refreshSolids();
         return _prediction.record(input, dt);
     }
 
@@ -180,6 +181,73 @@ namespace client {
             _cues.push_back(Cue::CoinPickup);
         }
         _status = status;
+    }
+
+    void Replica::apply(const rtype::AllRecords &records)
+    {
+        _records = records;
+    }
+
+    void Replica::moveMapCursor(const int delta)
+    {
+        const int count = static_cast<int>(rtype::MAP_COUNT);
+        const int next = (static_cast<int>(_mapCursor) + delta + count) % count;
+
+        _mapCursor = static_cast<rtype::MapId>(next);
+    }
+
+    const rtype::AllRecords &Replica::records() const
+    {
+        return _records;
+    }
+
+    rtype::MapId Replica::mapCursor() const
+    {
+        return _mapCursor;
+    }
+
+    const Prediction &Replica::prediction() const
+    {
+        return _prediction;
+    }
+
+    void Replica::refreshSolids()
+    {
+        std::vector<rtype::Collider> solids;
+        const std::optional<Engine::Entity> player = localPlayer();
+
+        _reg.each<rtype::Renderable, gameLogic::Vec2Pos, gameLogic::Vec2Hitbox>(
+            [&solids](const Engine::Entity e, const rtype::Renderable &sprite,
+                const gameLogic::Vec2Pos &pos, const gameLogic::Vec2Hitbox &box) {
+                if (sprite.id == rtype::SpriteId::RockWall) {
+                    solids.push_back({e, pos, box, {}});
+                }
+            });
+        if (player) {
+            _prediction.setWorld(_reg.get<gameLogic::Vec2Hitbox>(*player),
+                std::move(solids));
+        }
+    }
+
+    std::optional<rtype::SpriteId> Replica::bossSprite()
+    {
+        std::optional<rtype::SpriteId> found;
+
+        _reg.each<rtype::Renderable>(
+            [&found](const Engine::Entity, const rtype::Renderable &sprite) {
+                if (rtype::isBossSprite(sprite.id)) {
+                    found = sprite.id;
+                }
+            });
+        return found;
+    }
+
+    bool Replica::isHost() const
+    {
+        if (!_status || !_slot || _status->players.empty()) {
+            return false;
+        }
+        return _status->players.front().slot == *_slot;
     }
 
     void Replica::apply(const rtype::protocol::OwnedAugment &augments)
@@ -245,6 +313,9 @@ namespace client {
                 _cues.push_back(Cue::PlayerShot);
                 break;
             case rtype::SpriteId::Boss:
+            case rtype::SpriteId::DasherBoss:
+            case rtype::SpriteId::SummonerBoss:
+            case rtype::SpriteId::FortressBoss:
                 _cues.push_back(Cue::BossAppears);
                 break;
             case rtype::SpriteId::Explosion:

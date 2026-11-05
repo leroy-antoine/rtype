@@ -98,6 +98,14 @@ namespace client {
         return std::min(_selected, count - 1);
     }
 
+    std::string ShopPanel::hint(const Replica &replica)
+    {
+        if (replica.isHost()) {
+            return "LEFT/RIGHT: CHOOSE   ENTER: BUY   TAB: NEXT LEVEL";
+        }
+        return "LEFT/RIGHT: CHOOSE   ENTER: BUY   WAITING FOR P1";
+    }
+
     void ShopPanel::draw(const Replica &replica, const float elapsed)
     {
         const std::vector<rtype::AugmentId> &offers = replica.shopOffers();
@@ -122,7 +130,7 @@ namespace client {
             drawCard(replica, offers[i], {x, top + CARD_TOP}, i == selected, elapsed);
             x += CARD_WIDTH + CARD_GAP;
         }
-        _font.drawCentered("LEFT/RIGHT: CHOOSE   ENTER: BUY", _width / 2.f,
+        _font.drawCentered(hint(replica), _width / 2.f,
             top + PANEL_HEIGHT - 40.f, 2.f, GREY);
         drawMessage(elapsed);
     }

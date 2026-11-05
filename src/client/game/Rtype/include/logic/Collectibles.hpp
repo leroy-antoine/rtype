@@ -17,9 +17,17 @@
 #include "Queries.hpp"
 
 namespace rtype {
+    inline bool isSummoned(const Engine::Registry &reg, const Engine::Entity e)
+    {
+        return reg.has<MonsterState>(e) && reg.get<MonsterState>(e).summoned;
+    }
+
     inline Engine::Entity spawnCoin(Engine::Registry &reg,
         const Engine::Entity dead, std::mt19937 &rng)
     {
+        if (isSummoned(reg, dead)) {
+            return Engine::Entity{};
+        }
         if (!reg.has<MonsterTag>(dead) || !reg.has<gameLogic::Vec2Pos>(dead)
             || !reg.has<gameLogic::Vec2Hitbox>(dead)) {
             return Engine::Entity{};

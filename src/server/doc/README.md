@@ -57,6 +57,9 @@ game logic knows nothing of the network.
 | a client connects | `game.addPlayer()`, remembers `client id -> slot`, sends `YOU` and the whole world (`SPAWN` for each entity). If the game is full, it disconnects the client |
 | `INPUT` | decodes the keys and calls `game.setInput(slot, input)`; an invalid payload is ignored |
 | `RESPAWN` | calls `game.respawnPlayer(slot)` |
+| `LEAVE_MATCH` | if the sender is the host, calls `game.openLobby()`: the match is dropped and the lobby is shown again |
+| `PAUSE` | if the sender is the host, `game.setPaused(paused)`: the simulation and the clock stop until the host resumes |
+| `SELECT_MAP` | if the sender is the host (`game.host()`) and the map exists, builds it with `buildMap(id)` and calls `game.startMap`; ignored otherwise |
 | `BUY` | decodes the augment id, calls `game.buyAugment(slot, id)` and answers the buyer with `BUY_RESULT`; an invalid payload is ignored |
 | `READY` | decodes the flag and calls `game.setReady(slot, ready)`; an invalid payload is ignored |
 | a client disconnects or times out | `game.removePlayer(slot)`; the ship is destroyed and every client is told by a `DESTROY` |
@@ -64,7 +67,7 @@ game logic knows nothing of the network.
 
 The message formats are in [the protocol](../../../docs/protocol.md). The game
 API is in
-[the game logic README](../../games/rtype/doc/README.md#public-api-the-game-class).
+[the game logic README](../../client/game/Rtype/doc/README.md#public-api-the-game-class).
 
 ## Threads
 
@@ -93,11 +96,12 @@ while (running) {
 One `tick()` does:
 
 1. `receive()`: `server.update()` and handle every network event;
-2. `game.update(dt)`;
+2. `game.update(dt)`, then `recordVictory()`: on the tick when the phase becomes
+   `Victory`, the time is added to the leaderboard and sent;
 3. `broadcastEvents()`: `SPAWN` and `DESTROY` of this tick (reliable);
 4. `broadcastStates()`: the positions (`STATES`, unreliable);
 5. every 6th tick, `broadcastStatus()`: phase, boss and player health, coins
-   of the shared purse (`STATUS`, about 10 times per second);
+   of the shared purse, elapsed time, level number, map (`STATUS`, about 10 times per second);
 6. `server.flush()`: sends the datagrams.
 
 The game never reads a clock itself, it receives `dt`. Time does not depend on
@@ -111,6 +115,8 @@ the speed of the CPU.
 | `SPAWN`, `DESTROY` | an entity appears or disappears | reliable |
 | `STATES` | every tick | unreliable |
 | `STATUS` | every 6 ticks | unreliable |
+| `OWN_STATE` | every tick, to one client | unreliable (position and the effects of the portals) |
+| `LEADERBOARD` | a client connects, a match is won | reliable |
 
 Monster movement and shots reach the clients as positions (`STATES`) and
 spawns of bullets (`SPAWN`). The kill of a player or of a monster is a
@@ -126,9 +132,21 @@ spawns of bullets (`SPAWN`). The kill of a player or of a monster is a
   departure: `removePlayer`, `DESTROY` for the others. The match goes on.
 - **Nobody connected**: the level does not advance, and starts again from zero
   when the first player comes back.
-- **End of a match**: after a victory or a defeat, the game restarts by itself
-  after a few seconds (`RESTART_DELAY`), and a dead player can ask to come back
-  with `RESPAWN` while the match is running.
+- **Lobby**: the server starts in the `Lobby` phase, and comes back to it
+  when every player has left and after the end screen of a match. The *host*
+  is the connected player with the lowest slot. Only the host can leave the
+  lobby, with `SELECT_MAP`; the server builds the map with `buildMap(id)` and
+  calls `Game::startMap`. A message from another player, an unknown map, or a
+  message outside the lobby is ignored.
+- **End of a match**: the end screen is shown for a few seconds
+  (`RESTART_DELAY`). A defeat then restarts the same map; a victory returns to
+  the lobby. A dead
+  player can ask to come back with `RESPAWN` while the match is running.
+- **Leaderboard**: after each victory the server adds the time and the number
+  of players to the best times of the map (5 per map, `rtype::Leaderboard`),
+  writes them in `leaderboard.txt` (working directory of the server, one
+  `map time_ms players` line per record, read again at startup) and sends
+  `LEADERBOARD` to every client. A new client receives it when it connects.
 
 ## Robustness
 
@@ -143,8 +161,8 @@ spawns of bullets (`SPAWN`). The kill of a player or of a monster is a
 
 ## Limits and open questions
 
-- There is **one game per server**: every client joins the same match, up to
-  4 players. Lobbies are not implemented.
+- There is **one game per server**: every client joins the same lobby and the
+  same match, up to 4 players. Several rooms are not implemented.
 - There is no per-client rate limit on `INPUT` messages beyond the bounded
   queue. Each `INPUT` only overwrites the previous one, so flooding does not
   grow the game state, but a limit could be added.

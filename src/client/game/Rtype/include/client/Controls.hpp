@@ -13,6 +13,8 @@ namespace client {
 
         [[nodiscard]] const rtype::PlayerInput &input() const;
         [[nodiscard]] bool respawnRequested() const;
+        [[nodiscard]] bool pauseRequested() const;
+        [[nodiscard]] int menuMove() const;
         [[nodiscard]] const std::vector<Engine::Key> &pressedKeys() const;
 
     private:
@@ -29,6 +31,8 @@ namespace client {
 
         rtype::PlayerInput _input;
         bool _respawn = false;
+        bool _pause = false;
+        int _menuMove = 0;
         std::vector<Engine::Key> _pressed;
         std::set<Engine::Key> _held;
     };

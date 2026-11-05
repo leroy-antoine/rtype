@@ -1,6 +1,8 @@
 #include <cmath>
 #include "logic/Config.hpp"
+#include <utility>
 #include "logic/Movements.hpp"
+#include "logic/Solids.hpp"
 #include "client/Prediction.hpp"
 
 namespace client {
@@ -13,7 +15,7 @@ namespace client {
             _pending.pop_front();
         }
         if (_predicted) {
-            _predicted = gameLogic::Vec2Pos{*_predicted + step(input, dt)};
+            _predicted = advance(*_predicted, input, dt);
         }
         _input = input;
         return sequence;
@@ -22,15 +24,18 @@ namespace client {
     void Prediction::reconcile(const rtype::protocol::OwnState &state)
     {
         const std::optional<gameLogic::Vec2Pos> before = _predicted;
-        gameLogic::Vec2 pos = state.pos;
+        gameLogic::Vec2Pos pos = state.pos;
 
+        _inverted = state.inverted;
+        _speedFactor = static_cast<float>(state.speedPercent)
+            / rtype::config::SPEED_PERCENT;
         while (!_pending.empty() && _pending.front().sequence <= state.lastInput) {
             _pending.pop_front();
         }
         for (const Pending &pending : _pending) {
-            pos = pos + step(pending.input, pending.dt);
+            pos = advance(pos, pending.input, pending.dt);
         }
-        _predicted = gameLogic::Vec2Pos{pos};
+        _predicted = pos;
         if (!before) {
             return;
         }
@@ -61,11 +66,35 @@ namespace client {
 
     gameLogic::Vec2Velocity Prediction::velocity() const
     {
-        return gameLogic::Vec2Velocity{rtype::inputDirection(_input) * rtype::config::PLAYER_SPEED};
+        return gameLogic::Vec2Velocity{rtype::inputDirection(_input, _inverted)
+            * (rtype::config::PLAYER_SPEED * _speedFactor)};
     }
 
-    gameLogic::Vec2 Prediction::step(const rtype::PlayerInput &input, const float dt)
+    void Prediction::setWorld(const gameLogic::Vec2Hitbox &box,
+        std::vector<rtype::Collider> solids)
     {
-        return rtype::inputDirection(input) * (rtype::config::PLAYER_SPEED * dt);
+        _box = box;
+        _solids = std::move(solids);
+    }
+
+    bool Prediction::inverted() const
+    {
+        return _inverted;
+    }
+
+    float Prediction::speedFactor() const
+    {
+        return _speedFactor;
+    }
+
+    gameLogic::Vec2Pos Prediction::advance(const gameLogic::Vec2Pos &from,
+        const rtype::PlayerInput &input, const float dt) const
+    {
+        const gameLogic::Vec2 step = rtype::inputDirection(input, _inverted)
+            * (rtype::config::PLAYER_SPEED * _speedFactor * dt);
+        const rtype::Collider moved{{}, gameLogic::Vec2Pos{from + step}, _box,
+            {}};
+
+        return rtype::resolveSolids(moved, _solids);
     }
 }

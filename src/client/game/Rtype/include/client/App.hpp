@@ -36,6 +36,12 @@ namespace client {
         void playSounds(Audio &audio);
         bool listening();
         void sendControls(float dt, ShopPanel &shop);
+        void useShop(ShopPanel &shop);
+        [[nodiscard]] bool inLobby() const;
+        [[nodiscard]] bool isPaused() const;
+        void useMenu();
+        void useMatch();
+        void usePause();
         void sendReady();
         [[nodiscard]] bool isReady(const rtype::GameStatus &status) const;
         float advance();

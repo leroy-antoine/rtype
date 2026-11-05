@@ -88,10 +88,11 @@ After changing the profile, reset the CMake cache.
 
 ## Tests
 
-The tests cover the game logic (waves, boss, victory and defeat, respawn, the
-events sent to the clients) and the encoding of the protocol messages (round
-trips, truncated or invalid payloads). They are built with the rest of the
-project:
+The tests cover the game logic (waves, bosses, monster behaviours, walls,
+coins, level skip, victory and defeat, respawn, the lobby, the events sent to
+the clients), the three maps (ordering, reachability of the gates, bosses),
+the leaderboard and the encoding of the protocol messages (round trips,
+truncated or invalid payloads). They are built with the rest of the project:
 
 ```
 ./build/binaries/rtype_tests

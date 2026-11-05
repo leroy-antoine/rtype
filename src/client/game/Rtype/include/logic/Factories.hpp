@@ -7,6 +7,9 @@
 #include "utils/Vectors.hpp"
 #include "Components.hpp"
 #include "Config.hpp"
+#include "BossDefs.hpp"
+#include "Waves.hpp"
+#include "MonsterDefs.hpp"
 #include "Bullet.hpp"
 
 namespace rtype {
@@ -33,45 +36,62 @@ namespace rtype {
         reg.add(e, Weapon{config::PLAYER_FIRE_COOLDOWN});
         reg.add(e, Damage{config::PLAYER_DAMAGE});
         reg.add(e, Team{TeamId::Player});
+        reg.add(e, PlayerEffects{});
         reg.add(e, Renderable{SpriteId::Player});
         return e;
     }
 
+    inline void addMonsterStats(Engine::Registry &reg, const Engine::Entity e,
+        const MonsterDef &def)
+    {
+        reg.add(e, gameLogic::Vec2Hitbox{{def.width, def.height}});
+        reg.add(e, Speed{def.speed});
+        reg.add(e, Health{def.hp});
+        reg.add(e, Weapon{def.fireCooldown, def.fireCooldown});
+        reg.add(e, Damage{def.damage});
+        reg.add(e, Renderable{def.sprite});
+    }
+
     inline Engine::Entity createMonster(Engine::Registry &reg,
-        const int slot = 0)
+        const MonsterKind kind = MonsterKind::Basic, const int slot = 0)
     {
         const Engine::Entity e = reg.create();
 
         reg.add(e, MonsterTag{slot});
+        reg.add(e, MonsterType{kind});
+        reg.add(e, MonsterState{});
         reg.add(e, gameLogic::Vec2Pos{});
         reg.add(e, gameLogic::Vec2Direction{});
         reg.add(e, gameLogic::Vec2Velocity{});
-        reg.add(e, gameLogic::Vec2Hitbox{{config::MONSTER_WIDTH,
-            config::MONSTER_HEIGHT}});
-        reg.add(e, Speed{config::MONSTER_SPEED});
-        reg.add(e, Health{config::MONSTER_HP});
-        reg.add(e, Weapon{config::MONSTER_FIRE_COOLDOWN,
-            config::MONSTER_FIRE_COOLDOWN});
-        reg.add(e, Damage{config::MONSTER_DAMAGE});
         reg.add(e, Team{TeamId::Monster});
-        reg.add(e, Renderable{SpriteId::Monster});
+        addMonsterStats(reg, e, monsterDef(kind));
         return e;
     }
 
     // Le boss est un monstre plus gros, avec BossTag pour le reconnaitre.
-    inline Engine::Entity createBoss(Engine::Registry &reg)
+    inline void setBossStats(Engine::Registry &reg, const Engine::Entity e,
+        const MonsterDef &def)
+    {
+        reg.get<gameLogic::Vec2Hitbox>(e) =
+            gameLogic::Vec2Hitbox{{def.width, def.height}};
+        reg.get<Speed>(e) = Speed{def.speed};
+        reg.get<Health>(e) = Health{def.hp};
+        reg.get<Weapon>(e) = Weapon{def.fireCooldown, def.fireCooldown};
+        reg.get<Damage>(e) = Damage{def.damage};
+        reg.get<Renderable>(e) = Renderable{def.sprite};
+    }
+
+    inline Engine::Entity createBoss(Engine::Registry &reg,
+        const BossKind kind = BossKind::Standard)
     {
         const Engine::Entity e = createMonster(reg);
 
         reg.add(e, BossTag{});
-        reg.get<gameLogic::Vec2Hitbox>(e) = gameLogic::Vec2Hitbox{{
-            config::BOSS_WIDTH, config::BOSS_HEIGHT}};
-        reg.get<Speed>(e) = Speed{config::BOSS_SPEED};
-        reg.get<Health>(e) = Health{config::BOSS_HP};
-        reg.get<Weapon>(e) = Weapon{config::BOSS_FIRE_COOLDOWN,
-            config::BOSS_FIRE_COOLDOWN};
-        reg.get<Damage>(e) = Damage{config::BOSS_DAMAGE};
-        reg.get<Renderable>(e) = Renderable{SpriteId::Boss};
+        reg.add(e, BossType{kind});
+        if (kind == BossKind::Fortress) {
+            reg.add(e, LeviathanState{});
+        }
+        setBossStats(reg, e, bossDef(kind));
         return e;
     }
 
@@ -124,7 +144,12 @@ namespace rtype {
         }
         const gameLogic::Vec2Hitbox &box = reg.get<gameLogic::Vec2Hitbox>(e);
 
-        return std::max(box.x, box.y);
+        const float size = std::max(box.x, box.y);
+
+        if (reg.has<BossTag>(e)) {
+            return std::max(size, config::BOSS_EXPLOSION_MIN_SIZE);
+        }
+        return size;
     }
 
     inline Engine::Entity createExplosionOn(Engine::Registry &reg,
@@ -150,6 +175,57 @@ namespace rtype {
         reg.add(e, gameLogic::Vec2Hitbox{{config::COIN_WIDTH,
             config::COIN_HEIGHT}});
         reg.add(e, Renderable{SpriteId::Coin});
+        return e;
+    }
+
+    inline SpriteId obstacleSprite(const ObstacleKind kind)
+    {
+        switch (kind) {
+            case ObstacleKind::Spike: return SpriteId::SpikeWall;
+            case ObstacleKind::ReversePortal: return SpriteId::ReversePortal;
+            case ObstacleKind::FastPortal: return SpriteId::FastPortal;
+            case ObstacleKind::NormalPortal: return SpriteId::NormalPortal;
+            case ObstacleKind::Laser: return SpriteId::LaserPost;
+            case ObstacleKind::Turret: return SpriteId::TurretBlock;
+            case ObstacleKind::Mine: return SpriteId::MineBall;
+            case ObstacleKind::Beam: return SpriteId::BeamOn;
+            case ObstacleKind::BeamWarn: return SpriteId::BeamWarn;
+            default: return SpriteId::RockWall;
+        }
+    }
+
+    inline void addObstacleMotion(Engine::Registry &reg, const Engine::Entity e,
+        const ObstacleStep &step, const float age = 0.f)
+    {
+        constexpr float TWO_PI = 6.2831853f;
+
+        if (step.amplitude != 0.f && step.period > 0.f) {
+            reg.add(e, ObstacleMotion{step.y, step.amplitude,
+                TWO_PI / step.period, age});
+        }
+    }
+
+    inline Engine::Entity createObstacle(Engine::Registry &reg,
+        const ObstacleStep &step, const float overshoot = 0.f)
+    {
+        const Engine::Entity e = reg.create();
+        const float age = overshoot / config::SCROLL_SPEED;
+
+        reg.add(e, ObstacleTag{step.kind});
+        reg.add(e, gameLogic::Vec2Pos{{config::MAP_WIDTH
+            - overshoot * step.speed, step.y}});
+        reg.add(e, gameLogic::Vec2Hitbox{{step.width, step.height}});
+        reg.add(e, gameLogic::Vec2Velocity{{
+            -config::OBSTACLE_SPEED * step.speed, 0.f}});
+        reg.add(e, Renderable{obstacleSprite(step.kind)});
+        addObstacleMotion(reg, e, step, age);
+        if (step.kind == ObstacleKind::Laser) {
+            reg.add(e, LaserCycle{step.period + age});
+        }
+        if (step.kind == ObstacleKind::Turret) {
+            reg.add(e, TurretFire{config::TURRET_INTERVAL,
+                config::TURRET_INTERVAL});
+        }
         return e;
     }
 

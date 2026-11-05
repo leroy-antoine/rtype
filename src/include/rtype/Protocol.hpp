@@ -16,6 +16,8 @@
 #include "logic/Components.hpp"
 #include "logic/Config.hpp"
 #include "logic/Events.hpp"
+#include "logic/Leaderboard.hpp"
+#include "logic/MapList.hpp"
 #include "logic/Status.hpp"
 #include "logic/Augments.hpp"
 
@@ -39,14 +41,19 @@ namespace rtype::protocol {
     struct OwnState {
         std::uint32_t lastInput = 0;
         gameLogic::Vec2Pos pos;
+        bool inverted = false;
+        std::uint8_t speedPercent = 100;
     };
 
-    constexpr std::uint8_t VERSION = 8;
+    constexpr std::uint8_t VERSION = 20;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
-    constexpr Engine::MessageType BUY = 0x12;
-    constexpr Engine::MessageType READY = 0x13;
+    constexpr Engine::MessageType SELECT_MAP = 0x12;
+    constexpr Engine::MessageType LEAVE_MATCH = 0x13;
+    constexpr Engine::MessageType PAUSE = 0x14;
+    constexpr Engine::MessageType BUY = 0x15;
+    constexpr Engine::MessageType READY = 0x16;
 
     constexpr Engine::MessageType SPAWN = 0x20;
     constexpr Engine::MessageType DESTROY = 0x21;
@@ -54,6 +61,7 @@ namespace rtype::protocol {
     constexpr Engine::MessageType STATUS = 0x23;
     constexpr Engine::MessageType YOU = 0x24;
     constexpr Engine::MessageType OWN_STATE = 0x25;
+    constexpr Engine::MessageType LEADERBOARD = 0x29;
 
     constexpr std::uint8_t KEY_UP = 1 << 0;
     constexpr std::uint8_t KEY_DOWN = 1 << 1;
@@ -63,17 +71,20 @@ namespace rtype::protocol {
     constexpr std::uint8_t KEYS_MASK = 0x1F;
 
     constexpr std::size_t INPUT_SIZE = 5;
-    constexpr std::size_t OWN_STATE_SIZE = 12;
+    constexpr std::size_t OWN_STATE_SIZE = 14;
+    constexpr std::uint8_t FLAG_INVERTED = 1 << 0;
     constexpr std::size_t SPAWN_SIZE = 22;
     constexpr std::size_t STATE_SIZE = 12;
     constexpr std::size_t STATES_HEADER_SIZE = 5;
     constexpr std::size_t MAX_STATES_PER_MESSAGE =
         (Engine::Protocol::MAX_PAYLOAD_SIZE - STATES_HEADER_SIZE) / STATE_SIZE;
 
-    // STATUS : phase (1), boss hp (2), boss max hp (2), pieces (4), nombre de
-    // joueurs (1), puis par joueur : slot (1), hp (2), vivant (1), pret (1) ;
-    // enfin le compte a rebours du shop en millisecondes (2).
-    constexpr std::size_t STATUS_HEADER_SIZE = 10;
+    // STATUS : phase (1), boss hp (2), boss max hp (2), pieces (4), temps
+    // en ms (4), morts (2), niveau (1), map (1), nombre de joueurs (1),
+    // puis par joueur : slot (1), hp (2), vivant (1), pret (1) ; enfin le
+    // compte a rebours du shop en millisecondes (2).
+    constexpr std::size_t STATUS_HEADER_SIZE = 18;
+    constexpr std::size_t RECORD_SIZE = 5;
     constexpr std::size_t PLAYER_STATUS_SIZE = 5;
     constexpr std::size_t COUNTDOWN_SIZE = 2;
 
@@ -158,6 +169,8 @@ namespace rtype::protocol {
 
         writer.writeU32(state.lastInput);
         writeVec2(writer, state.pos);
+        writer.writeU8(state.inverted ? FLAG_INVERTED : 0);
+        writer.writeU8(state.speedPercent);
         return writer.data();
     }
 
@@ -166,11 +179,15 @@ namespace rtype::protocol {
         Engine::BinaryReader reader(payload);
         const std::optional<std::uint32_t> lastInput = reader.readU32();
         const std::optional<gameLogic::Vec2> pos = readVec2(reader);
+        const std::optional<std::uint8_t> flags = reader.readU8();
+        const std::optional<std::uint8_t> speed = reader.readU8();
 
-        if (payload.size() != OWN_STATE_SIZE || !lastInput || !pos) {
+        if (payload.size() != OWN_STATE_SIZE || !lastInput || !pos || !flags
+            || !speed || (*flags & ~FLAG_INVERTED) != 0 || *speed == 0) {
             return std::nullopt;
         }
-        return OwnState{*lastInput, gameLogic::Vec2Pos{*pos}};
+        return OwnState{*lastInput, gameLogic::Vec2Pos{*pos},
+            hasKey(*flags, FLAG_INVERTED), *speed};
     }
 
     inline Engine::MessageType typeOf(const EntitySpawned &)
@@ -319,14 +336,30 @@ namespace rtype::protocol {
         return payload[0];
     }
 
+    constexpr std::uint8_t PAUSED_FLAG = 0x80;
+
+    inline std::uint8_t phaseByte(const GameStatus &status)
+    {
+        const auto phase = static_cast<std::uint8_t>(status.phase);
+
+        if (status.paused) {
+            return phase | PAUSED_FLAG;
+        }
+        return phase;
+    }
+
     inline Payload encode(const GameStatus &status)
     {
         Engine::BinaryWriter writer;
 
-        writer.writeU8(static_cast<std::uint8_t>(status.phase));
+        writer.writeU8(phaseByte(status));
         writer.writeU16(static_cast<std::uint16_t>(status.bossHp));
         writer.writeU16(static_cast<std::uint16_t>(status.bossMaxHp));
         writer.writeU32(status.coins);
+        writer.writeU32(status.elapsedMs);
+        writer.writeU8(status.level);
+        writer.writeU8(status.map);
+        writer.writeU16(status.deaths);
         writer.writeU8(static_cast<std::uint8_t>(status.players.size()));
         for (const PlayerStatus &player : status.players) {
             writer.writeU8(static_cast<std::uint8_t>(player.slot));
@@ -354,37 +387,167 @@ namespace rtype::protocol {
         return PlayerStatus{*slot, *hp, *alive == 1, *ready == 1};
     }
 
-    inline std::optional<GameStatus> decodeStatus(const Payload &payload)
+    struct StatusHeader {
+        std::uint8_t phase = 0;
+        std::uint16_t bossHp = 0;
+        std::uint16_t bossMaxHp = 0;
+        std::uint32_t coins = 0;
+        std::uint32_t elapsedMs = 0;
+        std::uint8_t level = 0;
+        std::uint8_t map = 0;
+        std::uint16_t deaths = 0;
+        std::uint8_t count = 0;
+    };
+
+    inline std::optional<StatusHeader> readStatusHeader(
+        Engine::BinaryReader &reader)
     {
-        Engine::BinaryReader reader(payload);
         const std::optional<std::uint8_t> phase = reader.readU8();
         const std::optional<std::uint16_t> bossHp = reader.readU16();
         const std::optional<std::uint16_t> bossMaxHp = reader.readU16();
         const std::optional<std::uint32_t> coins = reader.readU32();
+        const std::optional<std::uint32_t> elapsedMs = reader.readU32();
+        const std::optional<std::uint8_t> level = reader.readU8();
+        const std::optional<std::uint8_t> map = reader.readU8();
+        const std::optional<std::uint16_t> deaths = reader.readU16();
         const std::optional<std::uint8_t> count = reader.readU8();
-        GameStatus status;
 
-        if (!phase || !bossHp || !bossMaxHp || !coins || !count
-            || *phase > static_cast<std::uint8_t>(Phase::Shop)
-            || *count > config::MAX_PLAYERS || *bossHp > *bossMaxHp
-            || reader.remaining()
-                != *count * PLAYER_STATUS_SIZE + COUNTDOWN_SIZE) {
+        if (!phase || !bossHp || !bossMaxHp || !coins || !elapsedMs
+            || !level || !map || !deaths || !count) {
             return std::nullopt;
         }
-        status.phase = static_cast<Phase>(*phase);
-        status.bossHp = *bossHp;
-        status.bossMaxHp = *bossMaxHp;
-        status.coins = *coins;
-        for (std::size_t i = 0; i < *count; ++i) {
+        return StatusHeader{*phase, *bossHp, *bossMaxHp, *coins, *elapsedMs,
+            *level, *map, *deaths, *count};
+    }
+
+    inline bool isValid(const StatusHeader &header, const std::size_t left)
+    {
+        return (header.phase & ~PAUSED_FLAG)
+                <= static_cast<std::uint8_t>(Phase::Shop)
+            && header.map < MAP_COUNT
+            && header.count <= config::MAX_PLAYERS
+            && header.bossHp <= header.bossMaxHp
+            && left == header.count * PLAYER_STATUS_SIZE + COUNTDOWN_SIZE;
+    }
+
+    inline bool readPlayers(Engine::BinaryReader &reader,
+        const std::size_t count, std::vector<PlayerStatus> &players)
+    {
+        for (std::size_t i = 0; i < count; ++i) {
             const std::optional<PlayerStatus> player = readPlayerStatus(reader);
 
             if (!player) {
-                return std::nullopt;
+                return false;
             }
-            status.players.push_back(*player);
+            players.push_back(*player);
+        }
+        return true;
+    }
+
+    inline std::optional<GameStatus> decodeStatus(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+        const std::optional<StatusHeader> header = readStatusHeader(reader);
+        GameStatus status;
+
+        if (!header || !isValid(*header, reader.remaining())) {
+            return std::nullopt;
+        }
+        status.phase = static_cast<Phase>(header->phase & ~PAUSED_FLAG);
+        status.paused = (header->phase & PAUSED_FLAG) != 0;
+        status.bossHp = header->bossHp;
+        status.bossMaxHp = header->bossMaxHp;
+        status.coins = header->coins;
+        status.elapsedMs = header->elapsedMs;
+        status.level = header->level;
+        status.map = header->map;
+        status.deaths = header->deaths;
+        if (!readPlayers(reader, header->count, status.players)) {
+            return std::nullopt;
         }
         status.countdown = *reader.readU16() / 1000.f;
         return status;
+    }
+
+    // SELECT_MAP : l'identifiant de la map choisie par l'hote.
+    inline Payload encodeSelectMap(const MapId map)
+    {
+        return {map};
+    }
+
+    inline std::optional<MapId> decodeSelectMap(const Payload &payload)
+    {
+        if (payload.size() != 1 || payload[0] >= MAP_COUNT) {
+            return std::nullopt;
+        }
+        return payload[0];
+    }
+
+    // PAUSE : 1 pour mettre la partie en pause, 0 pour la reprendre.
+    inline Payload encodePause(const bool paused)
+    {
+        return {static_cast<std::uint8_t>(paused)};
+    }
+
+    inline std::optional<bool> decodePause(const Payload &payload)
+    {
+        if (payload.size() != 1 || payload[0] > 1) {
+            return std::nullopt;
+        }
+        return payload[0] == 1;
+    }
+
+    // LEADERBOARD : pour chaque map, le nombre de records (1) puis par
+    // record le temps en ms (4) et le nombre de joueurs (1).
+    inline Payload encode(const AllRecords &records)
+    {
+        Engine::BinaryWriter writer;
+
+        for (const MapRecords &map : records) {
+            writer.writeU8(static_cast<std::uint8_t>(map.size()));
+            for (const RunRecord &record : map) {
+                writer.writeU32(record.timeMs);
+                writer.writeU8(record.players);
+            }
+        }
+        return writer.data();
+    }
+
+    inline bool readRecords(Engine::BinaryReader &reader, MapRecords &out)
+    {
+        const std::optional<std::uint8_t> count = reader.readU8();
+
+        if (!count || *count > MAX_RECORDS
+            || reader.remaining() < *count * RECORD_SIZE) {
+            return false;
+        }
+        for (std::size_t i = 0; i < *count; ++i) {
+            const std::optional<std::uint32_t> time = reader.readU32();
+            const std::optional<std::uint8_t> players = reader.readU8();
+
+            if (!time || !players || *players == 0
+                || *players > config::MAX_PLAYERS) {
+                return false;
+            }
+            out.push_back({*time, *players});
+        }
+        return true;
+    }
+
+    inline std::optional<AllRecords> decodeLeaderboard(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+        AllRecords records;
+
+        for (MapRecords &map : records) {
+            if (!readRecords(reader, map)) {
+                return std::nullopt;
+            }
+        }
+        if (reader.remaining() != 0) {
+            return std::nullopt;
+        }
+        return records;
     }
 
     inline std::optional<AugmentId> readAugmentId(Engine::BinaryReader &reader)

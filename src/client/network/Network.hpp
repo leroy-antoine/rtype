@@ -17,6 +17,9 @@ namespace client {
         bool update(Replica &replica);
         void sendInput(std::uint32_t sequence, const rtype::PlayerInput &input);
         void requestRespawn();
+        void selectMap(rtype::MapId map);
+        void leaveMatch();
+        void setPause(bool paused);
         void buy(rtype::AugmentId id);
         void requestReady(bool ready);
         void flush();
