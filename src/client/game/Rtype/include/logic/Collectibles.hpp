@@ -9,6 +9,7 @@
 #include <random>
 #include <vector>
 #include "engine/core/Registry.hpp"
+#include "Difficulty.hpp"
 #include "utils/Vectors.hpp"
 #include "Components.hpp"
 #include "Colisions.hpp"
@@ -62,6 +63,15 @@ namespace rtype {
         });
     }
 
+    inline std::size_t scaledCoin(Engine::Registry &reg,
+        const std::size_t value)
+    {
+        const int scaled = scaledAmount(static_cast<int>(value),
+            activeScale(reg).economy);
+
+        return static_cast<std::size_t>(scaled);
+    }
+
     inline bool touchesAny(const Collider &coin,
         const std::vector<Collider> &players)
     {
@@ -82,7 +92,7 @@ namespace rtype {
             }
         }
         for (const Engine::Entity e : taken) {
-            addToPurse(reg, reg.get<coins>(e).value);
+            addToPurse(reg, scaledCoin(reg, reg.get<coins>(e).value));
             reg.destroy(e);
         }
     }

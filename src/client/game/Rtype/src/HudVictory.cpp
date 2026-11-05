@@ -79,7 +79,8 @@ namespace client {
         if (status.map >= all.size()) {
             return WHITE;
         }
-        const rtype::MapRecords &records = all[status.map];
+        const rtype::MapRecords &records = all[status.map][
+            static_cast<std::size_t>(status.settings.difficulty)];
 
         if (records.empty() || status.elapsedMs <= records.front().timeMs) {
             return GREEN;

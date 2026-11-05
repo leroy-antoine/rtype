@@ -39,6 +39,7 @@ namespace client {
                 return false;
             }
             _controls.poll(window);
+            handleBack(window);
             const float dt = advance();
             if (const std::optional<rtype::protocol::BuyResult> result = _replica.takeBuyResult()) {
                 shop.showResult(*result, elapsed());
@@ -80,6 +81,10 @@ namespace client {
     {
         sendReady();
         rtype::PlayerInput input = _controls.input();
+
+        if (!inLobby()) {
+            _replica.menu().back();
+        }
 
         if (ShopPanel::isOpen(_replica)) {
             useShop(shop);
@@ -141,11 +146,80 @@ namespace client {
         return status && status->phase == rtype::Phase::Lobby;
     }
 
+    // Echap revient au choix de la map, ou quitte depuis ailleurs.
+    void App::handleBack(Engine::Window &window)
+    {
+        if (!_controls.backRequested()) {
+            return;
+        }
+        if (inLobby() && _replica.menu().step() != LobbyStep::Map) {
+            _replica.menu().back();
+            return;
+        }
+        window.close();
+    }
+
     void App::useMenu()
     {
+        const LobbyStep step = _replica.menu().step();
+
+        if (!_replica.isHost() && step == LobbyStep::Settings) {
+            _replica.menu().back();
+        } else if (step == LobbyStep::Settings) {
+            useSettingsStep();
+        } else if (step == LobbyStep::Scores) {
+            useScoresStep();
+        } else {
+            useMapStep();
+        }
+    }
+
+    rtype::Settings App::currentSettings() const
+    {
+        if (_replica.status()) {
+            return _replica.status()->settings;
+        }
+        return rtype::Settings{};
+    }
+
+    void App::useMapStep()
+    {
         _replica.moveMapCursor(_controls.menuMove());
-        if (_controls.respawnRequested() && _replica.isHost()) {
+        _replica.menu().moveShown(_controls.menuSide());
+        if (!_controls.respawnRequested()) {
+            return;
+        }
+        if (_replica.onLeaderboard()) {
+            _replica.menu().openScores();
+            _network.requestHistory();
+        } else if (_replica.isHost()) {
+            _replica.menu().openSettings(currentSettings());
+        }
+    }
+
+    void App::useScoresStep()
+    {
+        LobbyMenu &menu = _replica.menu();
+
+        menu.moveScoresMap(_controls.menuSide());
+        menu.scrollBy(_controls.menuMove(),
+            _replica.runs(menu.scoresMap()).size());
+        if (_controls.respawnRequested()) {
+            menu.back();
+        }
+    }
+
+    void App::useSettingsStep()
+    {
+        LobbyMenu &menu = _replica.menu();
+
+        menu.moveRow(_controls.menuMove());
+        if (_controls.menuSide() != 0) {
+            _network.changeSettings(menu.change(_controls.menuSide()));
+        }
+        if (_controls.respawnRequested()) {
             _network.selectMap(_replica.mapCursor());
+            menu.back();
         }
     }
 
