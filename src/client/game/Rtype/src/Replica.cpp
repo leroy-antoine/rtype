@@ -250,6 +250,22 @@ namespace client {
         return _status->players.front().slot == *_slot;
     }
 
+    void Replica::apply(const rtype::protocol::OwnedAugment &augments)
+    {
+        _augments = augments;
+    }
+
+    void Replica::apply(const std::vector<rtype::AugmentId> &shopOffers)
+    {
+        _shopOffers = shopOffers;
+    }
+
+    void Replica::apply(const rtype::protocol::BuyResult &result)
+    {
+        _buyResult = result;
+        _cues.push_back(result.ok ? Cue::Purchase : Cue::PurchaseRefused);
+    }
+
     void Replica::assignSlot(const int slot)
     {
         _slot = slot;
@@ -270,9 +286,24 @@ namespace client {
         return _slot;
     }
 
+    const rtype::protocol::OwnedAugment &Replica::augments() const
+    {
+        return _augments;
+    }
+
+    const std::vector<rtype::AugmentId> &Replica::shopOffers() const
+    {
+        return _shopOffers;
+    }
+
     std::vector<Cue> Replica::takeCues()
     {
         return std::exchange(_cues, {});
+    }
+
+    std::optional<rtype::protocol::BuyResult> Replica::takeBuyResult()
+    {
+        return std::exchange(_buyResult, std::nullopt);
     }
 
     void Replica::recordSpawnCue(const rtype::EntitySpawned &spawn)

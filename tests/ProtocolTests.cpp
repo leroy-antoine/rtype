@@ -146,7 +146,124 @@ TEST(the_assigned_slot_round_trips_and_is_validated)
 
 TEST(the_protocol_version_changed_with_the_new_messages)
 {
-    CHECK(protocol::VERSION >= 2);
+    CHECK(protocol::VERSION >= 7);
+}
+
+TEST(owned_augments_survive_an_encode_decode_round_trip)
+{
+    protocol::OwnedAugment owned{};
+
+    owned[0] = {AugmentId::DamageUp, AugmentId::FireRateUp};
+    owned[3] = {AugmentId::MaxHpUp};
+    const std::optional<protocol::OwnedAugment> decoded =
+        protocol::decodeAugments(protocol::encodeAugments(owned));
+
+    CHECK(decoded.has_value());
+    CHECK(*decoded == owned);
+}
+
+TEST(no_owned_augments_is_a_one_byte_message)
+{
+    const protocol::Payload payload =
+        protocol::encodeAugments(protocol::OwnedAugment{});
+
+    CHECK(payload.size() == 1);
+    CHECK(protocol::decodeAugments(payload).has_value());
+}
+
+TEST(malformed_augments_are_rejected)
+{
+    const auto bad = static_cast<std::uint8_t>(AugmentId::Count);
+    const auto noSlot = static_cast<std::uint8_t>(config::MAX_PLAYERS);
+
+    CHECK(!protocol::decodeAugments({}).has_value());
+    CHECK(!protocol::decodeAugments({1, 0, 1}).has_value());
+    CHECK(!protocol::decodeAugments({1, 0, 1, bad}).has_value());
+    CHECK(!protocol::decodeAugments({1, noSlot, 0}).has_value());
+    CHECK(!protocol::decodeAugments({2, 1, 0, 1, 0}).has_value());
+    CHECK(!protocol::decodeAugments({1, 0, 0, 0}).has_value());
+    CHECK(!protocol::decodeAugments({static_cast<std::uint8_t>(noSlot + 1)}).has_value());
+    CHECK(!protocol::decodeAugments({1, 0,
+        static_cast<std::uint8_t>(protocol::MAX_OWNED_AUGMENTS + 1)})
+        .has_value());
+}
+
+TEST(too_many_owned_augments_are_clamped_when_encoding)
+{
+    protocol::OwnedAugment owned{};
+
+    owned[1].assign(protocol::MAX_OWNED_AUGMENTS + 5, AugmentId::SpeedUp);
+    const std::optional<protocol::OwnedAugment> decoded =
+        protocol::decodeAugments(protocol::encodeAugments(owned));
+
+    CHECK(decoded.has_value());
+    CHECK((*decoded)[1].size() == protocol::MAX_OWNED_AUGMENTS);
+}
+
+TEST(shop_offers_round_trip_and_are_validated)
+{
+    const std::vector<AugmentId> offers = {AugmentId::SpeedUp,
+        AugmentId::MaxHpUp};
+    const std::optional<std::vector<AugmentId>> decoded =
+        protocol::decodeShop(protocol::encodeShop(offers));
+
+    CHECK(decoded.has_value());
+    CHECK(*decoded == offers);
+    CHECK(protocol::decodeShop({0}).has_value());
+    CHECK(!protocol::decodeShop({}).has_value());
+    CHECK(!protocol::decodeShop({2, 0}).has_value());
+    CHECK(!protocol::decodeShop({1, 0, 0}).has_value());
+    CHECK(!protocol::decodeShop({1,
+        static_cast<std::uint8_t>(AugmentId::Count)}).has_value());
+    CHECK(!protocol::decodeShop({static_cast<std::uint8_t>(
+        config::SHOP_OFFER_COUNT + 1)}).has_value());
+}
+
+TEST(every_augment_id_survives_a_buy_round_trip)
+{
+    for (const AugmentDef &def : AUGMENTS) {
+        const std::optional<AugmentId> decoded =
+            protocol::decodeBuy(protocol::encodeBuy(def.id));
+
+        CHECK(decoded.has_value());
+        CHECK(*decoded == def.id);
+    }
+}
+
+TEST(a_malformed_buy_is_rejected)
+{
+    CHECK(!protocol::decodeBuy({}).has_value());
+    CHECK(!protocol::decodeBuy({0, 0}).has_value());
+    CHECK(!protocol::decodeBuy({static_cast<std::uint8_t>(AugmentId::Count)})
+        .has_value());
+}
+
+TEST(a_buy_result_survives_an_encode_decode_round_trip)
+{
+    const protocol::BuyResult accepted{AugmentId::Shield, true};
+    const protocol::BuyResult refused{AugmentId::MultiShot, false};
+    const std::optional<protocol::BuyResult> first =
+        protocol::decodeBuyResult(protocol::encode(accepted));
+    const std::optional<protocol::BuyResult> second =
+        protocol::decodeBuyResult(protocol::encode(refused));
+
+    CHECK(first.has_value());
+    CHECK(first->id == AugmentId::Shield);
+    CHECK(first->ok);
+    CHECK(second.has_value());
+    CHECK(second->id == AugmentId::MultiShot);
+    CHECK(!second->ok);
+}
+
+TEST(a_malformed_buy_result_is_rejected)
+{
+    const auto bad = static_cast<std::uint8_t>(AugmentId::Count);
+
+    CHECK(!protocol::decodeBuyResult({}).has_value());
+    CHECK(!protocol::decodeBuyResult({0}).has_value());
+    CHECK(!protocol::decodeBuyResult({0, 1, 0}).has_value());
+    CHECK(!protocol::decodeBuyResult({0, 2}).has_value());
+    CHECK(!protocol::decodeBuyResult({bad, 1}).has_value());
 }
 
 TEST(the_lobby_phase_and_the_map_survive_a_status_round_trip)

@@ -27,7 +27,7 @@ A new client can be written from these two pages alone.
 | Direction | the client sends keys, the server sends the world |
 | Datagram | at most **1200 bytes**, carries one or several messages |
 | Byte order | **big-endian** for every integer and float |
-| Protocol version | `18` (`rtype::protocol::VERSION`), checked at connection |
+| Protocol version | `19` (`rtype::protocol::VERSION`), checked at connection |
 | Tick | the server simulates at 60 Hz and sends the states every tick |
 
 The server is the authority. A client never sends a position, a hit or a
@@ -62,16 +62,20 @@ Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
 
 ```
  client                                   server
-   │ ── Connect(version=12) ─────────────►  │  every 500 ms, 10 tries at most
+   │ ── Connect(version=19) ─────────────►  │  every 500 ms, 10 tries at most
    │ ◄───────────── Accept(token) ──────── │  or Refuse(0 version, 1 full)
    │ ◄───────────────────── YOU(slot) ──── │  reliable
    │ ◄────────────────── SPAWN × n ─────── │  reliable, the whole world
    │ ◄──────────────────── LEADERBOARD ─── │  reliable, the best times
    │ ── SELECT_MAP(map) ────────────────►  │  reliable, the host, in the lobby
+   │ ◄───────────────── AUGMENTS, SHOP ─── │  reliable, augments owned and on sale
    │ ── INPUT(sequence, keys) ──────────►  │  every frame of the client
    │ ◄─────────────── STATES, STATUS ───── │  every tick / every 6 ticks
    │ ◄──────────────────── OWN_STATE ───── │  every tick, to this client only
    │ ◄─────────────── SPAWN, DESTROY ───── │  reliable, when something happens
+   │ ◄─────────────── AUGMENTS, SHOP ───── │  reliable, when they change
+   │ ── BUY(id) ────────────────────────►  │  reliable, when the player buys
+   │ ◄─────────────────── BUY_RESULT ───── │  reliable, to the buyer only
    │ ── Disconnect ─────────────────────►  │
 ```
 
@@ -97,13 +101,18 @@ Sender: **C** is the client, **S** is the server. Delivery: **R** is reliable
 | `0x12` | `SELECT_MAP` | C | R | 1 |
 | `0x13` | `LEAVE_MATCH` | C | R | 0 |
 | `0x14` | `PAUSE` | C | R | 1 |
+| `0x15` | `BUY` | C | R | 1 |
+| `0x16` | `CLOSE_SHOP` | C | R | 0 |
 | `0x20` | `SPAWN` | S | R | 22 |
 | `0x21` | `DESTROY` | S | R | 4 |
 | `0x22` | `STATES` | S | U | 5 + 12 × n |
 | `0x23` | `STATUS` | S | U | 16 + 4 × n |
 | `0x24` | `YOU` | S | R | 1 |
 | `0x25` | `OWN_STATE` | S | U | 14 |
-| `0x26` | `LEADERBOARD` | S | R | 3 to 28 |
+| `0x26` | `AUGMENTS` | S | R | 1 + Σ (2 + n) |
+| `0x27` | `SHOP` | S | R | 1 + n |
+| `0x28` | `BUY_RESULT` | S | R | 2 |
+| `0x29` | `LEADERBOARD` | S | R | 3 to 28 |
 
 ### `INPUT` (0x10)
 
@@ -149,6 +158,27 @@ Sent by the host to leave the lobby and start the match on this map. The
 **host** is the player with the lowest slot among those connected. The server
 ignores the message when the sender is not the host, when the game is not in
 the lobby phase, or when the map is unknown.
+
+### `BUY` (0x15)
+
+Asks the server to buy one augment for the sender.
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | id | `u8` | augment id, see [`AUGMENTS`](#augments-0x26) |
+
+The payload size must be exactly 1 and the id must be known, otherwise the
+message is ignored. The client sends the **id** and not the position of the
+offer: if the offers change while the message travels, the purchase is simply
+refused instead of buying another augment. The server checks every rule
+(the augment is on sale, the team has enough coins) and always answers with
+`BUY_RESULT`.
+
+### `CLOSE_SHOP` (0x16)
+
+No payload. Sent by the host to leave the shop that opens at the end of every
+level and resume the game. Ignored when the sender is not the host or when
+the shop is closed.
 
 ### `SPAWN` (0x20)
 
@@ -270,7 +300,7 @@ The client replays the inputs sent after `last input` on top of this position
 disagrees. It is only sent once the server has received an `INPUT` from this
 client.
 
-### `LEADERBOARD` (0x26)
+### `LEADERBOARD` (0x29)
 
 The best victory times of every map, sent to a client when it connects and to
 everybody after each victory. Three maps, so three blocks one after the other:
@@ -284,12 +314,75 @@ everybody after each victory. Three maps, so three blocks one after the other:
 Each record takes 5 bytes (time then players). A payload with trailing bytes,
 a count above 5, or `0` players is rejected.
 
+### `AUGMENTS` (0x26)
+
+The augments owned by every player. Sent when they change (a purchase, a
+player who leaves) and once to a client that just connected.
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | count `p` | `u8` | number of players listed, at most 4 |
+
+Then, for each listed player:
+
+| Field | Type | Meaning |
+|---|---|---|
+| slot | `u8` | 0 to 3, a slot appears at most once |
+| count `n` | `u8` | number of augments, at most 32 |
+| ids | `u8` × n | augment ids, see the table below |
+
+A player without augments is not listed, so an empty message is the single
+byte `0`. The message is rejected if a slot is out of range or listed twice,
+an id is unknown, a count is too large, or bytes are missing or left over.
+The message replaces the whole previous list on the client.
+
+| Id | Augment |
+|---|---|
+| 0 | DamageUp |
+| 1 | SpeedUp |
+| 2 | MaxHpUp |
+| 3 | FireRateUp |
+| 4 | Regeneration |
+| 5 | Shield |
+| 6 | MultiShot |
+
+Prices and rarities are not sent: the client reads them from the shared
+augment table (`logic/Augments.hpp`).
+
+### `SHOP` (0x27)
+
+The augments currently on sale.
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | count `n` | `u8` | number of offers, at most `SHOP_OFFER_COUNT` |
+| 1 + i | id | `u8` | augment id |
+
+The payload size must be exactly `1 + n` and every id must be known. Sent
+when the offers change and once to a client that just connected. An empty
+list means the shop is closed. The server opens the shop at the end of every
+level and freezes the simulation until the host sends `CLOSE_SHOP`.
+
+### `BUY_RESULT` (0x28)
+
+The answer to a `BUY`, sent to the buyer only.
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | id | `u8` | the augment of the `BUY` |
+| 1 | ok | `u8` | `1` bought, `0` refused |
+
+The payload size must be exactly 2, the id must be known and `ok` must be `0`
+or `1`. After a successful purchase, the new `AUGMENTS`, `SHOP` and `STATUS`
+messages tell every client what changed.
+
 ## Reliability
 
 UDP can lose, duplicate and reorder datagrams. The protocol picks the delivery
 per message:
 
-- **Reliable** (`SPAWN`, `DESTROY`, `YOU`, `RESPAWN`, `SELECT_MAP`, `LEAVE_MATCH`, `PAUSE`, `LEADERBOARD`): a spawn or a death must
+- **Reliable** (`SPAWN`, `DESTROY`, `YOU`, `RESPAWN`, `SELECT_MAP`, `LEAVE_MATCH`, `PAUSE`, `LEADERBOARD`, `AUGMENTS`, `SHOP`,
+  `BUY`, `CLOSE_SHOP`, `BUY_RESULT`): a spawn, a death or a purchase must
   not be missed, or the client would draw a wrong world. The sender resends
   until an Ack comes back, the receiver applies the messages in order.
 - **Unreliable** (`INPUT`, `STATES`, `STATUS`, `OWN_STATE`): they are repeated every tick

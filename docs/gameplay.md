@@ -148,6 +148,16 @@ the scenery takes its colour: a pulsing red glow for the Standard boss, fast
 cyan streaks for the Dasher, a violet tint for the Summoner, a heavy
 red vignette and a rumble for the Fortress. The Leviathan shakes for a quarter of a second every time it is hit. Nothing flashes.
 
+## Shop
+
+At the end of every level (the moment the next one begins) the game **stops**
+and the shop opens: a few augments are on sale, more and more powerful as the
+levels go by, and better after a boss level. Everybody can buy with the team
+coins (left/right to choose, Enter to buy). The host presses **Tab** to leave
+the shop and start the next level. The clock does not run while the shop is
+open. There is no shop after the last level (the victory screen comes
+instead).
+
 ## Coins, time and level skip
 
 - Each monster that you destroy drops a coin. The coins are collected by

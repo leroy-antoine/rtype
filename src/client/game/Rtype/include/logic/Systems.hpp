@@ -162,6 +162,27 @@ namespace rtype {
         });
     }
 
+    inline void updateShieldTimers(Engine::Registry &reg, const float dt)
+    {
+        reg.each<Shield>([dt](const Engine::Entity, Shield &shield) {
+            shield.timer = std::max(0.f, shield.timer - dt);
+        });
+    }
+
+    inline void regenerationSystem(Engine::Registry &reg, const float dt)
+    {
+        reg.each<Regeneration, Health, MaxHealth>(
+            [dt](const Engine::Entity, Regeneration &regeneration,
+                Health &health, const MaxHealth &max) {
+                regeneration.timer -= dt;
+                if (regeneration.timer > 0.f) {
+                    return;
+                }
+                regeneration.timer = regeneration.interval;
+                health.hp = std::min(max.hp, health.hp + regeneration.hp);
+            });
+    }
+
     inline bool isReadyToShoot(const Engine::Registry &reg,
         const Engine::Entity e)
     {
@@ -190,6 +211,10 @@ namespace rtype {
     inline std::vector<gameLogic::Vec2> shotVelocities(
         Engine::Registry &reg, const Engine::Entity shooter)
     {
+        if (reg.has<MultiShot>(shooter)) {
+            return fan(reg.get<MultiShot>(shooter).bullets,
+                config::MULTISHOT_SPREAD, config::BULLET_SPEED, 1.f);
+        }
         if (reg.get<Team>(shooter).id == TeamId::Player) {
             return {{config::BULLET_SPEED, 0.f}};
         }

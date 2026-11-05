@@ -12,6 +12,7 @@ add_executable(r-type_client
         game/Rtype/src/GameView.cpp
         game/Rtype/src/Prediction.cpp
         game/Rtype/src/Replica.cpp
+        game/Rtype/src/ShopPanel.cpp
         game/Rtype/src/SpriteBank.cpp
         network/Network.cpp)
 target_include_directories(r-type_client PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

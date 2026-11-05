@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <utility>
 #include <vector>
 #include "engine/window/Renderer.hpp"
@@ -20,17 +21,18 @@ namespace client {
         const SpriteBank sprites(textures, _assets);
         GameView view(renderer, sprites, WORLD_TO_SCREEN, WINDOW_WIDTH, WINDOW_HEIGHT);
         Audio audio(_assets);
+        ShopPanel shop(renderer, sprites, WINDOW_WIDTH, WINDOW_HEIGHT);
 
         window.setFramerateLimit(FRAMERATE);
         _start = Clock::now();
         _last = _start;
-        if (!loop(window, view, audio)) {
+        if (!loop(window, view, audio, shop)) {
             return RTYPE_ERROR;
         }
         return RTYPE_SUCCESS;
     }
 
-    bool App::loop(Engine::Window &window, GameView &view, Audio &audio)
+    bool App::loop(Engine::Window &window, GameView &view, Audio &audio, ShopPanel &shop)
     {
         while (window.isOpen()) {
             if (!_network.update(_replica)) {
@@ -38,11 +40,15 @@ namespace client {
             }
             _controls.poll(window);
             const float dt = advance();
-            sendControls(dt);
+            if (const std::optional<rtype::protocol::BuyResult> result = _replica.takeBuyResult()) {
+                shop.showResult(*result, elapsed());
+            }
+            sendControls(dt, shop);
             _replica.update(dt);
             playSounds(audio);
             window.clear(4, 4, 18);
             view.draw(_replica, elapsed());
+            shop.draw(_replica, elapsed());
             window.display();
         }
         return true;
@@ -70,11 +76,14 @@ namespace client {
         return elapsed() - *_connectedSince >= LISTEN_DELAY;
     }
 
-    void App::sendControls(const float dt)
+    void App::sendControls(const float dt, ShopPanel &shop)
     {
         rtype::PlayerInput input = _controls.input();
 
-        if (inLobby()) {
+        if (ShopPanel::isOpen(_replica)) {
+            useShop(shop);
+            input = {};
+        } else if (inLobby()) {
             useMenu();
         } else if (isPaused()) {
             usePause();
@@ -84,6 +93,20 @@ namespace client {
         }
         _network.sendInput(_replica.predict(input, dt), input);
         _network.flush();
+    }
+
+    void App::useShop(ShopPanel &shop)
+    {
+        const std::vector<Engine::Key> &keys = _controls.pressedKeys();
+
+        if (const std::optional<rtype::AugmentId> id =
+            shop.handle(keys, _replica, elapsed())) {
+            _network.buy(*id);
+        }
+        if (_replica.isHost() && std::ranges::find(keys, Engine::Key::Tab)
+            != keys.end()) {
+            _network.closeShop();
+        }
     }
 
     bool App::isPaused() const

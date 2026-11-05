@@ -82,4 +82,19 @@ namespace rtype {
         }
         return gameLogic::Vec2Pos{{x, y}};
     }
+
+    inline std::vector<gameLogic::Vec2> fan(const int count, const float spread,
+        const float speed, const float direction)
+    {
+        const float middle = (count - 1) / 2.f;
+        std::vector<gameLogic::Vec2> shots;
+
+        for (int i = 0; i < count; ++i) {
+            const float angle = (i - middle) * spread;
+
+            shots.push_back({direction * std::cos(angle) * speed,
+                std::sin(angle) * speed});
+        }
+        return shots;
+    }
 }

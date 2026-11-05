@@ -1,24 +1,24 @@
 # Graph Report - RTYPE  (2026-11-03)
 
 ## Corpus Check
-- 146 files · ~145,511 words
+- 145 files · ~125,965 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 5 file(s) not represented in the graph (top: (none) 5)
 
 ## Summary
-- 2521 nodes · 5091 edges · 161 communities (119 shown, 42 thin omitted)
-- Extraction: 87% EXTRACTED · 13% INFERRED · 0% AMBIGUOUS · INFERRED: 667 edges (avg confidence: 0.88)
+- 2617 nodes · 5350 edges · 166 communities (118 shown, 48 thin omitted)
+- Extraction: 87% EXTRACTED · 13% INFERRED · 0% AMBIGUOUS · INFERRED: 715 edges (avg confidence: 0.87)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `26188d5e`
+- Built from commit: `06d320af`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
+- src/App.cpp
 - IntRect
 - string
-- Components.hpp
 - Background.cpp
 - Client Connection
 - vector
@@ -28,10 +28,10 @@
 - Server Events
 - Game Tests
 - Components.hpp
-- Registry
+- Entity
 - Connection Channel
 - Game
-- UdpSocket::Impl
+- Address
 - .updatePlaying
 - Hud
 - Entity State Payload
@@ -43,11 +43,12 @@
 - BinaryReader
 - DeathRuns.hpp
 - GameView
-- App
+- Layers
 - Client.cpp
+- Leviathan.hpp
 - Audio Player Impl
-- deathSystem
-- Command Buffer
+- Collectibles.hpp
+- Registry
 - BackdropId
 - Design Choices Docs
 - Audio Player
@@ -61,7 +62,7 @@
 - Phase
 - Network protocol doc
 - Architecture Targets
-- vector
+- Public API: the `Game` class
 - TEST
 - Segments
 - Key
@@ -72,7 +73,7 @@
 - SpriteId
 - Window.cpp
 - SpriteBank
-- movementSystem
+- GameTests.cpp
 - src/App.cpp
 - Background
 - Message Types
@@ -82,7 +83,7 @@
 - describeSpawn
 - SpriteId
 - time_point
-- Connection::handle
+- Connection::readId
 - Session Info
 - Renderer.cpp
 - SpriteBank
@@ -92,7 +93,7 @@
 - Window Impl Header
 - BinaryWriter.cpp
 - TEST
-- client/main.cpp
+- stdexcept
 - Phase
 - Sound Manager Impl
 - HudVictory.cpp
@@ -102,112 +103,113 @@
 - createPlayer
 - SlotTable
 - DisconnectReason
-- Knowledge graph (graphify)
+- Column
 - GameStatus
 - GameView.cpp
 - OwnState
 - game/App.cpp
-- Aura
+- Systems.hpp
 - .operator()
 - Track
 - CLAUDE.md
 - findPlayerBySlot
 - LevelDef
 - App
-- src/App.cpp
+- UdpSocket::Impl
 - map1
 - Archetype
 - ObstacleStep
 - Audio.cpp
 - App::run
 - vcpkg.json
+- GateSpec
 - Gameplay
-- SpriteBank.cpp
+- Datagram
 - Hud.cpp
 - bossHazardSystem
-- Prediction.cpp
-- Vec2
+- PlayerInput
+- ProjectileDef
 - Streak
 - Vector2f
-- UdpSocket
+- Replica.hpp
 - FixedTimestep
-- .restartDeathRun
-- Scatter.hpp
+- Obstacles.hpp
+- scatter
 - ObstacleKind
-- Hud::drawTimer
-- buildMap
+- LeviathanMove
+- Client::send
 - Star
-- Vec2Pos
-- Roadmap
+- Behaviours
+- Background::drawAura
 - size_t
-- formatTime
-- Area
-- wall
+- Scene
+- Vec2
 - LaserCycle
 - PendingSpawn
-- Hud::drawLobby
-- BossTag
-- TeamId
+- Connection::handle
+- R-Type game logic
+- BulletLook
 - TurretFire
-- spawnBoss
-- zoneOf
+- ObstacleMotion
+- Window::Window
+- Use the graph
 
 ## God Nodes (most connected - your core abstractions)
-1. `TEST()` - 180 edges
-2. `Registry` - 145 edges
-3. `Entity` - 117 edges
-4. `Game` - 112 edges
-5. `Replica` - 60 edges
-6. `SpriteId` - 46 edges
-7. `LevelDef` - 46 edges
-8. `Hud` - 44 edges
-9. `TEST()` - 44 edges
+1. `TEST()` - 194 edges
+2. `Registry` - 158 edges
+3. `Entity` - 126 edges
+4. `Game` - 114 edges
+5. `Replica` - 61 edges
+6. `TEST()` - 54 edges
+7. `LevelDef` - 49 edges
+8. `SpriteId` - 48 edges
+9. `Hud` - 44 edges
 10. `Server` - 43 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Use the graph` --references--> `Entity`  [INFERRED]
-  docs/graphify.md → engine/core/include/engine/core/Entity.hpp
 - `The ECS rules to remember` --references--> `each()`  [INFERRED]
   src/client/game/Rtype/doc/README.md → engine/core/include/engine/core/Registry.hpp
+- `Use the graph` --references--> `Entity`  [INFERRED]
+  docs/graphify.md → engine/core/include/engine/core/Entity.hpp
+- `Use the graph` --references--> `Connection`  [INFERRED]
+  docs/graphify.md → engine/network/include/engine/network/Connection.hpp
 - `The first map: 20 levels` --references--> `map1()`  [INFERRED]
   src/client/game/Rtype/doc/README.md → src/client/game/Rtype/src/maps/map1.cpp
 - `Add a system` --references--> `each()`  [INFERRED]
   src/client/game/Rtype/doc/README.md → engine/core/include/engine/core/Registry.hpp
-- `Current status` --references--> `LevelDef`  [INFERRED]
-  src/client/game/Rtype/doc/README.md → src/client/game/Rtype/include/logic/LevelBuilder.hpp
 
 ## Import Cycles
 - None detected.
 
-## Communities (161 total, 42 thin omitted)
+## Communities (166 total, 48 thin omitted)
 
 ### Community 1 - "IntRect"
-Cohesion: 0.13
-Nodes (15): Animation, firstFrame, frameCount, frameDuration, step, IntRect, height, left (+7 more)
+Cohesion: 0.15
+Nodes (13): Animation, firstFrame, frameCount, frameDuration, step, IntRect, height, left (+5 more)
 
 ### Community 2 - "string"
-Cohesion: 0.18
-Nodes (4): Window, _impl, handle(), App::loop()
+Cohesion: 0.12
+Nodes (6): Window, _impl, handle(), App::listening(), App::loop(), App::run()
 
 ### Community 4 - "Background.cpp"
 Cohesion: 0.19
-Nodes (15): Renderer, Background::drawBand(), Background::drawBars(), Background::drawFade(), Background::drawNebula(), Background::drawRings(), Background::drawSky(), Background::drawStar() (+7 more)
+Nodes (14): Renderer, Background::drawBand(), Background::drawBars(), Background::drawFade(), Background::drawNebula(), Background::drawSky(), Background::drawStar(), Background::drawStars() (+6 more)
 
 ### Community 5 - "Client Connection"
-Cohesion: 0.06
-Nodes (15): Client, _attempts, _connection, _events, _handshakeSequence, _lastAttempt, _server, _socket (+7 more)
+Cohesion: 0.05
+Nodes (17): Client, _attempts, _connection, _events, _handshakeSequence, _lastAttempt, _server, _socket (+9 more)
 
 ### Community 6 - "vector"
-Cohesion: 0.06
-Nodes (11): SoundManager::Impl, buffers, ids, SoundManager::load(), TextureManager::Impl, ids, textures, TextureManager::load() (+3 more)
+Cohesion: 0.08
+Nodes (8): SoundManager::Impl, buffers, ids, SoundManager::load(), TextureManager::Impl, ids, textures, TextureManager::load()
 
 ### Community 7 - "Component.hpp"
-Cohesion: 0.13
-Nodes (6): add(), create(), remove(), infoOf(), swapRemove(), hash<Engine::Entity>
+Cohesion: 0.16
+Nodes (7): add(), create(), remove(), ComponentRegistry, idOf(), infoOf(), swapRemove()
 
 ### Community 8 - "Delivery and Sessions"
-Cohesion: 0.10
-Nodes (18): Delivery, Reliable, Unreliable, Server::admit(), Server::broadcast(), Server::checkSessions(), Server::clientCount(), Server::close() (+10 more)
+Cohesion: 0.12
+Nodes (16): Delivery, Reliable, Unreliable, Server::admit(), Server::broadcast(), Server::checkSessions(), Server::clientCount(), Server::close() (+8 more)
 
 ### Community 9 - "Build and Protocol Docs"
 Cohesion: 0.16
@@ -215,99 +217,103 @@ Nodes (17): engine_audio library, SFML::Audio, engine build root, engine_core li
 
 ### Community 10 - "Server Events"
 Cohesion: 0.06
-Nodes (9): Server, _events, _maxClients, _nextClientId, _sessions, _socket, _version, Server::handleConnect() (+1 more)
+Nodes (11): Server, _events, _maxClients, _nextClientId, _sessions, _socket, _version, Server::handleConnect() (+3 more)
 
-### Community 14 - "Registry"
-Cohesion: 0.06
-Nodes (47): Entity, id, EntityManager, _freeList, _generations, eachRow(), has(), Registry (+39 more)
+### Community 14 - "Entity"
+Cohesion: 0.08
+Nodes (20): Entity, id, hash<Engine::Entity>, EntityManager, _freeList, _generations, eachRow(), has() (+12 more)
 
 ### Community 15 - "Connection Channel"
-Cohesion: 0.07
-Nodes (12): Use the graph, With an AI agent (Claude Code), Connection, _channel, _lastPing, _lastReceived, _outbox, _pingId (+4 more)
+Cohesion: 0.08
+Nodes (10): Connection, _channel, _lastPing, _lastReceived, _outbox, _pingId, _pingSentAt, _received (+2 more)
 
 ### Community 16 - "Game"
 Cohesion: 0.05
-Nodes (27): Game, _alive, _augments, _coinCounter, _deaths, _effectLevel, _elapsed, _events (+19 more)
+Nodes (25): What the server reads, countBefore(), Game, _alive, _augments, _coinCounter, _deaths, _effectLevel (+17 more)
 
-### Community 17 - "UdpSocket::Impl"
-Cohesion: 0.06
-Nodes (26): Address, ip, port, Datagram, bytes, from, toAddress(), toEndpoint() (+18 more)
+### Community 17 - "Address"
+Cohesion: 0.14
+Nodes (12): Address, ip, port, toAddress(), toEndpoint(), UdpSocket::Impl::Impl(), UdpSocket::Impl::store(), UdpSocket::port() (+4 more)
 
 ### Community 18 - ".updatePlaying"
-Cohesion: 0.07
-Nodes (13): Replica, CLOCK_CORRECTION_RATE, _cues, _entities, INTERPOLATION_DELAY, _latestTick, MAX_CLOCK_ERROR, _prediction (+5 more)
+Cohesion: 0.06
+Nodes (18): Replica, CLOCK_CORRECTION_RATE, _cues, _entities, INTERPOLATION_DELAY, _latestTick, MAX_CLOCK_ERROR, _prediction (+10 more)
 
 ### Community 19 - "Hud"
-Cohesion: 0.09
-Nodes (17): Hud, BAR_HEIGHT, BAR_WIDTH, BAR_X, BOSS_BAR_WIDTH, _font, _height, ICON_GAP (+9 more)
+Cohesion: 0.08
+Nodes (18): Hud, BAR_HEIGHT, BAR_WIDTH, BAR_X, BOSS_BAR_WIDTH, _font, _height, ICON_GAP (+10 more)
 
 ### Community 20 - "Entity State Payload"
-Cohesion: 0.18
-Nodes (19): decodeInput(), decodeLeaderboard(), decodeOwnState(), decodePause(), decodeSelectMap(), decodeSpawn(), decodeStates(), decodeStatus() (+11 more)
+Cohesion: 0.19
+Nodes (19): decodeDestroy(), decodeInput(), decodeLeaderboard(), decodeOwnState(), decodePause(), decodeSelectMap(), decodeSpawn(), decodeStates() (+11 more)
 
 ### Community 21 - "Prediction"
 Cohesion: 0.07
 Nodes (16): Pending, dt, input, sequence, Prediction, _box, _input, MAX_PENDING (+8 more)
 
 ### Community 22 - "Binary Writer"
-Cohesion: 0.21
-Nodes (8): BinaryWriter, _data, MAX_VARINT, Packet::serialize(), Server::sendAccept(), encode(), encodeInput(), writeVec2()
+Cohesion: 0.15
+Nodes (10): BinaryWriter, _data, MAX_VARINT, BinaryWriter::writeFloat(), BinaryWriter::writeU32(), Connection::sendId(), Packet::serialize(), Server::sendAccept() (+2 more)
 
 ### Community 23 - "Packet"
 Cohesion: 0.10
-Nodes (11): Packet, _messages, Client::checkConnection(), Client::handleDatagram(), Client::handleHandshake(), Client::handleSession(), Client::tryConnect(), Connection::flush() (+3 more)
+Nodes (11): Packet, _messages, Client::checkConnection(), Client::flushConnection(), Client::handleHandshake(), Client::handleSession(), Client::tryConnect(), Connection::hasHandshakeMessage() (+3 more)
 
 ### Community 24 - "Pending Messages"
 Cohesion: 0.11
 Nodes (8): Pending, message, sentAt, ReliableChannel, _early, _expected, _nextId, _pending
 
 ### Community 25 - "Replica"
-Cohesion: 0.12
-Nodes (12): GameView, ANIMATION_PHASE, _background, _hud, PLAYER_FRAME_DOWN, PLAYER_FRAME_IDLE, PLAYER_FRAME_UP, _screenHeight (+4 more)
+Cohesion: 0.09
+Nodes (17): GameView, ANIMATION_PHASE, _background, _hud, HURT_DURATION, HURT_SHAKE, _hurtUntil, _lastBossHp (+9 more)
 
 ### Community 26 - "BinaryReader"
-Cohesion: 0.21
+Cohesion: 0.23
 Nodes (8): BinaryReader::BinaryReader(), BinaryReader::readBytes(), BinaryReader::readFloat(), BinaryReader::readU16(), BinaryReader::readU32(), BinaryReader::readU8(), BinaryReader::readVarint(), BinaryReader::remaining()
 
 ### Community 27 - "DeathRuns.hpp"
-Cohesion: 0.18
-Nodes (18): addCourse(), addCoursePortal(), checkPattern(), Course, after, gapFrom, gapTo, motion (+10 more)
+Cohesion: 0.17
+Nodes (19): addCourse(), addCoursePortal(), checkPattern(), Course, after, gapFrom, gapTo, motion (+11 more)
 
 ### Community 28 - "GameView"
-Cohesion: 0.10
-Nodes (14): App, _assets, _connectedSince, _controls, FRAMERATE, _last, LISTEN_DELAY, _network (+6 more)
+Cohesion: 0.09
+Nodes (15): App, _assets, _connectedSince, _controls, FRAMERATE, _last, LISTEN_DELAY, _network (+7 more)
 
-### Community 29 - "App"
-Cohesion: 0.07
-Nodes (49): Layers, The tick: `Game::update`, applyContact(), canHit(), collectProjectiles(), collectTargets(), Collider, box (+41 more)
+### Community 29 - "Layers"
+Cohesion: 0.17
+Nodes (19): Layers, isShooter(), applyContact(), canHit(), collectProjectiles(), collectTargets(), Collider, box (+11 more)
 
 ### Community 30 - "Client.cpp"
-Cohesion: 0.09
-Nodes (13): DisconnectReason, Kicked, Quit, Shutdown, Timeout, Client::Client(), Client::close(), Client::flush() (+5 more)
+Cohesion: 0.22
+Nodes (4): Client::flush(), Client::latency(), Client::pollEvent(), Client::sendDisconnect()
+
+### Community 31 - "Leviathan.hpp"
+Cohesion: 0.12
+Nodes (32): LeviathanState, move, step, swing, timer, StrikeSpec, active, height (+24 more)
 
 ### Community 32 - "Audio Player Impl"
 Cohesion: 0.18
 Nodes (4): AudioPlayer::play(), AudioPlayer::playMusic(), AudioPlayer::setMusicVolume(), toSfmlVolume()
 
-### Community 33 - "deathSystem"
-Cohesion: 0.14
-Nodes (13): each(), Add a system, Architecture, Level skip, The ECS rules to remember, isSummoned(), spawnCoin(), createCoin() (+5 more)
+### Community 33 - "Collectibles.hpp"
+Cohesion: 0.18
+Nodes (9): Level skip, addToPurse(), coinPickupSystem(), collectCoins(), isSummoned(), spawnCoin(), touchesAny(), createCoin() (+1 more)
 
-### Community 34 - "Command Buffer"
-Cohesion: 0.14
-Nodes (5): CommandBuffer, _commands, Scheduler, _commands, _systems
+### Community 34 - "Registry"
+Cohesion: 0.07
+Nodes (35): CommandBuffer, _commands, Registry, _archetypes, EMPTY_ARCHETYPE, _entities, _iterating, NO_ARCHETYPE (+27 more)
 
 ### Community 35 - "BackdropId"
-Cohesion: 0.12
-Nodes (16): BackdropId, Count, Girders, NebulaBlue, NebulaGreen, NebulaOrange, NebulaPurple, NebulaRed (+8 more)
+Cohesion: 0.13
+Nodes (15): BackdropId, Count, Girders, NebulaBlue, NebulaGreen, NebulaOrange, NebulaPurple, NebulaRed (+7 more)
 
 ### Community 36 - "Design Choices Docs"
 Cohesion: 0.17
 Nodes (16): Accessibility doc, Audio/visual accessibility (health bars, per-slot sprites; palette, contrast proposed), Cognitive accessibility (simple rules, short levels, clear feedback), rtype::config (Config.hpp constants), Motor accessibility (keyboard only done; remap, toggle fire, gamepad proposed), Choice: per-message reliability, Choice: event-based replication with NetId, Choice: sessions with token, ping, 5s timeout (+8 more)
 
 ### Community 38 - "Connection Impl"
-Cohesion: 0.21
-Nodes (8): Connection::Connection(), Connection::handleUser(), Connection::latency(), Connection::peerDisconnect(), Connection::resendDelay(), Connection::sendPing(), Connection::token(), duration
+Cohesion: 0.27
+Nodes (6): Connection::Connection(), Connection::latency(), Connection::peerDisconnect(), Connection::resendDelay(), Connection::token(), duration
 
 ### Community 39 - "Replica Events"
 Cohesion: 0.13
@@ -326,16 +332,16 @@ Cohesion: 0.23
 Nodes (5): ReliableChannel::acknowledge(), ReliableChannel::receive(), ReliableChannel::resend(), ReliableChannel::send(), ReliableChannel::takeReady()
 
 ### Community 43 - "AugmentId"
-Cohesion: 0.08
-Nodes (19): applyAugment(), AugmentDef, apply, id, price, rarity, AugmentId, Count (+11 more)
+Cohesion: 0.07
+Nodes (24): addDamage(), addHp(), addSpeed(), applyAugment(), AugmentDef, apply, id, price (+16 more)
 
 ### Community 44 - "Zone"
-Cohesion: 0.12
-Nodes (15): Scene, aura, boosted, zone, Zone, Arena, Asteroids, Core (+7 more)
+Cohesion: 0.18
+Nodes (12): Variety by zone, stormInterval(), Zone, Arena, Asteroids, Core, Count, DeepSpace (+4 more)
 
 ### Community 45 - "Phase"
-Cohesion: 0.11
-Nodes (10): Audio, _dir, _enabled, _ids, _phase, _player, SOUND_COUNT, _sounds (+2 more)
+Cohesion: 0.14
+Nodes (9): Audio, _dir, _enabled, _ids, _phase, _player, SOUND_COUNT, _sounds (+1 more)
 
 ### Community 46 - "Network protocol doc"
 Cohesion: 0.18
@@ -350,116 +356,112 @@ Cohesion: 0.06
 Nodes (7): Leaderboard, _records, RunRecord, players, timeMs, sampleStatus(), TEST()
 
 ### Community 50 - "Segments"
-Cohesion: 0.13
-Nodes (16): firstLevel(), isDeathRun(), lastSpawnPoint(), levelAt(), levelSpan(), levelStart(), Segments, bossSpawn (+8 more)
+Cohesion: 0.11
+Nodes (21): appendLevel(), buildMap(), buildRun(), createCoinCounter(), firstLevel(), isDeathRun(), lastSpawnPoint(), levelAt() (+13 more)
 
 ### Community 51 - "Key"
-Cohesion: 0.20
-Nodes (10): Key, Backspace, Down, Enter, Escape, Left, Right, Space (+2 more)
+Cohesion: 0.17
+Nodes (12): Key, Backspace, Down, Enter, Escape, Left, Right, Space (+4 more)
 
 ### Community 52 - "addGates"
 Cohesion: 0.11
-Nodes (28): addCave(), addGates(), addRun(), addSweepers(), CavePiece, bottom, top, Gap (+20 more)
+Nodes (29): Obstacles, PlayerEffects, inverted, lastPortal, speedFactor, portal(), addCave(), addGates() (+21 more)
 
 ### Community 53 - "MonsterKind"
-Cohesion: 0.10
-Nodes (20): Add a new kind of monster, Behaviours, Kinds of monsters and bosses, MonsterState, age, locked, summoned, MonsterType (+12 more)
+Cohesion: 0.15
+Nodes (13): MonsterType, kind, MonsterKind, Basic, Bomber, Count, Elite, Kamikaze (+5 more)
 
 ### Community 54 - "map3.cpp"
 Cohesion: 0.54
 Nodes (6): gauntlet(), map3(), minefield(), pinch(), rhythm(), run()
 
 ### Community 55 - "Components"
-Cohesion: 0.06
-Nodes (47): Add a component, Add a map or a level, Add a player action (a new key), Coding conventions, Collisions, Components, Configuration, Current status (+39 more)
+Cohesion: 0.10
+Nodes (24): Architecture, Collisions, Components, Data oriented design, Shooting, Systems, Damage, value (+16 more)
 
 ### Community 56 - "SpriteId"
-Cohesion: 0.22
-Nodes (4): Controls, _input, _pause, _respawn
+Cohesion: 0.14
+Nodes (7): KeyPressed, key, Controls, _input, _pause, _respawn, Controls::handle()
 
 ### Community 57 - "Window.cpp"
-Cohesion: 0.10
-Nodes (14): Closed, FocusGained, FocusLost, KeyReleased, key, Resized, height, width (+6 more)
+Cohesion: 0.14
+Nodes (10): FocusGained, FocusLost, Resized, height, width, convert(), toKey(), translate() (+2 more)
 
 ### Community 58 - "SpriteBank"
-Cohesion: 0.13
-Nodes (9): explosionCue(), Replica::applyPrediction(), Replica::bossSprite(), Replica::localPlayer(), Replica::mapCursor(), Replica::predict(), Replica::recordSpawnCue(), Replica::refreshSolids() (+1 more)
+Cohesion: 0.12
+Nodes (10): explosionCue(), Replica::applyPrediction(), Replica::bossSprite(), Replica::localPlayer(), Replica::mapCursor(), Replica::predict(), Replica::record(), Replica::recordSpawnCue() (+2 more)
 
-### Community 59 - "movementSystem"
-Cohesion: 0.40
-Nodes (5): Position, velocity, speed, direction, bossSystem(), calculatePos(), movementSystem(), runBoss()
+### Community 59 - "GameTests.cpp"
+Cohesion: 0.14
+Nodes (9): bossSystem(), colliderOf(), kill(), killBoss(), playerOf(), run(), runBoss(), skipToBoss() (+1 more)
 
 ### Community 60 - "src/App.cpp"
 Cohesion: 0.24
 Nodes (6): AudioPlayer::Impl, music, musicVolume, next, soundVolume, voices
 
 ### Community 61 - "Background"
-Cohesion: 0.08
-Nodes (19): Background, _aura, _auraLevel, _boosted, _fade, _height, _last, LAYERS (+11 more)
+Cohesion: 0.09
+Nodes (17): Background, _aura, _auraLevel, _boosted, _fade, _height, _last, LAYERS (+9 more)
 
 ### Community 62 - "Message Types"
 Cohesion: 0.22
 Nodes (5): Message, id, payload, reliable, type
 
 ### Community 63 - "EntitySpawned"
-Cohesion: 0.14
-Nodes (11): EntityDestroyed, id, EntitySpawned, box, id, pos, slot, sprite (+3 more)
+Cohesion: 0.15
+Nodes (10): EntityDestroyed, id, EntitySpawned, box, id, pos, slot, sprite (+2 more)
 
 ### Community 64 - "BossKind"
-Cohesion: 0.25
-Nodes (8): BossType, kind, BossKind, Count, Dasher, Fortress, Standard, Summoner
-
-### Community 65 - "Controls.cpp"
-Cohesion: 0.18
-Nodes (5): KeyPressed, key, Controls::applyKey(), Controls::handle(), Controls::poll()
+Cohesion: 0.20
+Nodes (10): BossType, kind, BossKind, Count, Dasher, Fortress, Standard, Summoner (+2 more)
 
 ### Community 66 - "describeSpawn"
-Cohesion: 0.16
+Cohesion: 0.15
 Nodes (9): Packet::add(), Packet::isHandshake(), Packet::isValid(), Packet::Packet(), Packet::parseMessage(), Packet::sequence(), Packet::size(), Packet::sizeOf() (+1 more)
 
 ### Community 67 - "SpriteId"
 Cohesion: 0.06
-Nodes (34): isBossSprite(), Renderable, id, SpriteId, AlienShard, BeamOn, BeamWarn, Bomb (+26 more)
+Nodes (35): isBossSprite(), Renderable, id, SpriteId, AlienShard, BeamOn, BeamWarn, Bomb (+27 more)
 
 ### Community 68 - "time_point"
 Cohesion: 0.25
 Nodes (3): Connection::receive(), Connection::timedOut(), Connection::update()
 
-### Community 69 - "Connection::handle"
+### Community 69 - "Connection::readId"
 Cohesion: 0.20
-Nodes (5): Connection::handle(), Connection::handlePong(), Connection::nextSequence(), Connection::readId(), Connection::sendId()
+Nodes (6): Connection::handlePong(), Connection::handleUser(), Connection::nextSequence(), Connection::readId(), Connection::sendPing(), Connection::takeMessages()
 
 ### Community 70 - "Session Info"
-Cohesion: 0.18
-Nodes (8): _random, Session, address, connection, id, Server::findByAddress(), Server::findByToken(), Server::makeToken()
+Cohesion: 0.13
+Nodes (13): DisconnectReason, Kicked, Quit, Shutdown, Timeout, Session, address, connection (+5 more)
 
 ### Community 71 - "Renderer.cpp"
 Cohesion: 0.09
 Nodes (19): Color, a, b, g, r, Font, GLYPH_HEIGHT, GLYPH_WIDTH (+11 more)
 
 ### Community 72 - "SpriteBank"
-Cohesion: 0.09
-Nodes (10): TextureManager, _impl, SpriteBank, _assets, _backdrops, _clock, _sprites, Background::Background() (+2 more)
+Cohesion: 0.07
+Nodes (19): TextureManager, _impl, SpriteBank, _assets, _backdrops, _clock, _sprites, GameView::GameView() (+11 more)
 
 ### Community 73 - "EntityState"
-Cohesion: 0.16
-Nodes (12): EntityState, id, pos, Replica::record(), encodeStateChunk(), encodeStates(), InputMessage, input (+4 more)
+Cohesion: 0.17
+Nodes (12): EntityState, id, pos, encodeInput(), encodeStateChunk(), encodeStates(), InputMessage, input (+4 more)
 
 ### Community 74 - "WaveStep"
-Cohesion: 0.29
-Nodes (7): WaveStep, at, count, dy, interval, kind, y
+Cohesion: 0.11
+Nodes (21): fittedBase(), fittedSpacing(), formationDelay(), formationSlot(), Slot, delay, y, canTakeFormation() (+13 more)
 
 ### Community 75 - "Layers"
-Cohesion: 0.12
-Nodes (9): BinaryReader, _cursor, PlayerStatus, alive, hp, slot, readPlayers(), readPlayerStatus() (+1 more)
+Cohesion: 0.15
+Nodes (8): BinaryReader, _cursor, PlayerStatus, alive, hp, slot, readPlayers(), readPlayerStatus()
 
 ### Community 77 - "BinaryWriter.cpp"
-Cohesion: 0.20
-Nodes (6): BinaryWriter::writeBytes(), BinaryWriter::writeFloat(), BinaryWriter::writeU16(), BinaryWriter::writeU32(), BinaryWriter::writeU8(), BinaryWriter::writeVarint()
+Cohesion: 0.27
+Nodes (4): BinaryWriter::writeBytes(), BinaryWriter::writeU16(), BinaryWriter::writeU8(), BinaryWriter::writeVarint()
 
-### Community 80 - "client/main.cpp"
-Cohesion: 0.33
-Nodes (4): Case, name, run, Registrar
+### Community 80 - "stdexcept"
+Cohesion: 0.10
+Nodes (7): main(), parsePort(), parsePort(), Case, name, run, Registrar
 
 ### Community 81 - "Phase"
 Cohesion: 0.29
@@ -474,16 +476,16 @@ Cohesion: 0.14
 Nodes (7): clock(), confettiColor(), Hud::drawConfetti(), Hud::drawVictoryScreen(), Hud::drawVictoryStats(), Hud::timeColor(), count
 
 ### Community 84 - "MonsterDef"
-Cohesion: 0.17
-Nodes (13): addMonsterStats(), createBoss(), createMonster(), setBossStats(), MonsterDef, damage, fireCooldown, height (+5 more)
+Cohesion: 0.20
+Nodes (10): MonsterDef, damage, fireCooldown, height, hp, projectile, speed, sprite (+2 more)
 
 ### Community 85 - "RefuseReason"
-Cohesion: 0.22
-Nodes (8): Refused, reason, RefuseReason, Full, Version, Client::flushConnection(), Server::flush(), Server::sendRefuse()
+Cohesion: 0.40
+Nodes (5): Refused, reason, RefuseReason, Full, Version
 
 ### Community 86 - "Connection Send"
-Cohesion: 0.47
-Nodes (3): Connection::send(), Connection::sendEngine(), Connection::takeMessages()
+Cohesion: 0.38
+Nodes (3): Connection::flush(), Connection::send(), Connection::sendEngine()
 
 ### Community 87 - "createPlayer"
 Cohesion: 0.29
@@ -497,145 +499,137 @@ Nodes (9): Sound, BossAlert, Coin, Count, Defeat, Explosion, Hit, Shoot (+1 more
 Cohesion: 0.17
 Nodes (9): Cue, BossAppears, BossExplosion, CoinPickup, Explosion, Hit, PlayerShot, Audio::play() (+1 more)
 
-### Community 90 - "Knowledge graph (graphify)"
-Cohesion: 0.22
-Nodes (5): Sample, pos, tick, Replica::interpolate(), Replica::update()
+### Community 90 - "Column"
+Cohesion: 0.10
+Nodes (13): Column, _data, _info, ComponentId, id, ComponentInfo, getId(), ComponentRegistry::getInfo() (+5 more)
 
 ### Community 91 - "GameStatus"
-Cohesion: 0.11
-Nodes (14): GameStatus, bossHp, bossMaxHp, coins, deaths, elapsedMs, level, map (+6 more)
+Cohesion: 0.12
+Nodes (13): GameStatus, bossHp, bossMaxHp, coins, deaths, elapsedMs, level, map (+5 more)
 
 ### Community 92 - "GameView.cpp"
-Cohesion: 0.18
-Nodes (7): GameView::drawLayer(), GameView::drawWorld(), GameView::GameView(), GameView::isBlock(), GameView::isPortalSprite(), GameView::sceneOf(), GameView::tiltFrame()
+Cohesion: 0.11
+Nodes (14): Aura, Dasher, Fortress, None, Standard, Summoner, GameView::auraOf(), GameView::drawLayer() (+6 more)
 
 ### Community 93 - "OwnState"
-Cohesion: 0.33
-Nodes (6): Prediction::reconcile(), OwnState, inverted, lastInput, pos, speedPercent
+Cohesion: 0.22
+Nodes (8): Prediction::reconcile(), encodeKeys(), OwnState, inverted, lastInput, pos, speedPercent, phaseByte()
 
-### Community 95 - "Aura"
-Cohesion: 0.29
-Nodes (7): Aura, Dasher, Fortress, None, Standard, Summoner, GameView::auraOf()
+### Community 95 - "Systems.hpp"
+Cohesion: 0.15
+Nodes (19): The tick: `Game::update`, isFarOutOfBounds(), bombVelocity(), collisionSystem(), contactSystem(), deathSystem(), deleteUnitsOutOfBounds(), destroyFarEntities() (+11 more)
 
 ### Community 96 - ".operator()"
 Cohesion: 0.50
 Nodes (3): Install, Keep it up to date: the git hook, Knowledge graph (graphify)
 
 ### Community 97 - "Track"
-Cohesion: 0.22
-Nodes (9): Track, BossDasher, BossFortress, BossStandard, BossSummoner, Count, DeathRun, Level (+1 more)
+Cohesion: 0.14
+Nodes (13): Track, BossDasher, BossFortress, BossStandard, BossSummoner, Core, Count, DeathRun (+5 more)
 
 ### Community 98 - "CLAUDE.md"
 Cohesion: 0.17
 Nodes (10): isValid(), StatusHeader, bossHp, bossMaxHp, coins, deaths, elapsedMs, level (+2 more)
 
-### Community 99 - "findPlayerBySlot"
-Cohesion: 0.12
-Nodes (4): Maps and lobby, findPlayerBySlot(), kill(), playerOf()
-
 ### Community 100 - "LevelDef"
-Cohesion: 0.17
-Nodes (30): LevelDef, bosses, deathRun, length, obstacles, waves, wave(), deathRun() (+22 more)
+Cohesion: 0.18
+Nodes (30): LevelDef, bosses, deathRun, length, obstacles, waves, wave(), closeWith() (+22 more)
 
 ### Community 102 - "App"
 Cohesion: 0.13
 Nodes (11): App, _game, _lastInputs, _lastPhase, _leaderboard, LEADERBOARD_FILE, _server, _slots (+3 more)
 
-### Community 103 - "src/App.cpp"
-Cohesion: 0.11
-Nodes (4): App::App(), App::listening(), App::playSounds(), App::run()
+### Community 103 - "UdpSocket::Impl"
+Cohesion: 0.10
+Nodes (12): UdpSocket::Impl::startReceive(), UdpSocket::Impl, buffer, BUFFER_SIZE, io, localPort, MAX_QUEUED, mutex (+4 more)
 
 ### Community 105 - "Archetype"
-Cohesion: 0.06
-Nodes (24): Archetype, _columns, _columnsIndex, _entities, NO_COLUMN, _signature, Column, _data (+16 more)
+Cohesion: 0.14
+Nodes (9): Archetype, _columns, _columnsIndex, _entities, NO_COLUMN, _signature, Signature, WORD_BITS (+1 more)
 
 ### Community 106 - "ObstacleStep"
-Cohesion: 0.09
-Nodes (24): addGate(), GateSpec, at, gapHeight, gapY, kind, motion, pinch (+16 more)
+Cohesion: 0.12
+Nodes (19): addGate(), gateWall(), shifted(), wall(), withMotion(), asteroid(), placeScattered(), ObstacleStep (+11 more)
 
 ### Community 107 - "Audio.cpp"
-Cohesion: 0.22
-Nodes (6): Audio::Audio(), Audio::onPhase(), Audio::playCue(), Audio::playMusic(), Audio::playSound(), Audio::trackFor()
+Cohesion: 0.15
+Nodes (7): Audio::Audio(), Audio::follow(), Audio::onPhase(), Audio::playCue(), Audio::playMusic(), Audio::playSound(), Audio::trackOfZone()
+
+### Community 110 - "GateSpec"
+Cohesion: 0.12
+Nodes (17): GateSpec, at, gapHeight, gapY, kind, motion, pinch, speed (+9 more)
 
 ### Community 111 - "Gameplay"
-Cohesion: 0.15
-Nodes (12): Bosses, Coins, time and level skip, Controls, Enemies, Gameplay, Goal, Leaderboard, Lobby and maps (+4 more)
+Cohesion: 0.14
+Nodes (13): Bosses, Coins, time and level skip, Controls, Enemies, Gameplay, Goal, Leaderboard, Lobby and maps (+5 more)
 
-### Community 113 - "SpriteBank.cpp"
-Cohesion: 0.15
-Nodes (4): SpriteBank::add(), SpriteBank::addBackdrop(), SpriteBank::loadBackdrops(), SpriteBank::texture()
+### Community 113 - "Datagram"
+Cohesion: 0.17
+Nodes (7): _random, Datagram, bytes, from, Client::handleDatagram(), Server::handleDatagram(), Server::makeToken()
 
 ### Community 115 - "Hud.cpp"
-Cohesion: 0.29
-Nodes (4): Hud::drawMapList(), Hud::drawMenuHint(), Hud::drawPauseMenu(), Hud::Hud()
+Cohesion: 0.13
+Nodes (12): formatTime(), Hud::drawBar(), Hud::drawCoins(), Hud::drawLevel(), Hud::drawMapList(), Hud::drawMenuHint(), Hud::drawPauseMenu(), Hud::drawRecords() (+4 more)
 
 ### Community 116 - "bossHazardSystem"
-Cohesion: 0.22
+Cohesion: 0.33
 Nodes (8): bossHazardSystem(), HazardClock, laser, meteor, time, hazardInterval(), spawnBossLaser(), spawnMeteor()
 
-### Community 118 - "Prediction.cpp"
-Cohesion: 0.20
-Nodes (3): Prediction::advance(), Prediction::position(), Prediction::record()
+### Community 118 - "PlayerInput"
+Cohesion: 0.09
+Nodes (14): Position, velocity, speed, direction, PlayerInput, down, fire, left, right, up, calculatePos() (+6 more)
 
-### Community 119 - "Vec2"
-Cohesion: 0.12
-Nodes (22): volley(), centerOf(), dive(), lockOn(), ProjectileDef, drop, height, shots (+14 more)
+### Community 119 - "ProjectileDef"
+Cohesion: 0.20
+Nodes (9): volley(), ProjectileDef, drop, height, shots, speed, spread, sprite (+1 more)
 
 ### Community 121 - "Streak"
-Cohesion: 0.40
-Nodes (5): Streak, length, speed, x, y
+Cohesion: 0.33
+Nodes (6): Streak, length, speed, x, y, Background::Background()
 
 ### Community 122 - "Vector2f"
-Cohesion: 0.12
-Nodes (17): Sprite, animation, texture, Vector2f, x, y, Renderer::draw(), Renderer::drawRect() (+9 more)
+Cohesion: 0.10
+Nodes (19): Sprite, animation, texture, Vector2f, x, y, Renderer::draw(), Renderer::drawRect() (+11 more)
 
 ### Community 124 - "FixedTimestep"
 Cohesion: 0.25
 Nodes (3): FixedTimestep, _accumulator, _maxAccumulator
 
-### Community 125 - ".restartDeathRun"
-Cohesion: 0.20
-Nodes (6): countBefore(), levelEnd(), collectMonsters(), collectObstacles(), collectProjectileEntities(), collectWith()
+### Community 125 - "Obstacles.hpp"
+Cohesion: 0.11
+Nodes (26): absorbProjectiles(), applyPortal(), beamKind(), crossPortals(), deadlyColliders(), destroyFarObstacles(), fireTurret(), isDeadly() (+18 more)
 
-### Community 126 - "Scatter.hpp"
-Cohesion: 0.39
-Nodes (5): asteroid(), crowded(), scatter(), scatterLasers(), scatterLimit()
+### Community 126 - "scatter"
+Cohesion: 0.24
+Nodes (7): crowded(), scatter(), scatterLasers(), scatterLimit(), shapesOf(), shapeWaves(), zoneOf()
 
 ### Community 127 - "ObstacleKind"
-Cohesion: 0.07
-Nodes (33): Obstacles, ObstacleMotion, age, amplitude, baseY, omega, ObstacleTag, kind (+25 more)
+Cohesion: 0.11
+Nodes (19): ObstacleTag, kind, isPortal(), ObstacleKind, Beam, BeamWarn, Count, FastPortal (+11 more)
 
-### Community 128 - "Hud::drawTimer"
-Cohesion: 0.47
-Nodes (3): Hud::drawCoins(), Hud::drawLevel(), Hud::drawTimer()
-
-### Community 129 - "buildMap"
-Cohesion: 0.40
-Nodes (4): appendLevel(), buildMap(), buildRun(), shifted()
+### Community 128 - "LeviathanMove"
+Cohesion: 0.25
+Nodes (8): LeviathanMove, Aim, Columns, Dash, Rest, Return, Sweep, Windup
 
 ### Community 130 - "Star"
 Cohesion: 0.50
 Nodes (4): Star, layer, x, y
 
-### Community 131 - "Vec2Pos"
-Cohesion: 0.14
-Nodes (15): dasherTarget(), DashTarget, pos, velocity, roamBoss(), BulletLook, height, sprite (+7 more)
+### Community 131 - "Behaviours"
+Cohesion: 0.12
+Nodes (16): Behaviours, dasherTarget(), DashTarget, pos, velocity, roamBoss(), MonsterState, age (+8 more)
 
 ### Community 134 - "size_t"
 Cohesion: 0.40
 Nodes (4): EntityRecord, archetype, row, IterationGuard
 
-### Community 138 - "formatTime"
-Cohesion: 0.47
-Nodes (3): formatTime(), Hud::drawRecords(), twoDigits()
+### Community 138 - "Scene"
+Cohesion: 0.33
+Nodes (5): Scene, aura, boosted, zone, Background::follow()
 
-### Community 141 - "Area"
-Cohesion: 0.40
-Nodes (4): Area, box, pos, GameView::drawTiled()
-
-### Community 142 - "wall"
-Cohesion: 0.60
-Nodes (4): wall(), asteroidField(), pillars(), tankCover()
+### Community 141 - "Vec2"
+Cohesion: 0.21
+Nodes (17): The ECS rules to remember, Area, box, pos, bulletStartPos(), createBullet(), GameView::drawMeteor(), length() (+9 more)
 
 ### Community 144 - "LaserCycle"
 Cohesion: 0.50
@@ -645,37 +639,41 @@ Nodes (4): LaserCycle, age, beam, hasBeam
 Cohesion: 0.50
 Nodes (4): PendingSpawn, delay, kind, y
 
-### Community 150 - "BossTag"
-Cohesion: 0.67
-Nodes (3): BossTag, age, summonTimer
+### Community 150 - "R-Type game logic"
+Cohesion: 0.12
+Nodes (16): each(), Add a component, Add a map or a level, Add a player action (a new key), Add a system, Coding conventions, Configuration, Current status (+8 more)
 
-### Community 151 - "TeamId"
-Cohesion: 0.67
-Nodes (3): TeamId, Monster, Player
+### Community 151 - "BulletLook"
+Cohesion: 0.22
+Nodes (9): BulletLook, height, sprite, width, Team, id, TeamId, Monster (+1 more)
 
 ### Community 152 - "TurretFire"
 Cohesion: 0.67
 Nodes (3): TurretFire, interval, timer
 
+### Community 153 - "ObstacleMotion"
+Cohesion: 0.40
+Nodes (5): ObstacleMotion, age, amplitude, baseY, omega
+
 ## Knowledge Gaps
-- **607 isolated node(s):** `PLAYER_FRAME_DOWN`, `PLAYER_FRAME_IDLE`, `PLAYER_FRAME_UP`, `ANIMATION_PHASE`, `pos` (+602 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1205 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **42 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **642 isolated node(s):** `Shoot`, `Hit`, `Explosion`, `BossAlert`, `Victory` (+637 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1244 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **48 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Game` connect `Game` to `Components.hpp`, `findPlayerBySlot`, `App`, `AugmentId`, `Game Tests`, `Registry`, `vector`, `Phase`, `App`, `Segments`, `bossHazardSystem`, `PendingSpawn`, `spawnBoss`, `.restartDeathRun`?**
-  _High betweenness centrality (0.101) - this node is a cross-community bridge._
-- **Are the 70 inferred relationships involving `TEST()` (e.g. with `Registry` and `.alive()`) actually correct?**
-  _`TEST()` has 70 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `PLAYER_FRAME_DOWN`, `PLAYER_FRAME_IDLE`, `PLAYER_FRAME_UP` to the rest of the system?**
-  _607 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `IntRect` be split into smaller, more focused modules?**
-  _Cohesion score 0.13333333333333333 - nodes in this community are weakly interconnected._
-- **Why does `TEST()` connect `Game Tests` to `buildMap`, `Registry`, `wall`, `Game`, `spawnBoss`, `App`, `Levels.hpp`, `deathSystem`, `AugmentId`, `vector`, `TEST`, `Segments`, `MonsterKind`, `Components`, `movementSystem`, `Phase`, `MonsterDef`, `findPlayerBySlot`, `LevelDef`, `bossHazardSystem`, `Vec2`, `.restartDeathRun`, `ObstacleKind`?**
-  _High betweenness centrality (0.083) - this node is a cross-community bridge._
+- **Why does `TEST()` connect `Game Tests` to `Behaviours`, `Vec2`, `Entity`, `Game`, `Layers`, `Leviathan.hpp`, `Collectibles.hpp`, `Registry`, `AugmentId`, `Zone`, `Public API: the `Game` class`, `TEST`, `Segments`, `GameTests.cpp`, `Phase`, `Systems.hpp`, `findPlayerBySlot`, `LevelDef`, `ObstacleStep`, `bossHazardSystem`, `Obstacles.hpp`?**
+  _High betweenness centrality (0.152) - this node is a cross-community bridge._
+- **Are the 75 inferred relationships involving `TEST()` (e.g. with `Registry` and `.alive()`) actually correct?**
+  _`TEST()` has 75 INFERRED edges - model-reasoned connections that need verification._
+- **What connects `Shoot`, `Hit`, `Explosion` to the rest of the system?**
+  _642 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `src/App.cpp` be split into smaller, more focused modules?**
+  _Cohesion score 0.10574712643678161 - nodes in this community are weakly interconnected._
+- **Why does `Registry` connect `Registry` to `IntRect`, `Behaviours`, `size_t`, `Component.hpp`, `Game Tests`, `Vec2`, `Entity`, `Game`, `.updatePlaying`, `BulletLook`, `Replica`, `Layers`, `Leviathan.hpp`, `Collectibles.hpp`, `AugmentId`, `Segments`, `GameTests.cpp`, `GameView.cpp`, `Systems.hpp`, `findPlayerBySlot`, `Archetype`, `bossHazardSystem`, `Obstacles.hpp`?**
+  _High betweenness centrality (0.092) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `Registry` (e.g. with `TEST()` and `TEST()`) actually correct?**
   _`Registry` has 2 INFERRED edges - model-reasoned connections that need verification._
-- **Should `Client Connection` be split into smaller, more focused modules?**
-  _Cohesion score 0.058823529411764705 - nodes in this community are weakly interconnected._
+- **Should `string` be split into smaller, more focused modules?**
+  _Cohesion score 0.12280701754385964 - nodes in this community are weakly interconnected._

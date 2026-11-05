@@ -62,6 +62,17 @@ namespace rtype {
         return start;
     }
 
+    inline float levelStartOf(const Segments &segments,
+        const std::size_t number)
+    {
+        for (const auto &[id, from] : segments.levels) {
+            if (id == number) {
+                return from;
+            }
+        }
+        return 0.f;
+    }
+
     inline float levelEnd(const Segments &segments, const float start)
     {
         float end = std::numeric_limits<float>::max();

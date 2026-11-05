@@ -3,8 +3,11 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
+#include <vector>
 #include "logic/Config.hpp"
+#include "client/AugmentStyle.hpp"
 #include "client/Hud.hpp"
 
 namespace client {
@@ -70,7 +73,7 @@ namespace client {
             drawLobby(replica);
             return;
         }
-        drawPlayers(*status);
+        drawPlayers(*status, replica.augments());
         drawCoins(*status, elapsed);
         drawBossBar(*status);
         if (status->phase == rtype::Phase::Victory) {
@@ -99,7 +102,8 @@ namespace client {
     }
 
     // Une ligne par joueur : son nom (P1...) et sa barre de vie.
-    void Hud::drawPlayers(const rtype::GameStatus &status)
+    void Hud::drawPlayers(const rtype::GameStatus &status,
+        const rtype::protocol::OwnedAugment &augments)
     {
         float top = PLAYERS_TOP;
 
@@ -111,6 +115,9 @@ namespace client {
             _font.draw("P" + std::to_string(player.slot + 1), {MARGIN, top},
                 2.f, SLOT_COLORS[slot]);
             drawBar({BAR_X, top}, {BAR_WIDTH, BAR_HEIGHT}, ratio, GREEN);
+            if (slot < augments.size()) {
+                drawAugments(augments[slot], top);
+            }
             top += ROW_STEP;
         }
     }
@@ -153,6 +160,26 @@ namespace client {
         }
         if (prediction.speedFactor() > 1.f) {
             _font.draw("SPEED UP", {MARGIN, top}, 3.f, CYAN);
+        }
+    }
+
+    void Hud::drawAugments(const std::vector<rtype::AugmentId> &ids,
+        const float top)
+    {
+        const float textHeight = Font::height(AUGMENT_TEXT_SCALE);
+        const float textY = top + (BAR_HEIGHT - textHeight) / 2.f;
+        float x = BAR_X + BAR_WIDTH + AUGMENT_GAP;
+
+        for (const rtype::AugmentId id : ids) {
+            const std::string label = augmentLabel(id);
+            const float textWidth = Font::width(label, AUGMENT_TEXT_SCALE);
+
+            _renderer.drawRect({x - AUGMENT_PADDING, textY - AUGMENT_PADDING},
+                {textWidth + 2.f * AUGMENT_PADDING,
+                    textHeight + 2.f * AUGMENT_PADDING}, DARK);
+            _font.draw(label, {x, textY}, AUGMENT_TEXT_SCALE,
+                rarityColor(id));
+            x += textWidth + 2.f * AUGMENT_PADDING + AUGMENT_PADDING;
         }
     }
 

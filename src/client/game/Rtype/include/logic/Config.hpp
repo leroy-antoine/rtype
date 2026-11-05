@@ -117,10 +117,36 @@ namespace rtype::config {
     constexpr float AUGMENT_SPEED_BONUS = 75.f;
     constexpr int AUGMENT_HP_BONUS = 25;
 
-    constexpr int AUGMENT_DAMAGE_PRICE = 50;
-    constexpr int AUGMENT_SPEED_PRICE = 50;
-    constexpr int AUGMENT_HP_PRICE = 100;
-    constexpr int AUGMENT_FIRE_RATE_PRICE = 200;
+    constexpr std::size_t AUGMENT_DAMAGE_PRICE = 50;
+    constexpr std::size_t AUGMENT_SPEED_PRICE = 50;
+    constexpr std::size_t AUGMENT_HP_PRICE = 100;
+    constexpr std::size_t AUGMENT_FIRE_RATE_PRICE = 200;
+    constexpr std::size_t AUGMENT_REGENERATION_PRICE = 150;
+    constexpr std::size_t AUGMENT_SHIELD_PRICE = 250;
+    constexpr std::size_t AUGMENT_MULTISHOT_PRICE = 400;
+
+    constexpr int MULTISHOT_BULLETS = 3;
+    constexpr int MULTISHOT_EXTRA_BULLETS = 2;
+    constexpr float MULTISHOT_SPREAD = 0.15f;
+    constexpr float SHIELD_COOLDOWN = 8.f;
+    constexpr float SHIELD_COOLDOWN_FACTOR = 0.75f;
+    constexpr int REGENERATION_HP = 5;
+    constexpr float REGENERATION_INTERVAL = 2.f;
+
+    constexpr int COMMON_WEIGHT = 60;
+    constexpr int COMMON_WEIGHT_PER_LEVEL = -2;
+    constexpr int COMMON_BOSS_BONUS = -20;
+    constexpr int RARE_WEIGHT = 25;
+    constexpr int RARE_WEIGHT_PER_LEVEL = 1;
+    constexpr int RARE_BOSS_BONUS = 5;
+    constexpr int EPIC_WEIGHT = 12;
+    constexpr int EPIC_WEIGHT_PER_LEVEL = 1;
+    constexpr int EPIC_BOSS_BONUS = 10;
+    constexpr int LEGENDARY_WEIGHT = 3;
+    constexpr int LEGENDARY_WEIGHT_PER_LEVEL = 1;
+    constexpr int LEGENDARY_BOSS_BONUS = 5;
+    constexpr int MIN_RARITY_WEIGHT = 1;
+    constexpr std::size_t SHOP_OFFER_COUNT = 3;
 
     constexpr float OBSTACLE_TILE = 64.f;
     constexpr float PORTAL_WIDTH = 90.f;

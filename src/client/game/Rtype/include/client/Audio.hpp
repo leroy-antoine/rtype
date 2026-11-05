@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <filesystem>
+#include <optional>
 #include <vector>
 #include "engine/audio/AudioPlayer.hpp"
 #include "engine/audio/SoundManager.hpp"
@@ -27,11 +28,16 @@ namespace client {
         enum class Track { None, Level, BossStandard, BossDasher,
             BossSummoner, BossFortress, DeathRun, Nebula, Wreckage, Core,
             Count };
+        enum class ShopSound { Accept, Refuse, Count };
 
         static constexpr std::size_t SOUND_COUNT =
             static_cast<std::size_t>(Sound::Count);
+        static constexpr std::size_t SHOP_SOUND_COUNT =
+            static_cast<std::size_t>(ShopSound::Count);
 
         void load();
+        void loadShopSounds();
+        void playShopSound(ShopSound sound, float volume);
         void playSound(Sound sound, float volume);
         void playMusic(Track track);
         void playCue(Cue cue);
@@ -43,6 +49,7 @@ namespace client {
         Engine::SoundManager _sounds;
         Engine::AudioPlayer _player{_sounds};
         std::array<Engine::SoundID, SOUND_COUNT> _ids{};
+        std::array<std::optional<Engine::SoundID>, SHOP_SOUND_COUNT> _shopIds{};
         bool _enabled = false;
         Track _track = Track::None;
         rtype::Phase _phase = rtype::Phase::Playing;

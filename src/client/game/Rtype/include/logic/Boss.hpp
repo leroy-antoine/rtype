@@ -7,6 +7,7 @@
 #include <vector>
 #include "engine/core/Registry.hpp"
 #include "utils/Vectors.hpp"
+#include "Bullet.hpp"
 #include "Components.hpp"
 #include "Config.hpp"
 #include "Monsters.hpp"

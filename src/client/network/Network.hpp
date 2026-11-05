@@ -19,6 +19,8 @@ namespace client {
         void selectMap(rtype::MapId map);
         void leaveMatch();
         void setPause(bool paused);
+        void buy(rtype::AugmentId id);
+        void closeShop();
         void flush();
         [[nodiscard]] bool connected() const;
 

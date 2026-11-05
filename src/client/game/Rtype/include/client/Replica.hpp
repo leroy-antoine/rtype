@@ -14,7 +14,7 @@
 
 namespace client {
     enum class Cue { PlayerShot, Hit, Explosion, BossExplosion, BossAppears,
-        CoinPickup };
+        CoinPickup, Purchase, PurchaseRefused };
 
     class Replica {
     public:
@@ -25,6 +25,9 @@ namespace client {
         void apply(const rtype::GameStatus &status);
         void apply(const rtype::AllRecords &records);
         void moveMapCursor(int delta);
+        void apply(const rtype::protocol::OwnedAugment &augments);
+        void apply(const std::vector<rtype::AugmentId> &shopOffers);
+        void apply(const rtype::protocol::BuyResult &result);
         void assignSlot(int slot);
         std::uint32_t predict(const rtype::PlayerInput &input, float dt);
         void update(float dt);
@@ -37,7 +40,10 @@ namespace client {
         [[nodiscard]] bool isHost() const;
         [[nodiscard]] std::optional<rtype::SpriteId> bossSprite();
         [[nodiscard]] const Prediction &prediction() const;
+        [[nodiscard]] const rtype::protocol::OwnedAugment &augments() const;
+        [[nodiscard]] const std::vector<rtype::AugmentId> &shopOffers() const;
         std::vector<Cue> takeCues();
+        std::optional<rtype::protocol::BuyResult> takeBuyResult();
 
     private:
         static constexpr double INTERPOLATION_DELAY = 3.0;
@@ -68,6 +74,9 @@ namespace client {
         std::optional<int> _slot;
         rtype::AllRecords _records{};
         rtype::MapId _mapCursor = 0;
+        rtype::protocol::OwnedAugment _augments{};
+        std::vector<rtype::AugmentId> _shopOffers;
+        std::optional<rtype::protocol::BuyResult> _buyResult;
         std::vector<Cue> _cues;
     };
 }
