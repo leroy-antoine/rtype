@@ -23,6 +23,20 @@ namespace client {
         constexpr std::array<Color, 4> SLOT_COLORS = {{
             {90, 170, 255, 255}, {255, 90, 90, 255},
             {110, 230, 110, 255}, {255, 220, 80, 255}}};
+
+        std::string shopHint(const rtype::GameStatus &status,
+            const std::optional<int> self)
+        {
+            const bool ready = std::ranges::any_of(status.players,
+                [&self](const rtype::PlayerStatus &p) {
+                    return self && p.slot == *self && p.ready;
+                });
+
+            if (ready) {
+                return "WAITING FOR THE OTHER PLAYERS";
+            }
+            return "PRESS SPACE WHEN READY";
+        }
     }
 
     Hud::Hud(Engine::Renderer &renderer, const SpriteBank &sprites,
@@ -47,6 +61,8 @@ namespace client {
         drawBossBar(*status);
         if (status->phase == rtype::Phase::Playing) {
             drawRespawnHint(*status, replica.slot(), elapsed);
+        } else if (status->phase == rtype::Phase::Shop) {
+            drawShopScreen(*status, replica, elapsed);
         } else {
             drawEndScreen(*status, elapsed);
         }
@@ -75,19 +91,23 @@ namespace client {
             _font.draw("P" + std::to_string(player.slot + 1), {16.f, top},
                 2.f, SLOT_COLORS[slot]);
             drawBar({BAR_X, top}, {BAR_WIDTH, BAR_HEIGHT}, ratio, GREEN);
+            float x = BAR_X + BAR_WIDTH + AUGMENT_GAP;
+
+            if (status.phase == rtype::Phase::Shop) {
+                x = drawReady(player, x, top);
+            }
             if (slot < augments.size()) {
-                drawAugments(augments[slot], top);
+                drawAugments(augments[slot], x, top);
             }
             top += ROW_STEP;
         }
     }
 
     void Hud::drawAugments(const std::vector<rtype::AugmentId> &ids,
-        const float top)
+        float x, const float top)
     {
         const float textHeight = Font::height(AUGMENT_TEXT_SCALE);
         const float textY = top + (BAR_HEIGHT - textHeight) / 2.f;
-        float x = BAR_X + BAR_WIDTH + AUGMENT_GAP;
 
         for (const rtype::AugmentId id : ids) {
             const std::string label = augmentLabel(id);
@@ -166,16 +186,48 @@ namespace client {
         const float left = rtype::config::RESTART_DELAY - (elapsed - _phaseSince);
         const int seconds = std::max(0, static_cast<int>(std::ceil(left)));
         std::string title = "GAME OVER";
+        std::string next = "NEW GAME IN ";
         Color color = RED;
 
         if (status.phase == rtype::Phase::Victory) {
             title = "VICTORY";
+            next = "SHOP IN ";
             color = GREEN;
         }
         _renderer.drawRect({0.f, 0.f}, {_width, _height}, {0, 0, 0, 150});
         _font.drawCentered(title, _width / 2.f, _height / 2.f - 50.f, 10.f,
             color);
-        _font.drawCentered("NEW GAME IN " + std::to_string(seconds),
+        _font.drawCentered(next + std::to_string(seconds),
             _width / 2.f, _height / 2.f + 50.f, 3.f, WHITE);
+    }
+
+    float Hud::drawReady(const rtype::PlayerStatus &player, const float x,
+        const float top)
+    {
+        const std::string label = player.ready ? "READY" : "NOT READY";
+
+        _font.draw(label, {x, top}, 2.f, player.ready ? GREEN : RED);
+        return x + Font::width(label, 2.f) + AUGMENT_GAP;
+    }
+
+    void Hud::drawShopScreen(const rtype::GameStatus &status,
+        const Replica &replica, const float elapsed)
+    {
+        const float bottom = _height - SHOP_TEXT_MARGIN;
+
+        if (replica.shopOffers().empty()) {
+            _font.drawCentered("SHOP", _width / 2.f, _height / 2.f - 50.f,
+                10.f, YELLOW);
+        }
+        if (status.countdown > 0.f) {
+            _font.drawCentered("NEXT LEVEL IN "
+                + std::to_string(std::lround(std::ceil(status.countdown))),
+                _width / 2.f, bottom, 3.f, WHITE);
+            return;
+        }
+        if (std::fmod(elapsed, 1.f) < 0.5f) {
+            _font.drawCentered(shopHint(status, replica.slot()), _width / 2.f,
+                bottom, 3.f, WHITE);
+        }
     }
 }

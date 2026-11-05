@@ -33,10 +33,12 @@ namespace client {
         static constexpr float AUGMENT_GAP = 12.f;
         static constexpr float AUGMENT_TEXT_SCALE = 1.5f;
         static constexpr float AUGMENT_PADDING = 3.f;
+        static constexpr float SHOP_TEXT_MARGIN = 60.f;
 
         void drawPlayers(const rtype::GameStatus &status,
             const rtype::protocol::OwnedAugment &augments);
-        void drawAugments(const std::vector<rtype::AugmentId> &ids, float top);
+        void drawAugments(const std::vector<rtype::AugmentId> &ids, float x,
+            float top);
         void drawCoins(const rtype::GameStatus &status, float elapsed);
         void drawBar(Engine::Vector2f position, Engine::Vector2f size,
             float ratio, Engine::Color fill);
@@ -44,6 +46,9 @@ namespace client {
         void drawRespawnHint(const rtype::GameStatus &status,
             std::optional<int> self, float elapsed);
         void drawEndScreen(const rtype::GameStatus &status, float elapsed);
+        float drawReady(const rtype::PlayerStatus &player, float x, float top);
+        void drawShopScreen(const rtype::GameStatus &status,
+            const Replica &replica, float elapsed);
         void trackPhase(rtype::Phase phase, float elapsed);
 
         Engine::Renderer &_renderer;

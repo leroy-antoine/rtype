@@ -100,6 +100,7 @@ namespace rtype::config {
     constexpr int LEGENDARY_BOSS_BONUS = 5;
     constexpr int MIN_RARITY_WEIGHT = 1;
     constexpr std::size_t SHOP_OFFER_COUNT = 3;
+    constexpr float SHOP_COUNTDOWN = 5.f;
 
     constexpr float SCROLL_SPEED = 120.f; //-> Vitesse de défilement de la carte
     constexpr float BOSS_SPAWN_SCROLL = 2400.f;  // -> Distance defilee (2400 / 120 = 20 s de jeu) a laquelle le boss arrive.

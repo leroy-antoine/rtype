@@ -57,6 +57,8 @@ game logic knows nothing of the network.
 | a client connects | `game.addPlayer()`, remembers `client id -> slot`, sends `YOU` and the whole world (`SPAWN` for each entity). If the game is full, it disconnects the client |
 | `INPUT` | decodes the keys and calls `game.setInput(slot, input)`; an invalid payload is ignored |
 | `RESPAWN` | calls `game.respawnPlayer(slot)` |
+| `BUY` | decodes the augment id, calls `game.buyAugment(slot, id)` and answers the buyer with `BUY_RESULT`; an invalid payload is ignored |
+| `READY` | decodes the flag and calls `game.setReady(slot, ready)`; an invalid payload is ignored |
 | a client disconnects or times out | `game.removePlayer(slot)`; the ship is destroyed and every client is told by a `DESTROY` |
 | any message from an unknown client | ignored |
 

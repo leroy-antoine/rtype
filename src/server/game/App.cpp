@@ -175,6 +175,12 @@ namespace server {
             }
             return;
         }
+        if (event.type == rtype::protocol::READY) {
+            if (const std::optional<bool> ready = rtype::protocol::decodeReady(event.payload)) {
+                _game.setReady(*slot, *ready);
+            }
+            return;
+        }
         if (event.type == rtype::protocol::RESPAWN) {
             _game.respawnPlayer(*slot);
             return;

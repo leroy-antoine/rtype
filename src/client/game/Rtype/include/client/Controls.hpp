@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include <vector>
 #include "engine/window/Event.hpp"
 #include "engine/window/Window.hpp"
@@ -29,5 +30,6 @@ namespace client {
         rtype::PlayerInput _input;
         bool _respawn = false;
         std::vector<Engine::Key> _pressed;
+        std::set<Engine::Key> _held;
     };
 }

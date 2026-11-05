@@ -40,12 +40,16 @@ namespace client {
         if (event.key == Engine::Key::Enter) {
             _respawn = true;
         }
-        _pressed.push_back(event.key);
+        if (!_held.contains(event.key)) {
+            _pressed.push_back(event.key);
+            _held.insert(event.key);
+        }
         applyKey(event.key, true);
     }
 
     void Controls::handle(Engine::Window &, const Engine::Events::KeyReleased &event)
     {
+        _held.erase(event.key);
         applyKey(event.key, false);
     }
 
