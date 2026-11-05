@@ -31,6 +31,14 @@ namespace rtype::config {
     };
 
     constexpr float PLAYER_FIRE_COOLDOWN = 0.25f;
+    // Tir charge : en dessous de CHARGE_TAP_LIMIT un appui tire un coup
+    // normal ; au-dela la jauge monte jusqu'a CHARGE_FULL_TIME.
+    constexpr float CHARGE_TAP_LIMIT = 0.3f;
+    constexpr float CHARGE_FULL_TIME = 1.2f;
+    constexpr float CHARGE_MIN_FACTOR = 2.f;
+    constexpr float CHARGE_MAX_FACTOR = 6.f;
+    constexpr float CHARGE_MIN_SIZE = 2.f;
+    constexpr float CHARGE_MAX_SIZE = 4.f;
     constexpr float BULLET_SPEED = 900.f;
     constexpr float BULLET_WIDTH = 24.f;
     constexpr float BULLET_HEIGHT = 8.f;
@@ -124,6 +132,41 @@ namespace rtype::config {
     constexpr std::size_t AUGMENT_REGENERATION_PRICE = 150;
     constexpr std::size_t AUGMENT_SHIELD_PRICE = 250;
     constexpr std::size_t AUGMENT_MULTISHOT_PRICE = 400;
+    constexpr std::size_t AUGMENT_ROCKET_PRICE = 350;
+    constexpr std::size_t AUGMENT_LASER_PRICE = 450;
+    constexpr std::size_t AUGMENT_LIGHTNING_PRICE = 450;
+    constexpr float ROCKET_COOLDOWN = 1.2f;
+    constexpr float ROCKET_SPEED = 450.f;
+    constexpr float ROCKET_WIDTH = 30.f;
+    constexpr float ROCKET_HEIGHT = 12.f;
+    constexpr float ROCKET_RADIUS = 120.f;
+    constexpr float ROCKET_FUSE = 60.f;
+    constexpr int ROCKET_DAMAGE_FACTOR = 3;
+    constexpr float LASER_CHARGE_TIME = 2.f;
+    constexpr float LASER_COOLDOWN = 6.f;
+    constexpr float LASER_HEIGHT = 40.f;
+    constexpr float LASER_DURATION = 0.4f;
+    constexpr int LASER_DAMAGE_FACTOR = 8;
+    constexpr std::size_t AUGMENT_DRONE_PRICE = 300;
+    constexpr std::size_t AUGMENT_DRONE_BOOST_PRICE = 400;
+    constexpr std::size_t AUGMENT_DRONE_TWIN_PRICE = 500;
+    constexpr int DRONE_MAX_LEVEL = 3;
+    constexpr float DRONE_OFFSET_X = 60.f;
+    constexpr float DRONE_OFFSET_Y = 50.f;
+    constexpr float DRONE_FOLLOW = 8.f;
+    constexpr float DRONE_SIZE = 24.f;
+    constexpr float DRONE_RANGE = 700.f;
+    constexpr int DRONE_DAMAGE_DIVISOR = 2;
+    constexpr float DRONE_SPREAD = 0.08f;
+    constexpr float LIGHTNING_COOLDOWN = 0.8f;
+    constexpr float LIGHTNING_RANGE = 600.f;
+    constexpr float LIGHTNING_LANE = 40.f;
+    constexpr float LIGHTNING_JUMP = 100.f;
+    constexpr int LIGHTNING_JUMPS = 4;
+    constexpr float LIGHTNING_DAMAGE_FACTOR = 1.5f;
+    constexpr float LIGHTNING_FALLOFF = 0.8f;
+    constexpr float LIGHTNING_DURATION = 0.15f;
+    constexpr float LIGHTNING_MIN_SIZE = 6.f;
 
     constexpr int MULTISHOT_BULLETS = 3;
     constexpr int MULTISHOT_EXTRA_BULLETS = 2;

@@ -96,7 +96,8 @@ animations use this time, never the speed of the CPU.
 | Key | Action |
 |---|---|
 | Arrow keys | move the ship |
-| Space | fire (hold to keep firing) |
+| Space | fire: a tap shoots once, holding charges a piercing shot released with the key |
+| X | fire the secondary weapon (rocket launcher, laser or chain lightning) |
 | Enter | come back after being killed (while the match is running); in the lobby, start the selected map (host only) |
 | Up / Down | move the ship; in the lobby, move the cursor on the list of maps |
 | Escape | quit |
@@ -145,6 +146,14 @@ The window is 1280 x 720. The world is 1920 x 1080, so everything is scaled by
   tile (`portal_reverse.png`, `portal_fast.png`, `portal_normal.png`). The
   HUD writes `CONTROLS REVERSED` or `SPEED UP` at the bottom left while the
   effect lasts.
+- **Charge gauges**: under the ship, a yellow bar (cyan when full) fills while
+  Space is held for more than 0.3 s, and an orange bar fills while X is held
+  when the laser is equipped (`Replica::chargeTime`, `altTime`,
+  `laserEquipped`, drawn by `GameView::drawCharge`). The client measures the
+  hold time itself, from the keys it sends.
+- **Weapons**: the player rocket uses its own sprite (`player_rocket.png`);
+  the laser flash, the lightning segments and the drone are drawn with
+  rectangles by `GameView` (`drawPlayerLaser`, `drawBolt`, `drawDrone`).
 - **Coins**: dropped by monsters, drawn from a sprite sheet of 6 frames
   (`coin_spin_sheet.png`). The animated GIF is not used directly, because SFML
   only reads its first image.

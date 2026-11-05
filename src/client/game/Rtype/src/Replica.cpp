@@ -145,7 +145,78 @@ namespace client {
     std::uint32_t Replica::predict(const rtype::PlayerInput &input, const float dt)
     {
         refreshSolids();
+        trackCharge(input, dt);
         return _prediction.record(input, dt);
+    }
+
+    namespace {
+        float grown(const bool held, const float time, const float dt,
+            const float limit)
+        {
+            if (!held) {
+                return 0.f;
+            }
+            return std::min(time + dt, limit);
+        }
+    }
+
+    // Les jauges se remplissent pendant que les touches de tir sont
+    // maintenues, sauf en pause, au shop et pendant la recharge du laser.
+    void Replica::trackCharge(const rtype::PlayerInput &input, const float dt)
+    {
+        if (!isPlaying()) {
+            _chargeTime = 0.f;
+            _altTime = 0.f;
+            return;
+        }
+        _laserCooldown = std::max(0.f, _laserCooldown - dt);
+        _chargeTime = grown(input.fire, _chargeTime, dt,
+            rtype::config::CHARGE_FULL_TIME);
+        if (!input.alt && _altTime >= rtype::config::LASER_CHARGE_TIME
+            && laserEquipped()) {
+            _laserCooldown = rtype::config::LASER_COOLDOWN;
+        }
+        _altTime = grown(input.alt && _laserCooldown <= 0.f, _altTime, dt,
+            rtype::config::LASER_CHARGE_TIME);
+    }
+
+    bool Replica::isPlaying() const
+    {
+        return _status && _status->phase == rtype::Phase::Playing
+            && !_status->paused;
+    }
+
+    float Replica::chargeTime() const
+    {
+        return _chargeTime;
+    }
+
+    bool Replica::laserEquipped() const
+    {
+        if (!_slot) {
+            return false;
+        }
+        const std::optional<rtype::WeaponKind> weapon = rtype::equippedWeapon(
+            _augments[static_cast<std::size_t>(*_slot)]);
+
+        return weapon && *weapon == rtype::WeaponKind::Laser;
+    }
+
+    float Replica::altTime() const
+    {
+        return _altTime;
+    }
+
+    std::optional<std::pair<gameLogic::Vec2Pos, gameLogic::Vec2Hitbox>>
+        Replica::localShip()
+    {
+        const std::optional<Engine::Entity> player = localPlayer();
+
+        if (!player) {
+            return std::nullopt;
+        }
+        return std::make_pair(_reg.get<gameLogic::Vec2Pos>(*player),
+            _reg.get<gameLogic::Vec2Hitbox>(*player));
     }
 
     void Replica::applyPrediction()
@@ -310,6 +381,7 @@ namespace client {
     {
         switch (spawn.sprite) {
             case rtype::SpriteId::PlayerBullet:
+            case rtype::SpriteId::PlayerRocket:
                 _cues.push_back(Cue::PlayerShot);
                 break;
             case rtype::SpriteId::Boss:

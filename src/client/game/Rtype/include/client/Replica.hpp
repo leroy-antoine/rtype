@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <deque>
 #include <optional>
+#include <utility>
 #include <unordered_map>
 #include <vector>
 #include "engine/core/Registry.hpp"
@@ -38,6 +39,11 @@ namespace client {
         [[nodiscard]] const rtype::AllRecords &records() const;
         [[nodiscard]] rtype::MapId mapCursor() const;
         [[nodiscard]] bool isHost() const;
+        [[nodiscard]] float chargeTime() const;
+        [[nodiscard]] float altTime() const;
+        [[nodiscard]] bool laserEquipped() const;
+        [[nodiscard]] std::optional<std::pair<gameLogic::Vec2Pos,
+            gameLogic::Vec2Hitbox>> localShip();
         [[nodiscard]] std::optional<rtype::SpriteId> bossSprite();
         [[nodiscard]] const Prediction &prediction() const;
         [[nodiscard]] const rtype::protocol::OwnedAugment &augments() const;
@@ -63,6 +69,8 @@ namespace client {
         std::optional<Engine::Entity> localPlayer();
         void recordSpawnCue(const rtype::EntitySpawned &spawn);
         void refreshSolids();
+        void trackCharge(const rtype::PlayerInput &input, float dt);
+        [[nodiscard]] bool isPlaying() const;
 
         Engine::Registry _reg;
         std::unordered_map<std::uint32_t, Engine::Entity> _entities;
@@ -74,6 +82,9 @@ namespace client {
         std::optional<int> _slot;
         rtype::AllRecords _records{};
         rtype::MapId _mapCursor = 0;
+        float _chargeTime = 0.f;
+        float _altTime = 0.f;
+        float _laserCooldown = 0.f;
         rtype::protocol::OwnedAugment _augments{};
         std::vector<rtype::AugmentId> _shopOffers;
         std::optional<rtype::protocol::BuyResult> _buyResult;

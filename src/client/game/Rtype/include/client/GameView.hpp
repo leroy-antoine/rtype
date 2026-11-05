@@ -51,6 +51,16 @@ namespace client {
         void trackBossHurt(const Replica &replica, float elapsed);
         Engine::Vector2f shakeOf(rtype::SpriteId id, float elapsed) const;
         void drawWorld(Engine::Registry &reg, float elapsed);
+        void drawCharge(Replica &replica);
+        void drawGauge(Engine::Vector2f at, float width, float ratio,
+            Engine::Color fill);
+        static Engine::Color gaugeColor(float ratio, Engine::Color filling);
+        void drawDrone(const gameLogic::Vec2Pos &pos,
+            const gameLogic::Vec2Hitbox &box, float elapsed);
+        void drawBolt(const gameLogic::Vec2Pos &pos,
+            const gameLogic::Vec2Hitbox &box, bool rising, float elapsed);
+        void drawPlayerLaser(const gameLogic::Vec2Pos &pos,
+            const gameLogic::Vec2Hitbox &box, float elapsed);
         void drawLayer(Engine::Registry &reg, float elapsed, bool effects);
         void drawEntity(const Engine::Registry &reg, Engine::Entity e, const gameLogic::Vec2Pos &pos,
             const gameLogic::Vec2Hitbox &box, rtype::SpriteId id, float elapsed);

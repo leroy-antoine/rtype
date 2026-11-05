@@ -27,7 +27,7 @@ A new client can be written from these two pages alone.
 | Direction | the client sends keys, the server sends the world |
 | Datagram | at most **1200 bytes**, carries one or several messages |
 | Byte order | **big-endian** for every integer and float |
-| Protocol version | `20` (`rtype::protocol::VERSION`), checked at connection |
+| Protocol version | `21` (`rtype::protocol::VERSION`), checked at connection |
 | Tick | the server simulates at 60 Hz and sends the states every tick |
 
 The server is the authority. A client never sends a position, a hit or a
@@ -62,7 +62,7 @@ Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
 
 ```
  client                                   server
-   │ ── Connect(version=20) ─────────────►  │  every 500 ms, 10 tries at most
+   │ ── Connect(version=21) ─────────────►  │  every 500 ms, 10 tries at most
    │ ◄───────────── Accept(token) ──────── │  or Refuse(0 version, 1 full)
    │ ◄───────────────────── YOU(slot) ──── │  reliable
    │ ◄────────────────── SPAWN × n ─────── │  reliable, the whole world
@@ -122,9 +122,9 @@ server keeps it until the next one. The client sends it every frame.
 | Offset | Field | Type | Meaning |
 |---|---|---|---|
 | 0 | sequence | `u32` | number of this input, grows by one at each frame |
-| 4 | keys | `u8` | bit 0 up, bit 1 down, bit 2 left, bit 3 right, bit 4 fire |
+| 4 | keys | `u8` | bit 0 up, bit 1 down, bit 2 left, bit 3 right, bit 4 fire (Space), bit 5 secondary weapon (X) |
 
-Bits 5 to 7 of `keys` must be `0`, otherwise the message is ignored. The
+Bits 6 and 7 of `keys` must be `0`, otherwise the message is ignored. The
 server remembers the last `sequence` it applied and sends it back in
 `OWN_STATE`, so the client can predict its own ship.
 
@@ -230,8 +230,13 @@ to a client that has just connected, then one for each new entity.
 | 27 | laser warning |
 | 28 | meteor |
 | 29 | Leviathan bolt |
+| 30 | player rocket |
+| 31 | player laser (flash) |
+| 32 | lightning segment going down |
+| 33 | lightning segment going up |
+| 34 | drone |
 
-A value of 30 or more is invalid, and so is a player slot of 4 or more.
+A value of 35 or more is invalid, and so is a player slot of 4 or more.
 
 ### `DESTROY` (0x21)
 
@@ -352,6 +357,18 @@ The message replaces the whole previous list on the client.
 | 4 | Regeneration |
 | 5 | Shield |
 | 6 | MultiShot |
+| 7 | Rocket (secondary weapon) |
+| 8 | Laser (secondary weapon) |
+| 9 | Lightning (secondary weapon) |
+| 10 | Drone (gives the drone, level 1) |
+| 11 | DroneBoost (drone level 2) |
+| 12 | DroneTwin (drone level 3) |
+
+The three weapons replace each other: the equipped one is the last weapon id
+of the list, and the three drone ids give the drone the level 1, 2 or 3 (never lowering it). The
+server fires the weapons from the `KEY_ALT` bit of `INPUT`; nothing about the
+weapons travels on the network except the entities they create (rockets,
+flashes, lightning segments, the drone and its bullets) and the augment ids.
 
 Prices and rarities are not sent: the client reads them from the shared
 augment table (`logic/Augments.hpp`).
