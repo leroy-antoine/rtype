@@ -149,6 +149,7 @@ namespace rtype {
         reg.add(e, coins{dist(rng)});
         reg.add(e, gameLogic::Vec2Hitbox{{config::COIN_WIDTH,
             config::COIN_HEIGHT}});
+        reg.add(e, gameLogic::Vec2Velocity{{-config::SCROLL_SPEED, 0.f}});
         reg.add(e, Renderable{SpriteId::Coin});
         return e;
     }

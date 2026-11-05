@@ -121,12 +121,22 @@ namespace rtype {
         }
     }
 
+    inline void destroyFarCoins(Engine::Registry &reg)
+    {
+        for (const Collider &coin : collectCoins(reg)) {
+            if (isFarOutOfBounds(coin)) {
+                reg.destroy(coin.entity);
+            }
+        }
+    }
+
     // A appeler apres movementSystem et avant deathSystem.
     inline void deleteUnitsOutOfBounds(Engine::Registry &reg)
     {
         killPlayersOutOfBounds(reg);
         destroyFarEntities(reg, collectMonsters(reg));
         destroyFarEntities(reg, collectProjectileEntities(reg));
+        destroyFarCoins(reg);
     }
 
     inline void updateWeaponTimers(Engine::Registry &reg, const float dt)

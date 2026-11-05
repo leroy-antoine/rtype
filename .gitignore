@@ -6,6 +6,7 @@
 /.rsc/
 
 rtype-project(sans appendix).pdf
+rtype-project.pdf
 # IDE build dirs
 /cmake-build-*/
 cmake-build-*/
