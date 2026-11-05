@@ -209,6 +209,12 @@ namespace server {
             }
             return;
         }
+        if (event.type == rtype::protocol::READY) {
+            if (const std::optional<bool> ready = rtype::protocol::decodeReady(event.payload)) {
+                _game.setReady(*slot, *ready);
+            }
+            return;
+        }
         if (event.type == rtype::protocol::RESPAWN) {
             _game.respawnPlayer(*slot);
             return;
@@ -221,10 +227,6 @@ namespace server {
         }
         if (event.type == rtype::protocol::PAUSE) {
             pauseMatch(*slot, event.payload);
-        }
-        if (event.type == rtype::protocol::CLOSE_SHOP
-            && _game.host() == *slot) {
-            _game.closeShop();
         }
         if (event.type == rtype::protocol::BUY) {
             handleBuy(event.client, *slot, event.payload);

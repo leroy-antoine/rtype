@@ -38,7 +38,7 @@ namespace client {
 
         void drawPlayers(const rtype::GameStatus &status,
             const rtype::protocol::OwnedAugment &augments);
-        void drawAugments(const std::vector<rtype::AugmentId> &ids,
+        void drawAugments(const std::vector<rtype::AugmentId> &ids, float x,
             float top);
         void drawTimer(const rtype::GameStatus &status, float elapsed);
         void drawLevel(const rtype::GameStatus &status);
@@ -48,6 +48,7 @@ namespace client {
         static constexpr float AUGMENT_GAP = 12.f;
         static constexpr float AUGMENT_TEXT_SCALE = 1.5f;
         static constexpr float AUGMENT_PADDING = 3.f;
+        static constexpr float SHOP_TEXT_MARGIN = 60.f;
         void drawCoins(const rtype::GameStatus &status, float elapsed);
         void drawBar(Engine::Vector2f position, Engine::Vector2f size,
             float ratio, Engine::Color fill);
@@ -68,6 +69,9 @@ namespace client {
         void drawPauseMenu(const Replica &replica);
         void drawMapList(rtype::MapId cursor);
         void drawRecords(const rtype::MapRecords &records);
+        float drawReady(const rtype::PlayerStatus &player, float x, float top);
+        void drawShopScreen(const rtype::GameStatus &status,
+            const Replica &replica, float elapsed);
         void trackPhase(rtype::Phase phase, float elapsed);
 
         Engine::Renderer &_renderer;

@@ -389,3 +389,37 @@ TEST(the_deaths_survive_a_status_round_trip)
     CHECK(decoded.has_value());
     CHECK(decoded->deaths == 300);
 }
+
+TEST(ready_flags_and_countdown_survive_a_status_round_trip)
+{
+    GameStatus status = sampleStatus();
+
+    status.phase = Phase::Shop;
+    status.players[0].ready = true;
+    status.countdown = 3.5f;
+    const std::optional<GameStatus> decoded =
+        protocol::decodeStatus(protocol::encode(status));
+
+    CHECK(decoded.has_value());
+    CHECK(decoded->phase == Phase::Shop);
+    CHECK(decoded->players[0].ready);
+    CHECK(!decoded->players[1].ready);
+    CHECK(decoded->countdown == 3.5f);
+}
+
+TEST(an_invalid_ready_flag_in_a_status_is_rejected)
+{
+    protocol::Payload payload = protocol::encode(sampleStatus());
+
+    payload[protocol::STATUS_HEADER_SIZE + 4] = 2;
+    CHECK(!protocol::decodeStatus(payload).has_value());
+}
+
+TEST(a_ready_message_round_trips_and_is_validated)
+{
+    CHECK(protocol::decodeReady(protocol::encodeReady(true)) == true);
+    CHECK(protocol::decodeReady(protocol::encodeReady(false)) == false);
+    CHECK(!protocol::decodeReady({}).has_value());
+    CHECK(!protocol::decodeReady({2}).has_value());
+    CHECK(!protocol::decodeReady({1, 1}).has_value());
+}

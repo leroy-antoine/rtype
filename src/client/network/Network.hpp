@@ -5,6 +5,7 @@
 #include <string>
 #include "engine/network/Client.hpp"
 #include "engine/network/Event.hpp"
+#include "logic/Augments.hpp"
 #include "logic/Components.hpp"
 #include "client/Replica.hpp"
 
@@ -20,7 +21,7 @@ namespace client {
         void leaveMatch();
         void setPause(bool paused);
         void buy(rtype::AugmentId id);
-        void closeShop();
+        void requestReady(bool ready);
         void flush();
         [[nodiscard]] bool connected() const;
 

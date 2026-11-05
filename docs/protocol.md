@@ -27,7 +27,7 @@ A new client can be written from these two pages alone.
 | Direction | the client sends keys, the server sends the world |
 | Datagram | at most **1200 bytes**, carries one or several messages |
 | Byte order | **big-endian** for every integer and float |
-| Protocol version | `19` (`rtype::protocol::VERSION`), checked at connection |
+| Protocol version | `20` (`rtype::protocol::VERSION`), checked at connection |
 | Tick | the server simulates at 60 Hz and sends the states every tick |
 
 The server is the authority. A client never sends a position, a hit or a
@@ -62,7 +62,7 @@ Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
 
 ```
  client                                   server
-   │ ── Connect(version=19) ─────────────►  │  every 500 ms, 10 tries at most
+   │ ── Connect(version=20) ─────────────►  │  every 500 ms, 10 tries at most
    │ ◄───────────── Accept(token) ──────── │  or Refuse(0 version, 1 full)
    │ ◄───────────────────── YOU(slot) ──── │  reliable
    │ ◄────────────────── SPAWN × n ─────── │  reliable, the whole world
@@ -102,11 +102,11 @@ Sender: **C** is the client, **S** is the server. Delivery: **R** is reliable
 | `0x13` | `LEAVE_MATCH` | C | R | 0 |
 | `0x14` | `PAUSE` | C | R | 1 |
 | `0x15` | `BUY` | C | R | 1 |
-| `0x16` | `CLOSE_SHOP` | C | R | 0 |
+| `0x16` | `READY` | C | R | 1 |
 | `0x20` | `SPAWN` | S | R | 22 |
 | `0x21` | `DESTROY` | S | R | 4 |
 | `0x22` | `STATES` | S | U | 5 + 12 × n |
-| `0x23` | `STATUS` | S | U | 16 + 4 × n |
+| `0x23` | `STATUS` | S | U | 20 + 5 × n |
 | `0x24` | `YOU` | S | R | 1 |
 | `0x25` | `OWN_STATE` | S | U | 14 |
 | `0x26` | `AUGMENTS` | S | R | 1 + Σ (2 + n) |
@@ -171,14 +171,19 @@ The payload size must be exactly 1 and the id must be known, otherwise the
 message is ignored. The client sends the **id** and not the position of the
 offer: if the offers change while the message travels, the purchase is simply
 refused instead of buying another augment. The server checks every rule
-(the augment is on sale, the team has enough coins) and always answers with
+(the game is in the shop phase, the augment is on sale, the team has
+enough coins) and always answers with
 `BUY_RESULT`.
 
-### `CLOSE_SHOP` (0x16)
+### `READY` (0x16)
 
-No payload. Sent by the host to leave the shop that opens at the end of every
-level and resume the game. Ignored when the sender is not the host or when
-the shop is closed.
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | ready | `u8` | `1` ready, `0` not ready |
+
+Only accepted during the shop phase. When every connected player is ready,
+the server starts a countdown (shown in `STATUS`); it stops as soon as a
+player is no longer ready. When it ends, the next level starts.
 
 ### `SPAWN` (0x20)
 
@@ -255,7 +260,7 @@ What the HUD shows, sent about 10 times per second.
 
 | Offset | Field | Type | Meaning |
 |---|---|---|---|
-| 0 | phase | `u8` | bits 0-6: 0 playing, 1 victory, 2 defeat, 3 lobby; bit 7 (`0x80`): the match is paused |
+| 0 | phase | `u8` | bits 0-6: 0 playing, 1 victory, 2 defeat, 3 lobby, 4 shop; bit 7 (`0x80`): the match is paused |
 | 1 | boss hp | `u16` | `0` when there is no boss |
 | 3 | boss max hp | `u16` | the boss hp cannot exceed it |
 | 5 | coins | `u32` | the shared purse of the players |
@@ -264,9 +269,11 @@ What the HUD shows, sent about 10 times per second.
 | 14 | map | `u8` | index of the map being played (or last played), 0 to 2 |
 | 15 | deaths | `u16` | number of times a player was destroyed in this match |
 | 17 | count `n` | `u8` | number of players, at most 4 |
-| 18 + 4 × i | slot | `u8` | 0 to 3 |
-| 19 + 4 × i | hp | `u16` | |
-| 21 + 4 × i | alive | `u8` | `0` or `1` |
+| 18 + 5 × i | slot | `u8` | 0 to 3 |
+| 19 + 5 × i | hp | `u16` | |
+| 21 + 5 × i | alive | `u8` | `0` or `1` |
+| 22 + 5 × i | ready | `u8` | `0` or `1`, only meaningful in the shop phase |
+| 18 + 5 × n | countdown | `u16` | milliseconds before the next level, `0` when the countdown is not running |
 
 The server is in the **lobby** phase when it starts, and again after the end
 screen of a victory (or when every player has left). After a defeat, the same map restarts from its first level. The players are listed in
@@ -361,7 +368,8 @@ The augments currently on sale.
 The payload size must be exactly `1 + n` and every id must be known. Sent
 when the offers change and once to a client that just connected. An empty
 list means the shop is closed. The server opens the shop at the end of every
-level and freezes the simulation until the host sends `CLOSE_SHOP`.
+level and after a victory, as the shop phase: the game waits until every
+player sent `READY`.
 
 ### `BUY_RESULT` (0x28)
 
@@ -382,7 +390,7 @@ UDP can lose, duplicate and reorder datagrams. The protocol picks the delivery
 per message:
 
 - **Reliable** (`SPAWN`, `DESTROY`, `YOU`, `RESPAWN`, `SELECT_MAP`, `LEAVE_MATCH`, `PAUSE`, `LEADERBOARD`, `AUGMENTS`, `SHOP`,
-  `BUY`, `CLOSE_SHOP`, `BUY_RESULT`): a spawn, a death or a purchase must
+  `BUY`, `READY`, `BUY_RESULT`): a spawn, a death or a purchase must
   not be missed, or the client would draw a wrong world. The sender resends
   until an Ack comes back, the receiver applies the messages in order.
 - **Unreliable** (`INPUT`, `STATES`, `STATUS`, `OWN_STATE`): they are repeated every tick

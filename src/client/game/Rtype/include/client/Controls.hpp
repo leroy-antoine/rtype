@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include <vector>
 #include "engine/window/Event.hpp"
 #include "engine/window/Window.hpp"
@@ -33,5 +34,6 @@ namespace client {
         bool _pause = false;
         int _menuMove = 0;
         std::vector<Engine::Key> _pressed;
+        std::set<Engine::Key> _held;
     };
 }

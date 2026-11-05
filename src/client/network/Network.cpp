@@ -81,11 +81,10 @@ namespace client {
         }
     }
 
-    void Network::closeShop()
+    void Network::requestReady(const bool ready)
     {
         if (_client.connected()) {
-            _client.send(rtype::protocol::CLOSE_SHOP, {},
-                Engine::Delivery::Reliable);
+            _client.send(rtype::protocol::READY, rtype::protocol::encodeReady(ready), Engine::Delivery::Reliable);
         }
     }
 

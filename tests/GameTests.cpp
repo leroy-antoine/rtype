@@ -690,7 +690,22 @@ TEST(the_distance_stops_while_a_boss_is_alive)
     CHECK(game.scroll() == stopped);
 }
 
-TEST(a_finished_game_restarts_after_the_delay)
+TEST(a_lost_game_restarts_after_the_delay)
+{
+    Game game(1);
+
+    game.addPlayer();
+    run(game, 3.f);
+    kill(game, 0);
+    game.update(config::FIXED_DT);
+    CHECK(game.phase() == Phase::Defeat);
+    run(game, config::RESTART_DELAY + 1.f);
+    CHECK(game.phase() == Phase::Playing);
+    CHECK(game.scroll() < 3.f * config::SCROLL_SPEED);
+    CHECK(game.isPlayerAlive(0));
+}
+
+TEST(a_won_game_opens_the_shop_after_the_delay)
 {
     Game game(1);
 
@@ -700,10 +715,10 @@ TEST(a_finished_game_restarts_after_the_delay)
     game.update(config::FIXED_DT);
     CHECK(game.phase() == Phase::Victory);
     run(game, config::RESTART_DELAY + 1.f);
-    CHECK(game.phase() == Phase::Playing);
-    CHECK(game.scroll() < config::BOSS_SPAWN_SCROLL);
-    CHECK(game.isPlayerAlive(0));
+    CHECK(game.phase() == Phase::Shop);
+    CHECK(game.shopOffers().size() == config::SHOP_OFFER_COUNT);
     CHECK(collectWith<BossTag>(game.registry()).empty());
+    CHECK(collectMonsters(game.registry()).empty());
 }
 
 TEST(the_status_describes_players_and_the_boss)
@@ -1167,7 +1182,7 @@ TEST(the_host_is_the_first_connected_player)
     CHECK(game.host() == 1);
 }
 
-TEST(the_game_goes_back_to_the_lobby_after_a_victory)
+TEST(the_game_goes_back_to_the_lobby_after_the_shop_of_a_victory)
 {
     Game game(1);
 
@@ -1179,6 +1194,11 @@ TEST(the_game_goes_back_to_the_lobby_after_a_victory)
     game.update(config::FIXED_DT);
     CHECK(game.phase() == Phase::Victory);
     for (float t = 0.f; t < config::RESTART_DELAY + 1.f; t += config::FIXED_DT) {
+        game.update(config::FIXED_DT);
+    }
+    CHECK(game.phase() == Phase::Shop);
+    game.setReady(0, true);
+    for (float t = 0.f; t < config::SHOP_COUNTDOWN + 0.5f; t += config::FIXED_DT) {
         game.update(config::FIXED_DT);
     }
     CHECK(game.phase() == Phase::Lobby);

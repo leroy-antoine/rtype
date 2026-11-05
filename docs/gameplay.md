@@ -150,13 +150,13 @@ red vignette and a rumble for the Fortress. The Leviathan shakes for a quarter o
 
 ## Shop
 
-At the end of every level (the moment the next one begins) the game **stops**
-and the shop opens: a few augments are on sale, more and more powerful as the
-levels go by, and better after a boss level. Everybody can buy with the team
-coins (left/right to choose, Enter to buy). The host presses **Tab** to leave
-the shop and start the next level. The clock does not run while the shop is
-open. There is no shop after the last level (the victory screen comes
-instead).
+At the end of every level (the moment the next one begins) and after the last
+victory, the game **stops** and the shop opens: a few augments are on sale,
+more and more powerful as the levels go by, and better after a boss level.
+Everybody can buy with the team coins (left/right to choose, Enter to buy).
+Press **Space** to say you are ready: when every player is ready a five second
+countdown starts, then the next level begins (after the last victory the game
+goes back to the lobby). The clock does not run while the shop is open.
 
 ## Coins, time and level skip
 

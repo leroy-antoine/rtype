@@ -45,7 +45,7 @@ namespace rtype::protocol {
         std::uint8_t speedPercent = 100;
     };
 
-    constexpr std::uint8_t VERSION = 19;
+    constexpr std::uint8_t VERSION = 20;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
@@ -53,7 +53,7 @@ namespace rtype::protocol {
     constexpr Engine::MessageType LEAVE_MATCH = 0x13;
     constexpr Engine::MessageType PAUSE = 0x14;
     constexpr Engine::MessageType BUY = 0x15;
-    constexpr Engine::MessageType CLOSE_SHOP = 0x16;
+    constexpr Engine::MessageType READY = 0x16;
 
     constexpr Engine::MessageType SPAWN = 0x20;
     constexpr Engine::MessageType DESTROY = 0x21;
@@ -81,10 +81,12 @@ namespace rtype::protocol {
 
     // STATUS : phase (1), boss hp (2), boss max hp (2), pieces (4), temps
     // en ms (4), morts (2), niveau (1), map (1), nombre de joueurs (1),
-    // puis par joueur : slot (1), hp (2), vivant (1).
+    // puis par joueur : slot (1), hp (2), vivant (1), pret (1) ; enfin le
+    // compte a rebours du shop en millisecondes (2).
     constexpr std::size_t STATUS_HEADER_SIZE = 18;
     constexpr std::size_t RECORD_SIZE = 5;
-    constexpr std::size_t PLAYER_STATUS_SIZE = 4;
+    constexpr std::size_t PLAYER_STATUS_SIZE = 5;
+    constexpr std::size_t COUNTDOWN_SIZE = 2;
 
     constexpr Engine::MessageType AUGMENTS = 0x26;
     constexpr Engine::MessageType SHOP = 0x27;
@@ -363,7 +365,10 @@ namespace rtype::protocol {
             writer.writeU8(static_cast<std::uint8_t>(player.slot));
             writer.writeU16(static_cast<std::uint16_t>(player.hp));
             writer.writeU8(player.alive ? 1 : 0);
+            writer.writeU8(player.ready ? 1 : 0);
         }
+        writer.writeU16(static_cast<std::uint16_t>(
+            std::lround(status.countdown * 1000.f)));
         return writer.data();
     }
 
@@ -373,12 +378,13 @@ namespace rtype::protocol {
         const std::optional<std::uint8_t> slot = reader.readU8();
         const std::optional<std::uint16_t> hp = reader.readU16();
         const std::optional<std::uint8_t> alive = reader.readU8();
+        const std::optional<std::uint8_t> ready = reader.readU8();
 
-        if (!slot || !hp || !alive || *slot >= config::MAX_PLAYERS
-            || *alive > 1) {
+        if (!slot || !hp || !alive || !ready || *slot >= config::MAX_PLAYERS
+            || *alive > 1 || *ready > 1) {
             return std::nullopt;
         }
-        return PlayerStatus{*slot, *hp, *alive == 1};
+        return PlayerStatus{*slot, *hp, *alive == 1, *ready == 1};
     }
 
     struct StatusHeader {
@@ -417,11 +423,11 @@ namespace rtype::protocol {
     inline bool isValid(const StatusHeader &header, const std::size_t left)
     {
         return (header.phase & ~PAUSED_FLAG)
-                <= static_cast<std::uint8_t>(Phase::Lobby)
+                <= static_cast<std::uint8_t>(Phase::Shop)
             && header.map < MAP_COUNT
             && header.count <= config::MAX_PLAYERS
             && header.bossHp <= header.bossMaxHp
-            && left == header.count * PLAYER_STATUS_SIZE;
+            && left == header.count * PLAYER_STATUS_SIZE + COUNTDOWN_SIZE;
     }
 
     inline bool readPlayers(Engine::BinaryReader &reader,
@@ -459,6 +465,7 @@ namespace rtype::protocol {
         if (!readPlayers(reader, header->count, status.players)) {
             return std::nullopt;
         }
+        status.countdown = *reader.readU16() / 1000.f;
         return status;
     }
 
@@ -551,6 +558,19 @@ namespace rtype::protocol {
             return std::nullopt;
         }
         return static_cast<AugmentId>(*id);
+    }
+
+    inline Payload encodeReady(const bool ready)
+    {
+        return {ready ? std::uint8_t{1} : std::uint8_t{0}};
+    }
+
+    inline std::optional<bool> decodeReady(const Payload &payload)
+    {
+        if (payload.size() != 1 || payload[0] > 1) {
+            return std::nullopt;
+        }
+        return payload[0] == 1;
     }
 
     inline void writeAugmentIds(Engine::BinaryWriter &writer,

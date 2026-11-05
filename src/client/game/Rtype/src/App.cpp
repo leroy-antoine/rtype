@@ -78,6 +78,7 @@ namespace client {
 
     void App::sendControls(const float dt, ShopPanel &shop)
     {
+        sendReady();
         rtype::PlayerInput input = _controls.input();
 
         if (ShopPanel::isOpen(_replica)) {
@@ -102,10 +103,6 @@ namespace client {
         if (const std::optional<rtype::AugmentId> id =
             shop.handle(keys, _replica, elapsed())) {
             _network.buy(*id);
-        }
-        if (_replica.isHost() && std::ranges::find(keys, Engine::Key::Tab)
-            != keys.end()) {
-            _network.closeShop();
         }
     }
 
@@ -150,6 +147,28 @@ namespace client {
         if (_controls.respawnRequested() && _replica.isHost()) {
             _network.selectMap(_replica.mapCursor());
         }
+    }
+
+    void App::sendReady()
+    {
+        const std::optional<rtype::GameStatus> &status = _replica.status();
+        const bool space = std::ranges::find(_controls.pressedKeys(),
+            Engine::Key::Space) != _controls.pressedKeys().end();
+
+        if (!status || status->phase != rtype::Phase::Shop || !space) {
+            return;
+        }
+        _network.requestReady(!isReady(*status));
+    }
+
+    bool App::isReady(const rtype::GameStatus &status) const
+    {
+        const std::optional<int> self = _replica.slot();
+
+        return std::ranges::any_of(status.players,
+            [&self](const rtype::PlayerStatus &player) {
+                return self && player.slot == *self && player.ready;
+            });
     }
 
     float App::advance()

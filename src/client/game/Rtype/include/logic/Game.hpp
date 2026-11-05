@@ -11,6 +11,7 @@
 #include <map>
 #include <optional>
 #include <random>
+#include <set>
 #include <utility>
 #include <vector>
 #include "Augments.hpp"
@@ -74,6 +75,7 @@ namespace rtype {
                 _usedSlots[static_cast<std::size_t>(slot)] = false;
             }
             _augments.erase(slot);
+            _ready.erase(slot);
         }
 
         // Un joueur mort peut revenir tant que la partie n'est pas finie.
@@ -134,14 +136,27 @@ namespace rtype {
             const auto offer = std::ranges::find(_shopOffers, id);
             std::size_t &coins = _reg.get<CoinCounter>(_coinCounter).total;
 
-            if (!isUsedSlot(slot) || offer == _shopOffers.end()
-                || coins < priceOf(id)) {
+            if (_phase != Phase::Shop || !isUsedSlot(slot)
+                || offer == _shopOffers.end() || coins < priceOf(id)) {
                 return false;
             }
             coins -= priceOf(id);
             _shopOffers.erase(offer);
             _purchased.push_back(id);
             return addAugment(slot, id);
+        }
+
+        bool setReady(const int slot, const bool ready)
+        {
+            if (_phase != Phase::Shop || !isUsedSlot(slot)) {
+                return false;
+            }
+            if (ready) {
+                _ready.insert(slot);
+            } else {
+                _ready.erase(slot);
+            }
+            return true;
         }
 
         [[nodiscard]] std::size_t coins() const
@@ -199,12 +214,14 @@ namespace rtype {
         {
             if (!hasPlayers()) {
                 idle();
-            } else if (_paused || _shopOpen) {
+            } else if (_paused) {
                 return;
             } else if (_phase == Phase::Playing) {
                 updatePlaying(dt);
             } else if (_phase == Phase::Lobby) {
                 flyPlayers(dt);
+            } else if (_phase == Phase::Shop) {
+                updateShop(dt);
             } else {
                 updateEnded(dt);
             }
@@ -238,23 +255,13 @@ namespace rtype {
                 status.bossMaxHp =
                     bossDef(_reg.get<BossType>(boss).kind).hp;
             }
+            status.countdown = _countdown.value_or(0.f);
             for (int slot = 0; slot < SLOTS; ++slot) {
                 if (isUsedSlot(slot)) {
                     status.players.push_back(statusOf(slot));
                 }
             }
             return status;
-        }
-
-        [[nodiscard]] bool shopOpen() const
-        {
-            return _shopOpen;
-        }
-
-        void closeShop()
-        {
-            _shopOpen = false;
-            _shopOffers.clear();
         }
 
         void setPaused(const bool paused)
@@ -329,7 +336,7 @@ namespace rtype {
         {
             const std::optional<Engine::Entity> player =
                 findPlayerBySlot(_reg, slot);
-            PlayerStatus status{slot, 0, false};
+            PlayerStatus status{slot, 0, false, _ready.contains(slot)};
 
             if (player) {
                 status.alive = true;
@@ -537,7 +544,12 @@ namespace rtype {
         {
             flyPlayers(dt);
             _phaseTimer -= dt;
-            if (_phaseTimer <= 0.f) {
+            if (_phaseTimer > 0.f) {
+                return;
+            }
+            if (_phase == Phase::Victory) {
+                enterShop(level(), true);
+            } else {
                 leaveEndScreen();
             }
         }
@@ -557,7 +569,7 @@ namespace rtype {
                     effects = PlayerEffects{};
                 });
             if (finished >= 1 && now > finished) {
-                openShop(finished);
+                enterShop(finished, false);
             }
         }
 
@@ -572,13 +584,6 @@ namespace rtype {
                 });
         }
 
-        // Le shop s'ouvre a la fin de chaque niveau : le jeu attend que l'hote
-        // le ferme.
-        void openShop(const std::size_t finished)
-        {
-            restockShop({static_cast<int>(finished), levelHadBoss(finished)});
-            _shopOpen = !_shopOffers.empty();
-        }
 
         void skipLevel(const int kills)
         {
@@ -586,6 +591,76 @@ namespace rtype {
                 && !inDeathRun()) {
                 _scroll += grantSkip(_segments, _skip, _scroll, kills);
             }
+        }
+
+        // Le shop s'ouvre a la fin de chaque niveau et apres la victoire :
+        // le jeu attend que tous les joueurs soient prets.
+        void enterShop(const std::size_t finished, const bool last)
+        {
+            _phase = Phase::Shop;
+            _shopLast = last;
+            _ready.clear();
+            _countdown.reset();
+            if (!last) {
+                clearField();
+            }
+            restockShop(ShopTier{static_cast<int>(finished),
+                last || levelHadBoss(finished)});
+        }
+
+        void clearField()
+        {
+            _pending.clear();
+            destroyAll(collectMonsters(_reg));
+            destroyAll(collectProjectileEntities(_reg));
+            destroyAll(collectObstacles(_reg));
+        }
+
+        // Apres le dernier shop on retourne au lobby, sinon le niveau suivant
+        // continue la partie.
+        void leaveShop()
+        {
+            _ready.clear();
+            _countdown.reset();
+            _shopOffers.clear();
+            if (_shopLast) {
+                reset();
+                return;
+            }
+            _phase = Phase::Playing;
+        }
+
+        void updateShop(const float dt)
+        {
+            lifetimeSystem(_reg, dt);
+            playerControlSystem(_reg);
+            movementSystem(_reg, dt);
+            updateCountdown(dt);
+        }
+
+        void updateCountdown(const float dt)
+        {
+            if (!allReady()) {
+                _countdown.reset();
+                return;
+            }
+            if (!_countdown) {
+                _countdown = config::SHOP_COUNTDOWN;
+            }
+            *_countdown -= dt;
+            if (*_countdown <= 0.f) {
+                leaveShop();
+            }
+        }
+
+        [[nodiscard]] bool allReady() const
+        {
+            for (int slot = 0; slot < SLOTS; ++slot) {
+                if (isUsedSlot(slot) && !_ready.contains(slot)) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         void advanceLevel(const float dt)
@@ -801,13 +876,15 @@ namespace rtype {
             _skip = SkipBank{};
             _effectLevel = 0;
             _paused = false;
-            closeShop();
             _hazards = HazardClock{};
             _storm = 2.f;
             _deaths = 0;
             _phase = restingPhase();
             _phaseTimer = 0.f;
             _elapsed = 0.f;
+            _ready.clear();
+            _countdown.reset();
+            _shopOffers.clear();
             for (int slot = 0; slot < SLOTS; ++slot) {
                 if (isUsedSlot(slot)) {
                     spawnPlayer(slot);
@@ -855,10 +932,12 @@ namespace rtype {
         std::map<int, std::vector<AugmentId>> _augments;
         std::vector<AugmentId> _shopOffers;
         std::vector<AugmentId> _purchased;
+        std::set<int> _ready;
+        std::optional<float> _countdown;
+        bool _shopLast = false;
         Phase _phase = Phase::Playing;
         bool _lobby = false;
         bool _paused = false;
-        bool _shopOpen = false;
         std::uint16_t _deaths = 0;
         HazardClock _hazards;
         float _storm = 2.f;

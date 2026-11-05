@@ -42,6 +42,8 @@ namespace client {
         void useMenu();
         void useMatch();
         void usePause();
+        void sendReady();
+        [[nodiscard]] bool isReady(const rtype::GameStatus &status) const;
         float advance();
         [[nodiscard]] float elapsed() const;
 

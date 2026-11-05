@@ -384,7 +384,14 @@ about 60 % of that speed, so they are hard but not impossible.
 - phase `Playing`: `updatePlaying(dt)`;
 - phase `Lobby`: `flyPlayers(dt)`, the ships move but nothing else happens;
 - phase `Victory` or `Defeat`: `updateEnded(dt)`, where the players still fly
-  until the end screen timer ends, then the game goes back to the lobby.
+  until the end screen timer ends; then a defeat restarts the same map and a
+  victory opens the last shop of the match;
+- phase `Shop`: `updateShop(dt)`, where the players fly, buy augments and say
+  they are ready. The shop opens at the end of every level (the enemies are
+  cleared and the game resumes at the next level) and after a victory (then
+  the game goes back to the lobby). When every connected player is ready, a
+  countdown of `SHOP_COUNTDOWN` seconds starts; it stops as soon as a player
+  is not ready any more. Coins and augments are kept.
 
 At the end, in every case, `trackDestroys()` then `trackSpawns()` turn the
 changes of the world into events for the clients.
@@ -444,6 +451,7 @@ game.removePlayer(*slot);                     // a client disconnects
 | `std::vector<EntitySpawned> spawns() const` | the whole world, to send to a client who just connected. |
 | `std::vector<EntityState> states() const` | the position of every moving entity. |
 | `GameStatus status()` | phase, boss health, health of each player, coins of the shared purse, time elapsed since the start of the match, number of the level, map. |
+| `bool setReady(int slot, bool ready)` | in the shop phase, says whether a player is ready; `false` outside the shop or for an unknown slot. |
 | `Phase phase() const`, `float scroll() const` | the phase of the match, the distance scrolled. |
 
 `Game(unsigned seed)` makes the random heights of the waves reproducible, which

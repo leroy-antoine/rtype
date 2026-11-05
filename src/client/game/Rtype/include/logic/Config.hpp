@@ -147,6 +147,7 @@ namespace rtype::config {
     constexpr int LEGENDARY_BOSS_BONUS = 5;
     constexpr int MIN_RARITY_WEIGHT = 1;
     constexpr std::size_t SHOP_OFFER_COUNT = 3;
+    constexpr float SHOP_COUNTDOWN = 5.f;
 
     constexpr float OBSTACLE_TILE = 64.f;
     constexpr float PORTAL_WIDTH = 90.f;

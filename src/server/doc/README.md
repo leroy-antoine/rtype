@@ -60,6 +60,8 @@ game logic knows nothing of the network.
 | `LEAVE_MATCH` | if the sender is the host, calls `game.openLobby()`: the match is dropped and the lobby is shown again |
 | `PAUSE` | if the sender is the host, `game.setPaused(paused)`: the simulation and the clock stop until the host resumes |
 | `SELECT_MAP` | if the sender is the host (`game.host()`) and the map exists, builds it with `buildMap(id)` and calls `game.startMap`; ignored otherwise |
+| `BUY` | decodes the augment id, calls `game.buyAugment(slot, id)` and answers the buyer with `BUY_RESULT`; an invalid payload is ignored |
+| `READY` | decodes the flag and calls `game.setReady(slot, ready)`; an invalid payload is ignored |
 | a client disconnects or times out | `game.removePlayer(slot)`; the ship is destroyed and every client is told by a `DESTROY` |
 | any message from an unknown client | ignored |
 
