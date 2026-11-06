@@ -102,7 +102,7 @@ animations use this time, never the speed of the CPU.
 | Space | fire (hold to keep firing) |
 | Enter | come back after being killed (while the match is running); in the lobby, start the selected map (host only) |
 | Up / Down | move the ship; in the lobby, move the cursor on the list of maps |
-| Tab | in the lobby, switch between the maps of the game and the **Custom map** tab |
+| Tab | in the lobby, go to the next tab: maps of the game, **Custom map**, **Leaderboard** of the selected custom map |
 | Right / Left | in the Custom map tab, open / close the leaderboard of the selected map |
 | R | in the Custom map tab, read the `CustomMaps` folder again |
 | Escape | quit |

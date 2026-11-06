@@ -23,7 +23,9 @@ namespace client {
         // Reads the folder again.
         void rescan();
 
-        // Tab, Left, Right and R, from the keys pressed in this frame.
+        // Tab (Maps, Custom map, Leaderboard, Maps...), Right and Left (the
+        // leaderboard of the chosen map) and R, from the keys pressed in this
+        // frame.
         void navigate(const std::vector<Engine::Key> &pressed);
         void moveCursor(int delta);
 

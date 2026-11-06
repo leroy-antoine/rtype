@@ -129,7 +129,7 @@ The message formats are in [the protocol](protocol.md#maps-written-by-the-player
 | `HudLobby.cpp` | draws the lobby: tab bar, list, error of the selected map, leaderboard |
 | `Network` | `uploadMap`, `requestCustomRecords`, decoding of the three new messages |
 | `Replica` | `customInfo()` (name, hash, zones), `zone()` (scenery of the current level, built-in or custom), `customRecords(hash)`, `takeUploadResult()` |
-| `App` | `useMenu` / `useCustomMenu`: Tab, Right, Left, R and Enter |
+| `App` | `useMenu` / `useCustomMenu`: Tab (cycles the three tabs), Right, Left, R and Enter |
 
 The folder is `CustomMaps` **next to the executable** (`argv[0]`), like
 `assets`. CMake copies `src/client/game/Rtype/CustomMaps` there after each

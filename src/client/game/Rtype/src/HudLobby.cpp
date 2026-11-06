@@ -207,10 +207,10 @@ namespace client {
         std::string footer = "WAITING FOR P1 TO CHOOSE   TAB: SWITCH";
 
         if (menu.tab() == Tab::Records) {
-            footer = "LEFT: BACK   UP/DOWN: OTHER MAP";
+            footer = "LEFT: BACK   UP/DOWN: OTHER MAP   TAB: MAPS";
         } else if (host && menu.tab() == Tab::Custom) {
-            footer = "UP/DOWN: CHOOSE  ENTER: START  RIGHT: LEADERBOARD  "
-                "R: REFRESH  TAB: BACK";
+            footer = "UP/DOWN: CHOOSE  ENTER: START  TAB/RIGHT: LEADERBOARD  "
+                "R: REFRESH";
         } else if (host) {
             footer = "UP/DOWN: CHOOSE   ENTER: START   TAB: CUSTOM MAPS";
         }

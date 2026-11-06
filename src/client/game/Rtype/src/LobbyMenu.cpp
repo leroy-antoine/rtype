@@ -51,16 +51,25 @@ namespace client {
             _tab = Tab::Custom;
             return;
         }
+        if (_tab == Tab::Custom && selected() != nullptr) {
+            openRecords();
+            return;
+        }
         _tab = Tab::Maps;
     }
 
     // The records are those of a valid map: the server knows no other.
     void LobbyMenu::openRecords()
     {
-        if (_tab == Tab::Custom && selected() != nullptr) {
-            _tab = Tab::Records;
-            _recordsWanted = true;
+        if (_tab != Tab::Custom) {
+            return;
         }
+        if (selected() == nullptr) {
+            _message = "NO LEADERBOARD FOR A MAP WITH A MISTAKE";
+            return;
+        }
+        _tab = Tab::Records;
+        _recordsWanted = true;
     }
 
     void LobbyMenu::moveCursor(const int delta)

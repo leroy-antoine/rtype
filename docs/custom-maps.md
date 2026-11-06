@@ -89,10 +89,10 @@ The rules of JSON, to avoid the usual mistakes:
 |---|---|
 | Up / Down | choose a map |
 | Enter | start the map (host only) |
-| Right | open the **Leaderboard** tab: the five best times of this map |
+| Right or Tab | open the **Leaderboard** tab: the five best times of this map |
 | Left | back to the list (from the Leaderboard tab) |
 | R | read the folder again, after you edited a file |
-| Tab | back to the maps of the game |
+| Tab (from the Leaderboard tab) | back to the maps of the game |
 
 You changed your file? Press **R** in the Custom map tab and start it again.
 A map that you change gets a **new, empty leaderboard**: the times are kept per

@@ -57,6 +57,33 @@ TEST(tab_switches_between_the_maps_and_the_custom_maps)
     fs::remove_all(path);
 }
 
+TEST(tab_goes_through_the_leaderboard_of_a_valid_map)
+{
+    const fs::path path = folder("rtype_menu_tab_cycle");
+    LobbyMenu menu(path);
+
+    menu.navigate({Key::Tab});
+    menu.moveCursor(1);
+    menu.navigate({Key::Tab});
+    CHECK(menu.tab() == Tab::Records);
+    CHECK(menu.takeRecordsRequest().has_value());
+    menu.navigate({Key::Tab});
+    CHECK(menu.tab() == Tab::Maps);
+    fs::remove_all(path);
+}
+
+TEST(a_map_with_a_mistake_has_no_leaderboard)
+{
+    const fs::path path = folder("rtype_menu_no_board");
+    LobbyMenu menu(path);
+
+    menu.navigate({Key::Tab});
+    menu.navigate({Key::Right});
+    CHECK(menu.tab() == Tab::Custom);
+    CHECK(!menu.message().empty());
+    fs::remove_all(path);
+}
+
 TEST(the_leaderboard_is_only_opened_on_a_valid_map)
 {
     const fs::path path = folder("rtype_menu_records");
