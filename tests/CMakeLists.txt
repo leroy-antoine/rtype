@@ -4,7 +4,8 @@ add_executable(rtype_tests
         AugmentTests.cpp
         MapTests.cpp
         ShopTests.cpp
-        ProtocolTests.cpp)
+        ProtocolTests.cpp
+        RoomTests.cpp)
 target_include_directories(rtype_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(rtype_tests PRIVATE rtype::common rtype::game rtype::protocol rtype::maps)
 
