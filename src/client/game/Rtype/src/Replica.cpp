@@ -188,12 +188,48 @@ namespace client {
         _records = records;
     }
 
+    void Replica::apply(const rtype::protocol::HistoryPage &page)
+    {
+        if (page.start == 0) {
+            _history.clear();
+        }
+        if (page.start != _history.size()) {
+            return;
+        }
+        _history.insert(_history.end(), page.entries.begin(),
+            page.entries.end());
+        for (std::size_t map = 0; map < rtype::MAP_COUNT; ++map) {
+            _runs[map] = rtype::runsOf(_history,
+                static_cast<rtype::MapId>(map));
+        }
+    }
+
+    const rtype::MapRecords &Replica::runs(const rtype::MapId map) const
+    {
+        return _runs[map];
+    }
+
     void Replica::moveMapCursor(const int delta)
     {
-        const int count = static_cast<int>(rtype::MAP_COUNT);
+        const int count = static_cast<int>(ENTRY_COUNT);
         const int next = (static_cast<int>(_mapCursor) + delta + count) % count;
 
         _mapCursor = static_cast<rtype::MapId>(next);
+    }
+
+    bool Replica::onLeaderboard() const
+    {
+        return _mapCursor == LEADERBOARD_ENTRY;
+    }
+
+    LobbyMenu &Replica::menu()
+    {
+        return _menu;
+    }
+
+    const LobbyMenu &Replica::menu() const
+    {
+        return _menu;
     }
 
     const rtype::AllRecords &Replica::records() const

@@ -73,11 +73,32 @@ namespace rtype {
         return reg.has<Health>(e) && reg.get<Health>(e).hp > 0;
     }
 
+    inline bool isFriendlyHit(Engine::Registry &reg, const Collider &bullet,
+        const Collider &target)
+    {
+        if (!reg.has<Shooter>(bullet.entity)
+            || reg.get<Shooter>(bullet.entity).owner == target.entity) {
+            return false;
+        }
+        return bullet.team.id == TeamId::Player
+            && target.team.id == TeamId::Player && overlaps(bullet, target);
+    }
+
+    inline bool canStrike(Engine::Registry &reg, const Collider &bullet,
+        const Collider &target, const bool friendlyFire)
+    {
+        if (canHit(bullet, target)) {
+            return true;
+        }
+        return friendlyFire && isFriendlyHit(reg, bullet, target);
+    }
+
     inline bool hitFirstTarget(Engine::Registry &reg, const Collider &bullet,
-                               const std::vector<Collider> &targets)
+        const std::vector<Collider> &targets, const bool friendlyFire = false)
     {
         for (const Collider &target : targets) {
-            if (isAlive(reg, target.entity) && canHit(bullet, target)) {
+            if (isAlive(reg, target.entity)
+                && canStrike(reg, bullet, target, friendlyFire)) {
                 applyDamages(target.entity, bullet.entity, reg);
                 return true;
             }

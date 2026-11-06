@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <fstream>
 #include <variant>
 #include <vector>
 #include "logic/Builder.hpp"
@@ -222,6 +223,7 @@ TEST(the_game_is_lost_when_every_player_is_dead)
 {
     Game game(1);
 
+    game.setSettings(Settings{Difficulty::Brutal});
     game.addPlayer();
     kill(game, 0);
     game.update(config::FIXED_DT);
@@ -517,6 +519,7 @@ TEST(a_rock_that_pushes_a_player_off_the_map_crushes_him)
 {
     Game game(1);
 
+    game.setSettings(Settings{Difficulty::Brutal});
     game.addPlayer();
     const Engine::Entity player = *findPlayerBySlot(game.registry(), 0);
     const Engine::Entity rock = createObstacle(game.registry(),
@@ -694,6 +697,7 @@ TEST(a_lost_game_restarts_after_the_delay)
 {
     Game game(1);
 
+    game.setSettings(Settings{Difficulty::Brutal});
     game.addPlayer();
     run(game, 3.f);
     kill(game, 0);
@@ -893,6 +897,7 @@ TEST(the_timer_stops_when_the_match_is_over)
 {
     Game game(1);
 
+    game.setSettings(Settings{Difficulty::Brutal});
     game.addPlayer();
     run(game, 1.f);
     kill(game, 0);
@@ -1246,14 +1251,40 @@ TEST(the_best_times_are_sorted_capped_and_saved)
         board.add(1, {(8 - i) * 1000, 1});
     }
     CHECK(!board.add(static_cast<MapId>(MAP_COUNT), {1, 1}));
-    CHECK(board.all()[1].size() == MAX_RECORDS);
-    CHECK(board.all()[1].front().timeMs == 1000);
+    CHECK(board.all()[1][1].size() == MAX_RECORDS);
+    CHECK(board.all()[1][1].front().timeMs == 1000);
     CHECK(board.save(file));
     Leaderboard loaded;
 
     loaded.load(file);
-    CHECK(loaded.all()[1].size() == MAX_RECORDS);
-    CHECK(loaded.all()[1].back().timeMs == 5000);
+    CHECK(loaded.all()[1][1].size() == MAX_RECORDS);
+    CHECK(loaded.all()[1][1].back().timeMs == 3000);
+    CHECK(loaded.history().size() == 8);
+    std::filesystem::remove(file);
+}
+
+TEST(the_whole_history_is_kept_and_old_files_still_load)
+{
+    Leaderboard board;
+    const auto file = std::filesystem::temp_directory_path()
+        / "rtype_history_test.txt";
+
+    board.add(0, {9000, 2, Settings{Difficulty::Hard, true}});
+    board.add(0, {8000, 1});
+    board.save(file);
+    Leaderboard loaded;
+
+    loaded.load(file);
+    CHECK(loaded.history().size() == 2);
+    CHECK(loaded.history()[0].record.settings.difficulty == Difficulty::Hard);
+    CHECK(loaded.history()[0].record.settings.friendlyFire);
+    std::ofstream(file, std::ios::trunc) << "1 7000 3\n";
+    Leaderboard legacy;
+
+    legacy.load(file);
+    CHECK(legacy.history().size() == 1);
+    CHECK(legacy.history()[0].record.settings.difficulty
+        == Difficulty::Normal);
     std::filesystem::remove(file);
 }
 
@@ -1314,6 +1345,8 @@ TEST(the_lobby_cannot_be_paused)
 TEST(a_defeat_restarts_the_same_map)
 {
     Game game(1);
+
+    game.setSettings(Settings{Difficulty::Brutal});
 
     game.addPlayer();
     game.openLobby();

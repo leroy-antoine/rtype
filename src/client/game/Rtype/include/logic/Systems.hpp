@@ -8,6 +8,7 @@
 #include "utils/Vectors.hpp"
 #include "Components.hpp"
 #include "Colisions.hpp"
+#include "Difficulty.hpp"
 #include "Factories.hpp"
 #include "Collectibles.hpp"
 #include "Movements.hpp"
@@ -49,10 +50,11 @@ namespace rtype {
     inline void collisionSystem(Engine::Registry &reg)
     {
         const std::vector<Collider> targets = collectTargets(reg);
+        const bool friendlyFire = activeSettings(reg).friendlyFire;
         std::vector<Engine::Entity> spent;
 
         for (const Collider &bullet : collectProjectiles(reg)) {
-            if (hitFirstTarget(reg, bullet, targets)) {
+            if (hitFirstTarget(reg, bullet, targets, friendlyFire)) {
                 spent.push_back(bullet.entity);
             }
         }

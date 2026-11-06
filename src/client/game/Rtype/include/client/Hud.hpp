@@ -9,7 +9,9 @@
 #include "logic/Leaderboard.hpp"
 #include "logic/MapList.hpp"
 #include "logic/Augments.hpp"
+#include "logic/Settings.hpp"
 #include "logic/Status.hpp"
+#include <string>
 
 namespace client {
     // Interface minimale dessinee par-dessus le jeu : une barre de vie par
@@ -33,6 +35,7 @@ namespace client {
         static constexpr float ICON_SIZE = 32.f;
         static constexpr float ICON_GAP = 10.f;
         static constexpr float TEXT_SCALE = 4.f;
+        static constexpr float RUN_ROW_WIDTH = 540.f;
 
         static float textTop();
 
@@ -57,6 +60,16 @@ namespace client {
             std::optional<int> self, float elapsed);
         void drawEndScreen(float elapsed);
         void drawLobby(const Replica &replica);
+        void drawMapStep(const Replica &replica);
+        void drawSettingsStep(const Replica &replica);
+        void drawSettingRow(const std::string &label,
+            const std::string &value, Engine::Color color, bool selected,
+            float y);
+        void drawScaleSummary(rtype::Difficulty difficulty);
+        void drawScoresStep(const Replica &replica);
+        void drawRunRow(std::size_t rank, const rtype::RunRecord &record,
+            float y);
+        float drawLives(int lives, float x, float top);
         void drawVictoryScreen(const rtype::GameStatus &status,
             const Replica &replica, float elapsed);
         void drawConfetti(float age);
@@ -68,7 +81,8 @@ namespace client {
         void drawMenuHint(const Replica &replica);
         void drawPauseMenu(const Replica &replica);
         void drawMapList(rtype::MapId cursor);
-        void drawRecords(const rtype::MapRecords &records);
+        void drawRecords(const rtype::MapRecords &records,
+            rtype::Difficulty difficulty);
         float drawReady(const rtype::PlayerStatus &player, float x, float top);
         void drawShopScreen(const rtype::GameStatus &status,
             const Replica &replica, float elapsed);

@@ -138,6 +138,11 @@ namespace rtype {
     struct ProjectileTag {
     };
 
+    // Qui a tire la balle : le tir allie ne touche pas son propre tireur.
+    struct Shooter {
+        Engine::Entity owner;
+    };
+
     enum class TeamId { Player, Monster };
 
     struct Team {

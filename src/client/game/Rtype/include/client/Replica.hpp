@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 #include "engine/core/Registry.hpp"
+#include "client/LobbyMenu.hpp"
 #include "client/Prediction.hpp"
 #include "logic/Events.hpp"
 #include "logic/Status.hpp"
@@ -24,6 +25,7 @@ namespace client {
         void apply(const rtype::protocol::OwnState &state);
         void apply(const rtype::GameStatus &status);
         void apply(const rtype::AllRecords &records);
+        void apply(const rtype::protocol::HistoryPage &page);
         void moveMapCursor(int delta);
         void apply(const rtype::protocol::OwnedAugment &augments);
         void apply(const std::vector<rtype::AugmentId> &shopOffers);
@@ -36,8 +38,12 @@ namespace client {
         [[nodiscard]] const std::optional<rtype::GameStatus> &status() const;
         [[nodiscard]] std::optional<int> slot() const;
         [[nodiscard]] const rtype::AllRecords &records() const;
+        [[nodiscard]] const rtype::MapRecords &runs(rtype::MapId map) const;
         [[nodiscard]] rtype::MapId mapCursor() const;
+        [[nodiscard]] LobbyMenu &menu();
+        [[nodiscard]] const LobbyMenu &menu() const;
         [[nodiscard]] bool isHost() const;
+        [[nodiscard]] bool onLeaderboard() const;
         [[nodiscard]] std::optional<rtype::SpriteId> bossSprite();
         [[nodiscard]] const Prediction &prediction() const;
         [[nodiscard]] const rtype::protocol::OwnedAugment &augments() const;
@@ -73,7 +79,10 @@ namespace client {
         std::optional<rtype::GameStatus> _status;
         std::optional<int> _slot;
         rtype::AllRecords _records{};
+        std::vector<rtype::RunEntry> _history;
+        rtype::RunsByMap _runs{};
         rtype::MapId _mapCursor = 0;
+        LobbyMenu _menu;
         rtype::protocol::OwnedAugment _augments{};
         std::vector<rtype::AugmentId> _shopOffers;
         std::optional<rtype::protocol::BuyResult> _buyResult;

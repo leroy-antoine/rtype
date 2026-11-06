@@ -15,6 +15,8 @@ namespace client {
         [[nodiscard]] bool respawnRequested() const;
         [[nodiscard]] bool pauseRequested() const;
         [[nodiscard]] int menuMove() const;
+        [[nodiscard]] int menuSide() const;
+        [[nodiscard]] bool backRequested() const;
         [[nodiscard]] const std::vector<Engine::Key> &pressedKeys() const;
 
     private:
@@ -33,6 +35,8 @@ namespace client {
         bool _respawn = false;
         bool _pause = false;
         int _menuMove = 0;
+        int _menuSide = 0;
+        bool _back = false;
         std::vector<Engine::Key> _pressed;
         std::set<Engine::Key> _held;
     };

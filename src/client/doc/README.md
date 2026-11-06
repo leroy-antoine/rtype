@@ -68,7 +68,7 @@ tests: the client only uses its types (components, events, status, config).
 | `App` | the main loop: receive, poll the input, send it, draw |
 | `Replica` | the local copy of the world, the interpolation, the last `STATUS`, the slot of this player, the lobby cursor, the leaderboard, the sound cues |
 | `Prediction` | the predicted position of this player's ship, with the effects of the portals and the push of the rocks, and its reconciliation with `OWN_STATE` |
-| `Controls` | turns window events into the five keys of a `PlayerInput`, plus the menu actions (cursor up or down, Enter) |
+| `Controls` | turns window events into the five keys of a `PlayerInput`, plus the menu actions (cursor up or down, left or right, Enter, Escape) |
 | `GameView` | draws the entities of the replica |
 | `SpriteBank` | maps each kind of entity to a texture and a source rectangle |
 | `Background` | the scenery: sky gradient, nebula, zone decor, star-field and boss aura (see [Background](#background)) |
@@ -97,9 +97,9 @@ animations use this time, never the speed of the CPU.
 |---|---|
 | Arrow keys | move the ship |
 | Space | fire (hold to keep firing) |
-| Enter | come back after being killed (while the match is running); in the lobby, start the selected map (host only) |
-| Up / Down | move the ship; in the lobby, move the cursor on the list of maps |
-| Escape | quit |
+| Enter | come back after being killed (while the match is running); in the lobby, open the settings of the selected map (host only), start the match from the settings, open the leaderboard |
+| Up / Down | move the ship; in the lobby, move the cursor on the list of games |
+| Escape | back to the game list from the settings or the scores; quit from anywhere else |
 
 The client sends the **state** of the keys every frame, with a sequence number
 (see `INPUT` in
@@ -134,12 +134,29 @@ The window is 1280 x 720. The world is 1920 x 1080, so everything is scaled by
   end screen, so the final time stays readable.
   The top centre shows the level being played (`LEVEL 3`), in the same text
   size. The server sends the number in `STATUS`.
-- **Lobby**: when the phase is `Lobby`, a screen covers the game: the title
-  `SELECT A MAP`, the list of maps with a highlighted cursor (each player moves
-  their own with Up / Down) and the five best times of the map under the
-  cursor (`1. 02:13.4  2P`). The host (the first player of the `STATUS` list)
-  starts the match with Enter; the others see `WAITING FOR P1 TO CHOOSE THE
-  MAP`. The times come from the `LEADERBOARD` message.
+- **Lobby**: when the phase is `Lobby`, a screen covers the game. It has
+  three steps, kept by `LobbyMenu` (client side only):
+  - *Games*: the title `SELECT A GAME`, the list (the maps, then
+    `LEADERBOARD`) with a highlighted cursor (each player moves their own with
+    Up / Down) and the three best times of the map under the cursor for one difficulty
+    (`1. 02:13.4  2P  BRUTAL FF`, the difficulty in its color; Left / Right
+    change the difficulty of the ranking, brutal first). Enter on a map
+    opens the settings for the host (the first player of the `STATUS` list);
+    the others see `WAITING FOR P1 TO CHOOSE`. Enter on `LEADERBOARD` opens
+    the scores for anyone.
+  - *Settings* (host only): `GAME SETTINGS`, the rows difficulty and friendly
+    fire (Up / Down to change row, Left / Right to change the value), and a
+    summary of the multipliers of the difficulty. Every change is sent with
+    `SETTINGS`; Enter starts the match with `SELECT_MAP`, Escape goes back.
+  - *Scores*: every victory of one map, fastest first (Left / Right changes
+    the map, Up / Down scrolls, Enter or Escape goes back). The list is asked
+    with `HISTORY_REQUEST` when the entry is opened and rebuilt from the
+    `HISTORY` pages by the `Replica`.
+
+  The times come from `LEADERBOARD`. The difficulty colors (green, orange,
+  red, crimson) are in `DifficultyStyle.hpp`.
+- **Lives**: small squares at the right of each health bar, `OUT` when the
+  player is eliminated. They come from the `lives` of each player in `STATUS`.
 - **Walls and portals**: drawn by repeating a 64 x 64 tile (`obstacle_rock.png`,
   `obstacle_spike.png`) over the size of the wall; a portal repeats an animated
   tile (`portal_reverse.png`, `portal_fast.png`, `portal_normal.png`). The
