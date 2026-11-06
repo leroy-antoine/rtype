@@ -847,6 +847,26 @@ TEST(an_augment_needs_a_connected_player_and_a_valid_id)
     CHECK(game.ownedAugments(0).empty());
 }
 
+TEST(a_coin_scrolls_with_the_map_and_leaves_the_screen)
+{
+    Engine::Registry reg;
+    std::mt19937 rng(1);
+    const Engine::Entity monster = createMonster(reg);
+
+    reg.get<gameLogic::Vec2Pos>(monster) = gameLogic::Vec2Pos{{800.f, 300.f}};
+    const Engine::Entity coin = spawnCoin(reg, monster, rng);
+    const float before = reg.get<gameLogic::Vec2Pos>(coin).x;
+
+    movementSystem(reg, 1.f);
+    CHECK(reg.get<gameLogic::Vec2Pos>(coin).x
+        == before - config::SCROLL_SPEED);
+    for (int i = 0; i < 60 * 30; ++i) {
+        movementSystem(reg, config::FIXED_DT);
+        deleteUnitsOutOfBounds(reg);
+    }
+    CHECK(!reg.alive(coin));
+}
+
 TEST(the_timer_counts_the_time_of_the_match)
 {
     Game game(1);

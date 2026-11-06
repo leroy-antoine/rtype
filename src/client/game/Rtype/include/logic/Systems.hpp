@@ -136,6 +136,15 @@ namespace rtype {
         }
     }
 
+    inline void destroyFarCoins(Engine::Registry &reg)
+    {
+        for (const Collider &coin : collectCoins(reg)) {
+            if (isFarOutOfBounds(coin)) {
+                reg.destroy(coin.entity);
+            }
+        }
+    }
+
     inline void healPlayers(Engine::Registry &reg)
     {
         for (const Engine::Entity e : collectPlayers(reg)) {
@@ -149,6 +158,7 @@ namespace rtype {
         killPlayersOutOfBounds(reg);
         destroyFarEntities(reg, collectMonsters(reg));
         destroyFarEntities(reg, collectProjectileEntities(reg));
+        destroyFarCoins(reg);
         destroyFarObstacles(reg);
     }
 
