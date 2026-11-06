@@ -45,7 +45,7 @@ namespace rtype::protocol {
         std::uint8_t speedPercent = 100;
     };
 
-    constexpr std::uint8_t VERSION = 20;
+    constexpr std::uint8_t VERSION = 21;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
@@ -424,7 +424,7 @@ namespace rtype::protocol {
     {
         return (header.phase & ~PAUSED_FLAG)
                 <= static_cast<std::uint8_t>(Phase::Shop)
-            && header.map < MAP_COUNT
+            && header.map <= CUSTOM_MAP
             && header.count <= config::MAX_PLAYERS
             && header.bossHp <= header.bossMaxHp
             && left == header.count * PLAYER_STATUS_SIZE + COUNTDOWN_SIZE;

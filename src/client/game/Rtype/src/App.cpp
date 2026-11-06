@@ -8,8 +8,10 @@
 #include "client/SpriteBank.hpp"
 
 namespace client {
-    App::App(std::filesystem::path assets, const std::string &host, const std::uint16_t port)
-        : _assets(std::move(assets)), _network(host, port)
+    App::App(std::filesystem::path assets, std::filesystem::path customMaps,
+        const std::string &host, const std::uint16_t port)
+        : _assets(std::move(assets)), _network(host, port),
+        _menu(std::move(customMaps))
     {
     }
 
@@ -47,7 +49,7 @@ namespace client {
             _replica.update(dt);
             playSounds(audio);
             window.clear(4, 4, 18);
-            view.draw(_replica, elapsed());
+            view.draw(_replica, _menu, elapsed());
             shop.draw(_replica, elapsed());
             window.display();
         }
@@ -143,10 +145,49 @@ namespace client {
 
     void App::useMenu()
     {
+        if (const auto result = _replica.takeUploadResult()) {
+            _menu.setMessage(result->error);
+        }
+        _menu.navigate(_controls.pressedKeys());
+        if (_menu.tab() != Tab::Maps) {
+            useCustomMenu();
+            return;
+        }
         _replica.moveMapCursor(_controls.menuMove());
         if (_controls.respawnRequested() && _replica.isHost()) {
             _network.selectMap(_replica.mapCursor());
         }
+    }
+
+    // The maps written by the players: the host picks one, it is sent to the
+    // server, which checks it again and starts it.
+    void App::useCustomMenu()
+    {
+        _menu.moveCursor(_controls.menuMove());
+        if (const auto hash = _menu.takeRecordsRequest()) {
+            _network.requestCustomRecords(*hash);
+        }
+        if (_menu.tab() == Tab::Custom && _controls.respawnRequested()
+            && _replica.isHost()) {
+            startCustomMap();
+        }
+    }
+
+    void App::startCustomMap()
+    {
+        std::string text;
+
+        if (_network.uploading()) {
+            return;
+        }
+        const std::string error = _menu.readSelected(text);
+
+        if (!error.empty()) {
+            _menu.setMessage(error);
+            return;
+        }
+        _network.uploadMap(std::move(text));
+        _menu.setMessage("SENDING THE MAP...");
     }
 
     void App::sendReady()

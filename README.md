@@ -17,6 +17,9 @@ three decoupled layers: **rendering**, **networking** and **game logic**.
   zigzagging elites, rockets that charge, bombers that drop bombs) and **four
   bosses** (a standard boss, a roaming Dasher, a Summoner that calls
   reinforcements and a Fortress that fires barrages).
+- **Your own maps**: write a map in a JSON file (waves, bosses, obstacles,
+  levels), pick it in the lobby, play it and compete for its leaderboard. See
+  [Create your own map](docs/custom-maps.md).
 - **Obstacles**: solid rocks to hide behind, deadly spikes, swinging gates, and portals that speed the ship up or reverse the controls.
 - **Music and scenery** that change with every boss and every zone of the map.
 - **Coins** shared by the team, a match **timer**, and a **leaderboard** with
@@ -33,7 +36,7 @@ See [Gameplay](docs/gameplay.md) for the rules as a player sees them.
 - Git
 - Linux or Windows
 
-Dependencies (Asio, SFML 3) are installed by vcpkg, which is a submodule of this
+Dependencies (Asio, SFML 3, nlohmann-json) are installed by vcpkg, which is a submodule of this
 repository.
 
 ## Quick start
@@ -63,6 +66,7 @@ another machine.
 | Key | Action |
 |---|---|
 | Arrow keys | move the ship (in the lobby, Up and Down choose a map) |
+| Tab | in the lobby, switch to the **Custom map** tab (your own maps) |
 | Space | fire (hold to keep firing) |
 | Enter | come back after a death; in the lobby, start the map (host only) |
 | Escape | quit |
@@ -80,10 +84,11 @@ After a victory or a defeat, the game returns to the lobby.
 | `engine/audio` | sounds and music |
 | `src/include` | headers shared by all parts |
 | `src/client/game/Rtype` | the game logic and the client game code (and the sprites in `assets/`) |
+| `src/client/game/Rtype/CustomMaps` | example maps in JSON, copied next to the client: put yours there |
 | `src/server` | the authoritative server |
 | `src/client` | the display |
 | `docs` | documentation that concerns the whole project |
-| `tests` | automated tests of the game logic, the maps, the leaderboard and the protocol |
+| `tests` | automated tests of the game logic, the maps, the custom maps, the leaderboard and the protocol |
 
 ## Documentation
 
@@ -100,6 +105,8 @@ Documentation that concerns the whole project is in [docs](docs/README.md):
 - [Gameplay](docs/gameplay.md)
 - [Architecture](docs/architecture.md)
 - [Build and run](docs/build.md)
+- [Create your own map](docs/custom-maps.md) (players) and
+  [custom maps for developers](docs/custom-maps-internals.md)
 - [Network protocol](docs/protocol.md)
 - [Technical and comparative study](docs/comparative-study.md)
 - [Accessibility](docs/accessibility.md)

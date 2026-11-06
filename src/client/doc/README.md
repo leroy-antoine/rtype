@@ -23,8 +23,9 @@ the server.
 ./build/binaries/r-type_client <host> <port>
 ```
 
-The `assets` folder (sprites and sounds) is copied next to the executable by
-CMake and is looked up there. Without sound files or without an audio device,
+The `assets` folder (sprites and sounds) and the `CustomMaps` folder (maps
+written by the players, see [Create your own map](../../../docs/custom-maps.md))
+are copied next to the executable by CMake and are looked up there. Without sound files or without an audio device,
 the game runs without sound.
 
 ## Architecture
@@ -64,7 +65,7 @@ tests: the client only uses its types (components, events, status, config).
 | File | Role |
 |---|---|
 | `main.cpp` | parses `<host> <port>`, runs `client::App` |
-| `network/Network` | wraps `Engine::Client`: connection events, sending the keys, decoding the messages into the replica |
+| `network/Network` | wraps `Engine::Client`: connection events, sending the keys, decoding the messages into the replica, sending a custom map in pieces |
 | `App` | the main loop: receive, poll the input, send it, draw |
 | `Replica` | the local copy of the world, the interpolation, the last `STATUS`, the slot of this player, the lobby cursor, the leaderboard, the sound cues |
 | `Prediction` | the predicted position of this player's ship, with the effects of the portals and the push of the rocks, and its reconciliation with `OWN_STATE` |
@@ -72,7 +73,9 @@ tests: the client only uses its types (components, events, status, config).
 | `GameView` | draws the entities of the replica |
 | `SpriteBank` | maps each kind of entity to a texture and a source rectangle |
 | `Background` | the scenery: sky gradient, nebula, zone decor, star-field and boss aura (see [Background](#background)) |
-| `Hud` | health bars, boss bar, coin counter, timer, level, respawn hint, end screens and the lobby screen (map list, best times) |
+| `Hud` | health bars, boss bar, coin counter, timer, level, respawn hint, end screens |
+| `LobbyMenu`, `HudLobby.cpp` | the lobby: the tabs (maps of the game, **Custom map**, **Leaderboard**), the list of the JSON maps found in `CustomMaps`, their errors. `LobbyMenu` holds the state, `HudLobby.cpp` draws it |
+| `TimeFormat.hpp` | writes a time in ms as `MM:SS.T` |
 | `Font` | small bitmap font for the HUD, drawn with rectangles |
 | `Audio` | sounds and music |
 
@@ -99,6 +102,9 @@ animations use this time, never the speed of the CPU.
 | Space | fire (hold to keep firing) |
 | Enter | come back after being killed (while the match is running); in the lobby, start the selected map (host only) |
 | Up / Down | move the ship; in the lobby, move the cursor on the list of maps |
+| Tab | in the lobby, switch between the maps of the game and the **Custom map** tab |
+| Right / Left | in the Custom map tab, open / close the leaderboard of the selected map |
+| R | in the Custom map tab, read the `CustomMaps` folder again |
 | Escape | quit |
 
 The client sends the **state** of the keys every frame, with a sequence number

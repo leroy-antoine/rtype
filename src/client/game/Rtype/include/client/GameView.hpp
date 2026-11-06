@@ -16,7 +16,7 @@ namespace client {
             float screenWidth, float screenHeight);
 
         // Fond, entites du monde puis interface.
-        void draw(Replica &replica, float elapsed);
+        void draw(Replica &replica, const LobbyMenu &menu, float elapsed);
 
     private:
         static constexpr int PLAYER_FRAME_DOWN = 0;

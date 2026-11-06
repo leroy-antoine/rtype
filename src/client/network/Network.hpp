@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <cstddef>
 #include "engine/network/Client.hpp"
 #include "engine/network/Event.hpp"
 #include "logic/Augments.hpp"
@@ -22,10 +23,28 @@ namespace client {
         void setPause(bool paused);
         void buy(rtype::AugmentId id);
         void requestReady(bool ready);
+
+        // Sends the JSON of a map in pieces (a few at each update), then asks
+        // the server to play it.
+        void uploadMap(std::string text);
+        void requestCustomRecords(std::uint64_t hash);
+        [[nodiscard]] bool uploading() const;
         void flush();
         [[nodiscard]] bool connected() const;
 
     private:
+        // Pieces sent at each update: enough to be quick, few enough not to
+        // overfill the reliable channel.
+        static constexpr std::size_t CHUNKS_PER_UPDATE = 8;
+
+        struct Upload {
+            std::string text;
+            std::size_t sent = 0;
+            bool begun = false;
+        };
+
+        void pumpUpload();
+        void sendChunks(Upload &upload);
         static void assignSlot(Replica &replica, const std::optional<int> &slot);
         void handle(Replica &replica, const Engine::ClientEvents::Connected &event);
         void handle(Replica &replica, const Engine::ClientEvents::Refused &event);
@@ -35,5 +54,6 @@ namespace client {
 
         Engine::Client _client;
         bool _open = true;
+        std::optional<Upload> _upload;
     };
 }

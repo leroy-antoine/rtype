@@ -70,7 +70,12 @@ namespace rtype::mapjson {
             throw MapError("map: file bigger than "
                 + std::to_string(MAX_FILE_BYTES / 1024) + " KiB");
         }
-        return Json::parse(text.begin(), text.end(), tooDeep);
+        try {
+            return Json::parse(text.begin(), text.end(), tooDeep);
+        } catch (const Json::parse_error &error) {
+            throw MapError("map: not valid JSON, error near byte "
+                + std::to_string(error.byte));
+        }
     }
 
     ParseResult parseMap(const std::string_view text)

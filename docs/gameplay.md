@@ -35,6 +35,11 @@ the highlighted map; the other players wait for them.
 | **BOSS RUSH** | 5 short levels: the Standard boss, the Dasher, the Summoner, a pause level with three mini-bosses, then the Leviathan |
 | **DEATH RUNS** | 4 relentless levels of about a minute, then the Leviathan. Gates, lasers, mines and turrets are mixed in the same course, without any monster, with portals |
 
+A **Custom map** tab (press Tab in the lobby) lists the maps written by the
+players in the `CustomMaps` folder. A map with a mistake is marked and its
+error is shown. The host starts a valid one with Enter. Right opens the
+leaderboard of the selected map. See [Create your own map](custom-maps.md).
+
 The level number is shown at the top centre of the screen.
 
 ## Controls
@@ -175,7 +180,8 @@ goes back to the lobby). The clock does not run while the shop is open.
 Every victory records its time and the number of players. The server keeps the
 five best times of each map and shows them in the lobby. A solo run and a run
 with four players are listed together, with the number of players next to the
-time.
+time. Each map written by a player has its own leaderboard, kept as long as
+its file is not changed.
 
 ## Winning and losing
 

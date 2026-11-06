@@ -4,7 +4,7 @@
   "version": 1,
   "levels": [
     {
-      "length": 2400,
+      "length": 2600,
       "zone": "DeepSpace",
       "waves": [
         {"at": 200, "kind": "Basic", "count": 5, "y": "random",
@@ -19,20 +19,60 @@
          "width": 80},
         {"type": "FastPortal", "at": 900},
         {"type": "Gate", "at": 1100, "gapY": 300, "gapHeight": 260,
-         "width": 80, "wall": "Spike", "amplitude": 80, "period": 3}
+         "width": 80, "wall": "Spike", "amplitude": 80, "period": 3},
+        {"type": "Rock", "at": 1600, "y": 300, "width": 120,
+         "height": 200}
       ],
       "bosses": [
-        {"kind": "Standard", "at": 2000}
+        {"kind": "Standard", "at": 2300}
       ]
     },
     {
-      "length": 1800,
+      "length": 2400,
       "zone": "Nebula",
       "waves": [
-        {"at": 200, "kind": "Kamikaze", "count": 8, "interval": 0.2}
+        {"at": 200, "kind": "Kamikaze", "count": 8, "interval": 0.2},
+        {"at": 800, "kind": "Rocket", "count": 4, "y": 150, "dy": 250,
+         "interval": 0}
+      ],
+      "obstacles": [
+        {"type": "Laser", "at": 600, "y": 0, "width": 70, "height": 1080,
+         "period": 0},
+        {"type": "Laser", "at": 900, "y": 0, "width": 70, "height": 1080,
+         "period": 1},
+        {"type": "Turret", "at": 1200, "y": 0, "width": 64, "height": 64},
+        {"type": "Mine", "at": 1500, "y": 500, "width": 56, "height": 56,
+         "amplitude": 150, "period": 3}
       ],
       "bosses": [
-        {"kind": "Fortress", "at": 1500}
+        {"kind": "Dasher", "at": 2100}
+      ]
+    },
+    {
+      "length": 2000,
+      "zone": "Warp",
+      "deathRun": true,
+      "obstacles": [
+        {"type": "ReversePortal", "at": 200},
+        {"type": "Gate", "at": 500, "gapY": 400, "gapHeight": 200,
+         "width": 80, "amplitude": 70, "period": 2.4},
+        {"type": "NormalPortal", "at": 800},
+        {"type": "Gate", "at": 1000, "gapY": 300, "gapHeight": 200,
+         "width": 80, "amplitude": 70, "period": 1.5, "pinch": true},
+        {"type": "Gate", "at": 1500, "gapY": 500, "gapHeight": 220,
+         "width": 80}
+      ]
+    },
+    {
+      "length": 2400,
+      "zone": "Arena",
+      "waves": [
+        {"at": 200, "kind": "Bomber", "count": 3, "y": 150, "dy": 300,
+         "interval": 0},
+        {"at": 900, "kind": "MiniTank", "count": 1, "y": 300}
+      ],
+      "bosses": [
+        {"kind": "Fortress", "at": 2000}
       ]
     }
   ]

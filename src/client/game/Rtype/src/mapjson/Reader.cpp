@@ -1,4 +1,5 @@
 #include "Reader.hpp"
+#include "mapjson/Text.hpp"
 
 #include <algorithm>
 #include <sstream>
@@ -12,15 +13,6 @@ namespace rtype::mapjson {
 
             out << value;
             return out.str();
-        }
-
-        bool isPrintable(const std::string &word)
-        {
-            return std::ranges::all_of(word, [](const char c) {
-                const auto code = static_cast<unsigned char>(c);
-
-                return code >= 0x20 && code != 0x7F;
-            });
         }
     }
 
@@ -140,7 +132,7 @@ namespace rtype::mapjson {
         if (word.size() > MAX_TEXT) {
             failKey(key, "text longer than " + std::to_string(MAX_TEXT));
         }
-        if (!isPrintable(word)) {
+        if (!isPrintableText(word)) {
             failKey(key, "control characters are not allowed");
         }
         return word;

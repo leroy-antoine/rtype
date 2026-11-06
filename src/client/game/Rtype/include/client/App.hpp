@@ -11,13 +11,15 @@
 #include "logic/Config.hpp"
 #include "Controls.hpp"
 #include "GameView.hpp"
+#include "LobbyMenu.hpp"
 #include "Replica.hpp"
 #include "ShopPanel.hpp"
 
 namespace client {
     class App {
     public:
-        App(std::filesystem::path assets, const std::string &host, std::uint16_t port);
+        App(std::filesystem::path assets, std::filesystem::path customMaps,
+            const std::string &host, std::uint16_t port);
 
         int run();
 
@@ -40,6 +42,8 @@ namespace client {
         [[nodiscard]] bool inLobby() const;
         [[nodiscard]] bool isPaused() const;
         void useMenu();
+        void useCustomMenu();
+        void startCustomMap();
         void useMatch();
         void usePause();
         void sendReady();
@@ -50,6 +54,7 @@ namespace client {
         std::filesystem::path _assets;
         Network _network;
         Replica _replica;
+        LobbyMenu _menu;
         Controls _controls;
         Clock::time_point _start;
         Clock::time_point _last;

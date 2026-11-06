@@ -9,6 +9,7 @@
 #include "logic/Config.hpp"
 #include "client/AugmentStyle.hpp"
 #include "client/Hud.hpp"
+#include "client/TimeFormat.hpp"
 
 namespace client {
     namespace {
@@ -23,30 +24,6 @@ namespace client {
         constexpr Color CYAN{90, 230, 255, 255};
 
         // Une couleur par slot, comme les vaisseaux.
-        constexpr std::uint32_t MS_PER_MINUTE = 60000;
-        constexpr std::uint32_t MS_PER_SECOND = 1000;
-        constexpr std::uint32_t MS_PER_TENTH = 100;
-
-        std::string twoDigits(const std::uint32_t value)
-        {
-            std::string text = std::to_string(value);
-
-            if (text.size() < 2) {
-                text.insert(0, "0");
-            }
-            return text;
-        }
-
-        std::string formatTime(const std::uint32_t ms)
-        {
-            const std::uint32_t minutes = ms / MS_PER_MINUTE;
-            const std::uint32_t seconds = ms / MS_PER_SECOND % 60;
-            const std::uint32_t tenths = ms / MS_PER_TENTH % 10;
-
-            return twoDigits(minutes) + ":" + twoDigits(seconds) + "."
-                + std::to_string(tenths);
-        }
-
         constexpr std::array<Color, 4> SLOT_COLORS = {{
             {90, 170, 255, 255}, {255, 90, 90, 255},
             {110, 230, 110, 255}, {255, 220, 80, 255}}};
@@ -73,7 +50,8 @@ namespace client {
     {
     }
 
-    void Hud::draw(const Replica &replica, const float elapsed)
+    void Hud::draw(const Replica &replica, const LobbyMenu &menu,
+        const float elapsed)
     {
         const std::optional<rtype::GameStatus> &status = replica.status();
 
@@ -84,7 +62,7 @@ namespace client {
         }
         trackPhase(status->phase, elapsed);
         if (status->phase == rtype::Phase::Lobby) {
-            drawLobby(replica);
+            drawLobby(replica, menu);
             return;
         }
         drawPlayers(*status, replica.augments());
@@ -287,61 +265,6 @@ namespace client {
             10.f, RED);
         _font.drawCentered("NEW GAME IN " + std::to_string(seconds),
             _width / 2.f, _height / 2.f + 50.f, 3.f, WHITE);
-    }
-
-    void Hud::drawLobby(const Replica &replica)
-    {
-        const rtype::MapId cursor = replica.mapCursor();
-        std::string footer = "WAITING FOR P1 TO CHOOSE THE MAP";
-
-        if (replica.isHost()) {
-            footer = "UP/DOWN: CHOOSE   ENTER: START";
-        }
-        _renderer.drawRect({0.f, 0.f}, {_width, _height}, {0, 0, 0, 210});
-        _font.drawCentered("SELECT A MAP", _width / 2.f, 50.f, 6.f, WHITE);
-        drawMapList(cursor);
-        drawRecords(replica.records()[cursor]);
-        _font.drawCentered(footer, _width / 2.f, _height - 50.f, 3.f, WHITE);
-    }
-
-    void Hud::drawMapList(const rtype::MapId cursor)
-    {
-        constexpr float TOP = 150.f;
-        constexpr float STEP = 52.f;
-        constexpr float STRIP_WIDTH = 520.f;
-
-        for (std::size_t i = 0; i < rtype::MAP_COUNT; ++i) {
-            const float y = TOP + static_cast<float>(i) * STEP;
-            Color color = WHITE;
-
-            if (i == cursor) {
-                _renderer.drawRect({(_width - STRIP_WIDTH) / 2.f, y - 8.f},
-                    {STRIP_WIDTH, STEP - 6.f}, {40, 70, 140, 255});
-                color = YELLOW;
-            }
-            _font.drawCentered(rtype::MAP_NAMES[i], _width / 2.f, y, 4.f,
-                color);
-        }
-    }
-
-    void Hud::drawRecords(const rtype::MapRecords &records)
-    {
-        constexpr float TOP = 360.f;
-        constexpr float STEP = 36.f;
-
-        _font.drawCentered("BEST TIMES", _width / 2.f, TOP, 3.f, WHITE);
-        if (records.empty()) {
-            _font.drawCentered("NO RECORD YET", _width / 2.f, TOP + STEP,
-                3.f, GREEN);
-        }
-        for (std::size_t i = 0; i < records.size(); ++i) {
-            const std::string line = std::to_string(i + 1) + ". "
-                + formatTime(records[i].timeMs) + "  "
-                + std::to_string(records[i].players) + "P";
-
-            _font.drawCentered(line, _width / 2.f,
-                TOP + STEP * static_cast<float>(i + 1), 3.f, GREEN);
-        }
     }
 
     float Hud::drawReady(const rtype::PlayerStatus &player, const float x,

@@ -20,6 +20,18 @@ namespace rtype {
     using MapRecords = std::vector<RunRecord>;
     using AllRecords = std::array<MapRecords, MAP_COUNT>;
 
+    // Ajoute un temps : le plus rapide en premier, MAX_RECORDS au plus.
+    inline void addRecord(MapRecords &records, const RunRecord &record)
+    {
+        records.push_back(record);
+        std::ranges::stable_sort(records, [](const auto &a, const auto &b) {
+            return a.timeMs < b.timeMs;
+        });
+        if (records.size() > MAX_RECORDS) {
+            records.resize(MAX_RECORDS);
+        }
+    }
+
     // Meilleurs temps de victoire de chaque map, le plus rapide en premier.
     class Leaderboard {
     public:
@@ -28,15 +40,7 @@ namespace rtype {
             if (map >= MAP_COUNT) {
                 return false;
             }
-            MapRecords &records = _records[map];
-
-            records.push_back(record);
-            std::ranges::stable_sort(records, [](const auto &a, const auto &b) {
-                return a.timeMs < b.timeMs;
-            });
-            if (records.size() > MAX_RECORDS) {
-                records.resize(MAX_RECORDS);
-            }
+            addRecord(_records[map], record);
             return true;
         }
 

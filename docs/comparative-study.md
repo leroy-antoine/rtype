@@ -19,6 +19,25 @@
 | Rendering, input, audio | **SFML 3** | SDL2, Raylib | simple C++ API, good for 2D sprites, allowed by the subject (not a "too broad" engine). Hidden behind `engine::window`, so it can be replaced without touching the game |
 | Networking | **Asio** | raw BSD / Windows sockets, ENet | cross-platform, UDP support, asynchronous model suits a server that must not block; raw sockets would need our own abstraction anyway |
 
+## Format of the maps written by the players
+
+The players write their maps as files, so the format must be easy to write by
+hand, to read, and to check. The subject asks for the game to be built in C++
+only, so no scripting language (Lua, Python) is used.
+
+| Option | Easy for a player | Checkable | Cost | Verdict |
+|---|---|---|---|---|
+| JSON file, read by **nlohmann-json** | yes: widely known, many editors check it | yes: types and ranges, errors with the line | one header-only C++ dependency, installed by vcpkg | **chosen** |
+| JSON file, parser written by hand | yes | yes | about 150 more lines to write and test, for a format that is already solved | not worth it |
+| Custom text format | needs a new syntax to learn | by our own parser | a parser and its documentation | no |
+| Binary format | no | yes | an editor would be needed | no |
+| Scripting (Lua, Python) | powerful | hard: a script can do anything | forbidden by the subject, a security risk on the server | no |
+
+The JSON is turned into the same `LevelDef` as the maps of the game, so no
+part of the game logic had to change. A map is checked twice, on the client (to
+show the errors to the player) and on the server (which does not trust the
+client): see [custom maps for developers](custom-maps-internals.md#security).
+
 ## Architecture
 
 | Topic | Choice | Alternatives | Why |
@@ -60,7 +79,7 @@ The packet layout, the sequence numbers and the reliability rules are in
 
 The state of a match is kept in memory and is lost when the server stops. Only
 the best times of each map are persisted, in a small text file
-(`leaderboard.txt`).
+(`leaderboard.txt`, and `custom_leaderboard.txt` for the maps written by the players, indexed by the hash of the map).
 
 | Option | Persistence | Reliability | Constraint | Verdict |
 |---|---|---|---|---|
@@ -78,6 +97,7 @@ the best times of each map are persisted, in a small text file
 | Flooding by a client | bounded memory: 1200 bytes per datagram, 4096 datagrams queued, 64 early reliable messages, a client with more than 256 unacknowledged messages is kicked. An `INPUT` only overwrites the previous one. There is no per-client rate limit yet (**TODO**) |
 | Spoofed or replayed datagrams | a random session token and the address of the session are checked, and an old sequence number is dropped |
 | One client crashes the server | the server treats all network input as untrusted, and a failing client is removed without stopping the game |
+| A hostile map file | the host's JSON is capped (256 KiB, nesting, number of items), every value has a range, unknown fields are refused, and the server checks it again; only the host can send a map |
 | Vulnerable dependencies | dependencies come from a pinned vcpkg baseline (`vcpkg-configuration.json`); update the baseline regularly and watch the security advisories of Asio and SFML (**TODO**: who and how often) |
 
 ## Long-term monitoring

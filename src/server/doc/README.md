@@ -63,6 +63,8 @@ game logic knows nothing of the network.
 | `BUY` | decodes the augment id, calls `game.buyAugment(slot, id)` and answers the buyer with `BUY_RESULT`; an invalid payload is ignored |
 | `READY` | decodes the flag and calls `game.setReady(slot, ready)`; an invalid payload is ignored |
 | a client disconnects or times out | `game.removePlayer(slot)`; the ship is destroyed and every client is told by a `DESTROY` |
+| `MAP_UPLOAD_BEGIN`, `MAP_UPLOAD_CHUNK`, `MAP_UPLOAD_END` | from the host only: `CustomMaps` rebuilds the JSON of a map written by a player, checks it again and calls `game.startMap(buildRun(levels), CUSTOM_MAP, zones)`; the host gets a `MAP_UPLOAD_RESULT` and everybody a `CUSTOM_INFO`. A pending upload is dropped when its owner leaves |
+| `CUSTOM_RECORDS_GET` | answers with the best times of that map (`CUSTOM_RECORDS`) |
 | any message from an unknown client | ignored |
 
 The message formats are in [the protocol](../../../docs/protocol.md). The game
@@ -117,6 +119,9 @@ the speed of the CPU.
 | `STATUS` | every 6 ticks | unreliable |
 | `OWN_STATE` | every tick, to one client | unreliable (position and the effects of the portals) |
 | `LEADERBOARD` | a client connects, a match is won | reliable |
+| `CUSTOM_INFO` | a map written by a player starts, or a client connects during one | reliable |
+| `MAP_UPLOAD_RESULT` | the end of an upload, to the host | reliable |
+| `CUSTOM_RECORDS` | a client asks for them, a custom map is won | reliable |
 
 Monster movement and shots reach the clients as positions (`STATES`) and
 spawns of bullets (`SPAWN`). The kill of a player or of a monster is a
@@ -154,6 +159,11 @@ spawns of bullets (`SPAWN`). The kill of a player or of a monster is a
   ignored by the decoders (exact size, fields in range, finite floats). Nothing
   malformed reaches the game.
 - A client sends *keys*, never a position or a hit.
+- A map written by a player is data from a client: only the host may send it,
+  the upload is capped at 256 KiB and dropped at the first mistake, and the
+  JSON is parsed again with limits (see
+  [custom maps](../../../docs/custom-maps-internals.md#security)). The server
+  reads no file for it.
 - Memory is bounded: 1200 bytes per datagram, 4096 datagrams queued, and a
   client that does not acknowledge more than 256 reliable messages is kicked.
 - A message from an address without a session, or with a wrong token, is

@@ -144,7 +144,7 @@ TEST(a_map_is_played_by_the_game)
 TEST(a_text_that_is_not_a_map_is_refused)
 {
     CHECK(failsWith("", "map"));
-    CHECK(failsWith("{oops", "map"));
+    CHECK(failsWith("{oops", "map: not valid JSON, error near byte"));
     CHECK(failsWith("[]", "expected an object"));
     CHECK(failsWith("{}", "map.name: missing field"));
     CHECK(failsWith(std::string(100, '[') + std::string(100, ']'),
@@ -231,7 +231,20 @@ TEST(the_example_map_is_valid)
     CHECK(example != entries.end());
     CHECK(example->error.empty());
     CHECK(example->map.has_value());
-    CHECK(example->map->levels.size() == 2);
+    CHECK(example->map->levels.size() == 4);
+    CHECK(example->map->levels[2].deathRun);
+}
+
+TEST(the_simple_map_is_valid)
+{
+    const std::vector<mapjson::MapEntry> entries =
+        mapjson::scanMaps(CUSTOM_MAPS_DIR);
+    const auto simple = std::ranges::find(entries, "simple.json",
+        &mapjson::MapEntry::file);
+
+    CHECK(simple != entries.end());
+    CHECK(simple->error.empty());
+    CHECK(simple->map->levels.size() == 1);
 }
 
 TEST(the_folder_is_scanned)
@@ -274,4 +287,19 @@ TEST(a_big_file_is_refused_without_being_read)
     CHECK(entries.size() == 1);
     CHECK(entries[0].error.find("bigger than") != std::string::npos);
     fs::remove_all(folder);
+}
+
+TEST(the_example_map_is_played_by_the_game)
+{
+    const std::vector<mapjson::MapEntry> entries =
+        mapjson::scanMaps(CUSTOM_MAPS_DIR);
+    const auto example = std::ranges::find(entries, "example.json",
+        &mapjson::MapEntry::file);
+    Game game(1, buildRun(example->map->levels));
+
+    game.addPlayer();
+    for (int tick = 0; tick < 60 * 120; ++tick) {
+        game.update(config::FIXED_DT);
+    }
+    CHECK(game.phase() != Phase::Lobby);
 }

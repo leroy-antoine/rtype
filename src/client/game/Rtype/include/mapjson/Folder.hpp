@@ -16,6 +16,11 @@ namespace rtype::mapjson {
         std::string error;
     };
 
+    // Reads a whole map file into `text`. Returns an empty string on success,
+    // the reason otherwise (file too big, unreadable). Never throws.
+    std::string readMapFile(const std::filesystem::path &file,
+        std::string &text);
+
     // Reads every .json file of the folder, sorted by file name. A missing
     // folder is created. Never throws.
     std::vector<MapEntry> scanMaps(const std::filesystem::path &folder);

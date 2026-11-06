@@ -37,35 +37,13 @@ namespace rtype::mapjson {
             return files;
         }
 
-        // Returns an empty string on success, the reason otherwise.
-        std::string readText(const fs::path &file, std::string &text)
-        {
-            std::error_code error;
-            const auto size = fs::file_size(file, error);
-
-            if (error) {
-                return "cannot read the file";
-            }
-            if (size > MAX_FILE_BYTES) {
-                return "map: file bigger than "
-                    + std::to_string(MAX_FILE_BYTES / 1024) + " KiB";
-            }
-            std::ifstream in(file, std::ios::binary);
-
-            text.resize(static_cast<std::size_t>(size));
-            if (!in.read(text.data(), static_cast<std::streamsize>(size))) {
-                return "cannot read the file";
-            }
-            return "";
-        }
-
         MapEntry loadEntry(const fs::path &file)
         {
             MapEntry entry;
             std::string text;
 
             entry.file = file.filename().string();
-            entry.error = readText(file, text);
+            entry.error = readMapFile(file, text);
             if (!entry.error.empty()) {
                 return entry;
             }
@@ -75,6 +53,27 @@ namespace rtype::mapjson {
             entry.error = std::move(parsed.error);
             return entry;
         }
+    }
+
+    std::string readMapFile(const fs::path &file, std::string &text)
+    {
+        std::error_code error;
+        const auto size = fs::file_size(file, error);
+
+        if (error) {
+            return "cannot read the file";
+        }
+        if (size > MAX_FILE_BYTES) {
+            return "map: file bigger than "
+                + std::to_string(MAX_FILE_BYTES / 1024) + " KiB";
+        }
+        std::ifstream in(file, std::ios::binary);
+
+        text.resize(static_cast<std::size_t>(size));
+        if (!in.read(text.data(), static_cast<std::streamsize>(size))) {
+            return "cannot read the file";
+        }
+        return "";
     }
 
     std::vector<MapEntry> scanMaps(const fs::path &folder)

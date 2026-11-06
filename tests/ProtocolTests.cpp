@@ -284,8 +284,16 @@ TEST(a_status_with_an_unknown_map_is_rejected)
 {
     GameStatus status = sampleStatus();
 
-    status.map = static_cast<std::uint8_t>(MAP_COUNT);
+    status.map = static_cast<std::uint8_t>(CUSTOM_MAP + 1);
     CHECK(!protocol::decodeStatus(protocol::encode(status)).has_value());
+}
+
+TEST(a_status_of_a_custom_map_is_accepted)
+{
+    GameStatus status = sampleStatus();
+
+    status.map = CUSTOM_MAP;
+    CHECK(protocol::decodeStatus(protocol::encode(status))->map == CUSTOM_MAP);
 }
 
 TEST(a_map_selection_is_validated)

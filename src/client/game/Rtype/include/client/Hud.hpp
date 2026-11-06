@@ -4,6 +4,7 @@
 #include <vector>
 #include "engine/window/Renderer.hpp"
 #include "Font.hpp"
+#include "LobbyMenu.hpp"
 #include "Replica.hpp"
 #include "SpriteBank.hpp"
 #include "logic/Leaderboard.hpp"
@@ -20,7 +21,8 @@ namespace client {
         Hud(Engine::Renderer &renderer, const SpriteBank &sprites,
             float screenWidth, float screenHeight);
 
-        void draw(const Replica &replica, float elapsed);
+        void draw(const Replica &replica, const LobbyMenu &menu,
+            float elapsed);
 
     private:
         static constexpr float BAR_X = 70.f;
@@ -56,7 +58,17 @@ namespace client {
         void drawRespawnHint(const rtype::GameStatus &status,
             std::optional<int> self, float elapsed);
         void drawEndScreen(float elapsed);
-        void drawLobby(const Replica &replica);
+        void drawLobby(const Replica &replica, const LobbyMenu &menu);
+        void drawTabs(Tab tab);
+        void drawCustomList(const LobbyMenu &menu);
+        void drawCustomRow(const rtype::mapjson::MapEntry &entry, float y,
+            bool selected);
+        void drawCustomDetail(const rtype::mapjson::MapEntry &entry);
+        void drawNoCustomMap();
+        void drawCustomRecords(const Replica &replica, const LobbyMenu &menu);
+        void drawLines(const std::vector<std::string> &lines, float top,
+            float scale, Engine::Color color);
+        void drawLobbyFooter(const LobbyMenu &menu, bool host);
         void drawVictoryScreen(const rtype::GameStatus &status,
             const Replica &replica, float elapsed);
         void drawConfetti(float age);
