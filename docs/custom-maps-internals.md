@@ -129,11 +129,11 @@ The message formats are in [the protocol](protocol.md#maps-written-by-the-player
 | File | Role |
 |---|---|
 | `CustomMapList` | the maps found by `scanMaps`, the cursor, the message. It knows nothing of the network or of the drawing |
-| `LobbyMenu` | which screen of the lobby is shown. Two steps are for custom maps (`Custom`, `CustomScores`), and `Settings` serves both kinds of maps (`settingsForCustom`). `back()` goes back one screen |
-| `HudLobby.cpp` | draws the custom screens: tab bar, list, error of the selected map, leaderboard |
+| `LobbyMenu` | which screen of the lobby is shown. One step is for custom maps (`Custom`); `Settings` and `Scores` serve both kinds of maps (`settingsForCustom`; the scores have one page per map of the game, then one for the custom maps, `onCustomScores`). `back()` goes back one screen |
+| `HudLobby.cpp` | draws the custom screens: tab bar, list, error of the selected map, and the custom page of the leaderboard (called by `Hud::drawScoresStep`) |
 | `Network` | `uploadMap`, `requestCustomRecords`, decoding of the three new messages |
 | `Replica` | `customInfo()` (name, hash, zones), `zone()` (scenery of the current level, built-in or custom), `customRecords(hash)`, `takeUploadResult()` |
-| `App` | `useCustomStep`, `useCustomScoresStep`, `startCustomMap`: Tab, Right, R, Enter and the difficulty of the ranking |
+| `App` | `useCustomStep`, `useCustomScoresPage`, `startCustomMap`, `requestShownRecords`: Tab, Right, R, Enter, and the pages of the leaderboard |
 
 The folder is `CustomMaps` **next to the executable** (`argv[0]`), like
 `assets`. CMake copies `src/client/game/Rtype/CustomMaps` there after each
@@ -206,5 +206,5 @@ old one working.
 |---|---|
 | `tests/MapJsonTests.cpp` | the reader (valid maps, one test per kind of error, the caps), the folder scan, the two example maps, a map played by `Game` |
 | `tests/CustomMapTests.cpp` | `MapUpload`, the five new messages, `CustomLeaderboard` (per difficulty, saved and loaded), `startMap` with zones |
-| `tests/CustomMapListTests.cpp` | `CustomMapList` (cursor, rescan, reading of the chosen map), the steps of `LobbyMenu`, `utils::wrap` |
+| `tests/CustomMapListTests.cpp` | `CustomMapList` (cursor, rescan, reading of the chosen map), the steps and the pages of `LobbyMenu`, `utils::wrap` |
 | `tests/ProtocolTests.cpp` | `STATUS` with the custom map id |

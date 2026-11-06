@@ -45,8 +45,8 @@ for any player (see [Leaderboard](#leaderboard)).
 A **Custom map** tab (press Tab in the lobby) lists the maps written by the
 players in the `CustomMaps` folder. A map with a mistake is marked and its
 error is shown. The host picks a valid one with Enter, chooses the
-difficulty and friendly fire like for any map, and starts it. Right or Tab
-opens the leaderboard of the selected map. See [Create your own map](custom-maps.md).
+difficulty and friendly fire like for any map, and starts it. Right opens the
+leaderboard, on the page of the custom maps. See [Create your own map](custom-maps.md).
 
 The level number is shown at the top centre of the screen.
 
@@ -271,8 +271,10 @@ on.
   map, Up and Down scroll, Enter or Escape goes back.
 - The server keeps everything in `leaderboard.txt`, so the scores survive a
   restart.
-- Each map written by a player has its own leaderboard, kept as long as its
-  file is not changed, with the same three rankings by difficulty (see
+- The leaderboard has one page for each map of the game, then a page for the
+  **custom maps** (Left and Right go from page to page; Up and Down choose
+  the map). Each map written by a player has its own times, kept as long as
+  its file is not changed: the three best for each difficulty (see
   [Create your own map](custom-maps.md)).
 
 ## Winning and losing

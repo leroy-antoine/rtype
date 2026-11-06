@@ -73,9 +73,12 @@ namespace client {
         void drawNoCustomMap();
         void drawCustomScores(const Replica &replica,
             const CustomMapList &custom);
+        void drawNoCustomScores(const CustomMapList &custom);
+        void drawCustomDifficulty(rtype::Difficulty difficulty,
+            const rtype::MapRecords &runs, float top);
         void drawLines(const std::vector<std::string> &lines, float top,
             float scale, Engine::Color color);
-        void drawCustomFooter(LobbyStep step, bool host);
+        void drawCustomFooter(bool host);
         [[nodiscard]] static std::string settingsMapName(
             const Replica &replica, const CustomMapList &custom);
         void drawMapStep(const Replica &replica);
@@ -85,7 +88,8 @@ namespace client {
             const std::string &value, Engine::Color color, bool selected,
             float y);
         void drawScaleSummary(rtype::Difficulty difficulty);
-        void drawScoresStep(const Replica &replica);
+        void drawScoresStep(const Replica &replica,
+            const CustomMapList &custom);
         void drawRunRow(std::size_t rank, const rtype::RunRecord &record,
             float y);
         float drawLives(int lives, float x, float top);

@@ -47,9 +47,9 @@ namespace client {
         void useSettingsStep();
         void useScoresStep();
         void useCustomStep();
-        void useCustomScoresStep();
+        void useCustomScoresPage(bool wasCustom);
         void startCustomMap();
-        void askCustomRecords();
+        void requestShownRecords();
         [[nodiscard]] bool pressed(Engine::Key key) const;
         void handleBack(Engine::Window &window);
         void useMatch();

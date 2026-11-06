@@ -176,8 +176,6 @@ namespace client {
             useScoresStep();
         } else if (step == LobbyStep::Custom) {
             useCustomStep();
-        } else if (step == LobbyStep::CustomScores) {
-            useCustomScoresStep();
         } else {
             useMapStep();
         }
@@ -213,20 +211,52 @@ namespace client {
         if (_replica.onLeaderboard()) {
             _replica.menu().openScores();
             _network.requestHistory();
+            requestShownRecords();
         } else if (_replica.isHost()) {
             _replica.menu().openSettings(currentSettings());
         }
     }
 
+    // Left and Right go from page to page: one for each map of the game, then
+    // the custom maps.
     void App::useScoresStep()
     {
         LobbyMenu &menu = _replica.menu();
+        const bool wasCustom = menu.onCustomScores();
 
         menu.moveScoresMap(_controls.menuSide());
-        menu.scrollBy(_controls.menuMove(),
-            _replica.runs(menu.scoresMap()).size());
+        if (menu.onCustomScores()) {
+            useCustomScoresPage(wasCustom);
+        } else {
+            menu.scrollBy(_controls.menuMove(),
+                _replica.runs(menu.scoresMap()).size());
+        }
         if (_controls.respawnRequested()) {
             menu.back();
+        }
+    }
+
+    // The best times of the custom map under the cursor: Up and Down choose
+    // another map.
+    void App::useCustomScoresPage(const bool wasCustom)
+    {
+        if (!wasCustom) {
+            _custom.rescan();
+            requestShownRecords();
+        }
+        _custom.moveCursor(_controls.menuMove());
+        if (_controls.menuMove() != 0) {
+            requestShownRecords();
+        }
+    }
+
+    // The server only knows the maps without a mistake.
+    void App::requestShownRecords()
+    {
+        const rtype::mapjson::MapEntry *entry = _custom.selected();
+
+        if (_replica.menu().onCustomScores() && entry != nullptr) {
+            _network.requestCustomRecords(entry->hash);
         }
     }
 
@@ -260,8 +290,13 @@ namespace client {
         if (pressed(Engine::Key::R)) {
             _custom.rescan();
         }
-        if (pressed(Engine::Key::Tab) || _controls.menuSide() > 0) {
-            askCustomRecords();
+        if (pressed(Engine::Key::Tab)) {
+            menu.reset();
+            return;
+        }
+        if (_controls.menuSide() > 0) {
+            menu.openScores(true);
+            requestShownRecords();
             return;
         }
         if (!_controls.respawnRequested() || !_replica.isHost()) {
@@ -272,38 +307,6 @@ namespace client {
             return;
         }
         menu.openSettings(currentSettings(), true);
-    }
-
-    // Tab and Right open the leaderboard of a map without a mistake: the
-    // server only knows those.
-    void App::askCustomRecords()
-    {
-        const rtype::mapjson::MapEntry *entry = _custom.selected();
-
-        if (entry == nullptr) {
-            _custom.setMessage("NO LEADERBOARD FOR A MAP WITH A MISTAKE");
-            if (pressed(Engine::Key::Tab)) {
-                _replica.menu().reset();
-            }
-            return;
-        }
-        _replica.menu().openCustomScores();
-        _network.requestCustomRecords(entry->hash);
-    }
-
-    void App::useCustomScoresStep()
-    {
-        LobbyMenu &menu = _replica.menu();
-
-        menu.moveShown(_controls.menuSide());
-        if (pressed(Engine::Key::Tab)) {
-            menu.reset();
-            return;
-        }
-        _custom.moveCursor(_controls.menuMove());
-        if (_controls.menuMove() != 0 && _custom.selected() != nullptr) {
-            _network.requestCustomRecords(_custom.selected()->hash);
-        }
     }
 
     void App::startCustomMap()

@@ -3,6 +3,7 @@
 #include <string>
 #include "client/DifficultyStyle.hpp"
 #include "client/Hud.hpp"
+#include "client/TimeFormat.hpp"
 #include "utils/Wrap.hpp"
 
 // The part of the lobby that shows the maps written by the players. The maps
@@ -20,7 +21,6 @@ namespace client {
 
         constexpr std::size_t TAB_MAPS = 0;
         constexpr std::size_t TAB_CUSTOM = 1;
-        constexpr std::size_t TAB_SCORES = 2;
         constexpr std::size_t VISIBLE_MAPS = 6;
         constexpr std::size_t ERROR_COLUMNS = 90;
         constexpr float CUSTOM_ROW_TOP = 170.f;
@@ -61,8 +61,7 @@ namespace client {
     {
         constexpr float TOP = 104.f;
         constexpr float GAP = 330.f;
-        const std::array<const char *, 3> names = {"MAPS", "CUSTOM MAP",
-            "LEADERBOARD"};
+        const std::array<const char *, 2> names = {"MAPS", "CUSTOM MAP"};
 
         for (std::size_t i = 0; i < names.size(); ++i) {
             Color color = GREY;
@@ -71,7 +70,7 @@ namespace client {
                 color = YELLOW;
             }
             _font.drawCentered(names[i],
-                _width / 2.f + (static_cast<float>(i) - 1.f) * GAP, TOP, 3.f,
+                _width / 2.f + (static_cast<float>(i) - 0.5f) * GAP, TOP, 3.f,
                 color);
         }
     }
@@ -79,19 +78,12 @@ namespace client {
     void Hud::drawCustomStep(const Replica &replica,
         const CustomMapList &custom)
     {
-        const LobbyStep step = replica.menu().step();
-
         _font.drawCentered("SELECT A GAME", _width / 2.f, 50.f, 6.f, WHITE);
-        if (step == LobbyStep::CustomScores) {
-            drawTabs(TAB_SCORES);
-            drawCustomScores(replica, custom);
-        } else {
-            drawTabs(TAB_CUSTOM);
-            drawCustomList(custom);
-        }
+        drawTabs(TAB_CUSTOM);
+        drawCustomList(custom);
         drawLines(utils::wrap(custom.message(), ERROR_COLUMNS), 600.f, 2.f,
             RED);
-        drawCustomFooter(step, replica.isHost());
+        drawCustomFooter(replica.isHost());
     }
 
     void Hud::drawCustomList(const CustomMapList &custom)
@@ -155,22 +147,63 @@ namespace client {
         _font.drawCentered("THEN PRESS R", _width / 2.f, 330.f, 2.f, GREY);
     }
 
-    // The best times of the selected map, for the difficulty being shown.
+    // The page of the custom maps in the leaderboard: the three best times of
+    // the map under the cursor, for each difficulty (the hardest first).
     void Hud::drawCustomScores(const Replica &replica,
         const CustomMapList &custom)
     {
+        constexpr float TOP = 200.f;
+        constexpr float BLOCK = 92.f;
         const rtype::mapjson::MapEntry *entry = custom.selected();
-        const rtype::Difficulty shown = replica.menu().shownDifficulty();
 
+        _font.drawCentered("CUSTOM MAPS", _width / 2.f, 120.f, 4.f, YELLOW);
         if (entry == nullptr) {
-            _font.drawCentered("NO LEADERBOARD FOR A MAP WITH A MISTAKE",
-                _width / 2.f, 230.f, 3.f, RED);
+            drawNoCustomScores(custom);
+        } else {
+            _font.drawCentered(entry->map->name, _width / 2.f, 160.f, 3.f,
+                WHITE);
+        }
+        for (std::size_t i = 0; entry != nullptr
+            && i < rtype::DIFFICULTY_BY_RANK.size(); ++i) {
+            const rtype::Difficulty level = rtype::DIFFICULTY_BY_RANK[i];
+
+            drawCustomDifficulty(level, replica.customRecords(entry->hash)[
+                static_cast<std::size_t>(level)],
+                TOP + BLOCK * static_cast<float>(i));
+        }
+        _font.drawCentered("LEFT/RIGHT: GAME  UP/DOWN: OTHER MAP  "
+            "ENTER: BACK", _width / 2.f, _height - 50.f, 2.f, WHITE);
+    }
+
+    void Hud::drawNoCustomScores(const CustomMapList &custom)
+    {
+        if (custom.entries().empty()) {
+            drawNoCustomMap();
             return;
         }
-        _font.drawCentered(entry->map->name, _width / 2.f, 200.f, 4.f,
-            YELLOW);
-        drawRecords(replica.customRecords(entry->hash)[
-            static_cast<std::size_t>(shown)], shown);
+        _font.drawCentered("NO LEADERBOARD FOR A MAP WITH A MISTAKE",
+            _width / 2.f, 230.f, 3.f, RED);
+    }
+
+    void Hud::drawCustomDifficulty(const rtype::Difficulty difficulty,
+        const rtype::MapRecords &runs, const float top)
+    {
+        constexpr float ROW = 22.f;
+
+        _font.drawCentered(difficultyName(difficulty), _width / 2.f, top,
+            3.f, difficultyColor(difficulty));
+        if (runs.empty()) {
+            _font.drawCentered("NO RECORD YET", _width / 2.f, top + ROW + 4.f,
+                2.f, GREY);
+        }
+        for (std::size_t i = 0; i < runs.size(); ++i) {
+            const std::string line = std::to_string(i + 1) + ". "
+                + formatTime(runs[i].timeMs) + "  "
+                + std::to_string(runs[i].players) + "P";
+
+            _font.drawCentered(line, _width / 2.f,
+                top + ROW + 4.f + ROW * static_cast<float>(i), 2.f, GREEN);
+        }
     }
 
     void Hud::drawLines(const std::vector<std::string> &lines,
@@ -184,15 +217,13 @@ namespace client {
         }
     }
 
-    void Hud::drawCustomFooter(const LobbyStep step, const bool host)
+    void Hud::drawCustomFooter(const bool host)
     {
         std::string footer = "WAITING FOR P1 TO CHOOSE   TAB: MAPS";
 
-        if (step == LobbyStep::CustomScores) {
-            footer = "LEFT/RIGHT: DIFFICULTY  UP/DOWN: OTHER MAP  TAB: MAPS";
-        } else if (host) {
-            footer = "UP/DOWN: CHOOSE  ENTER: SETTINGS  TAB/RIGHT: "
-                "LEADERBOARD  R: REFRESH";
+        if (host) {
+            footer = "UP/DOWN: CHOOSE  ENTER: SETTINGS  RIGHT: LEADERBOARD  "
+                "R: REFRESH  TAB: MAPS";
         }
         _font.drawCentered(footer, _width / 2.f, _height - 50.f, 2.f, WHITE);
     }

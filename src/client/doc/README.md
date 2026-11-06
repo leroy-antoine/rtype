@@ -74,7 +74,7 @@ tests: the client only uses its types (components, events, status, config).
 | `SpriteBank` | maps each kind of entity to a texture and a source rectangle |
 | `Background` | the scenery: sky gradient, nebula, zone decor, star-field and boss aura (see [Background](#background)) |
 | `Hud` | health bars, boss bar, coin counter, timer, level, respawn hint, end screens |
-| `CustomMapList`, `HudLobby.cpp` | the maps written by the players that the client found in `CustomMaps`, with their errors (`CustomMapList`), and the two screens that show them: the list and their leaderboard (`HudLobby.cpp`). The screen shown is a step of `LobbyMenu` (`Custom`, `CustomScores`) |
+| `CustomMapList`, `HudLobby.cpp` | the maps written by the players that the client found in `CustomMaps`, with their errors (`CustomMapList`), and the two screens that show them: the list and their page of the leaderboard (`HudLobby.cpp`). The list is the `Custom` step of `LobbyMenu`; the leaderboard page is the last page of its `Scores` step |
 | `Font` | small bitmap font for the HUD, drawn with rectangles |
 | `Audio` | sounds and music |
 
@@ -102,8 +102,8 @@ animations use this time, never the speed of the CPU.
 | X | fire the secondary weapon (rocket launcher, laser or chain lightning) |
 | Enter | come back after being killed (while the match is running); in the lobby, open the settings of the selected map (host only), start the match from the settings, open the leaderboard |
 | Up / Down | move the ship; in the lobby, move the cursor on the list of games |
-| Tab | in the lobby, go to the next tab: maps of the game, **Custom map**, **Leaderboard** of the selected custom map |
-| Right | in the Custom map tab, open the leaderboard of the selected map (Left / Right then change the difficulty) |
+| Tab | in the lobby, switch between the maps of the game and the **Custom map** list |
+| Right | in the Custom map list, open the leaderboard on the page of the custom maps (Left / Right go from page to page, Up / Down choose the map) |
 | R | in the Custom map tab, read the `CustomMaps` folder again |
 | Escape | back one screen from the settings or the scores; quit from the first screen |
 
@@ -141,8 +141,8 @@ The window is 1280 x 720. The world is 1920 x 1080, so everything is scaled by
   The top centre shows the level being played (`LEVEL 3`), in the same text
   size. The server sends the number in `STATUS`.
 - **Lobby**: when the phase is `Lobby`, a screen covers the game. It has
-  steps kept by `LobbyMenu` (client side only; `Custom` and `CustomScores` show
-  the maps written by the players, see `CustomMapList`):
+  steps kept by `LobbyMenu` (client side only; `Custom` lists the maps written
+  by the players, see `CustomMapList`):
   - *Games*: the title `SELECT A GAME`, the list (the maps, then
     `LEADERBOARD`) with a highlighted cursor (each player moves their own with
     Up / Down) and the three best times of the map under the cursor for one difficulty

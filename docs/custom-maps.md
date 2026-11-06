@@ -91,19 +91,21 @@ The rules of JSON, to avoid the usual mistakes:
 |---|---|
 | Up / Down | choose a map |
 | Enter | open the settings, then start the map (host only) |
-| Right or Tab | open the **Leaderboard** tab: the best times of this map |
+| Right | open the **Leaderboard**, on the page of your custom maps |
 | R | read the folder again, after you edited a file |
+| Tab | back to the maps of the game |
 | Escape | back one screen (quit from the first screen) |
 
-| Key (Leaderboard tab) | Action |
-|---|---|
-| Left / Right | change the difficulty of the ranking |
-| Up / Down | look at the leaderboard of another map |
-| Tab | back to the maps of the game |
-| Escape | back to the list of your maps |
+### The leaderboard of the custom maps
 
-The leaderboard keeps the **three best times for each difficulty**, like the
-maps of the game.
+Your maps have their own page in the **LEADERBOARD** screen of the game (the
+last entry of the list of the games). Its pages follow each other with **Left**
+and **Right**: CAMPAIGN, BOSS RUSH, DEATH RUNS, then **CUSTOM MAPS**. You also
+get there with **Right** from the list of your maps.
+
+On the CUSTOM MAPS page, **Up** and **Down** choose the map, and the page shows
+its **three best times for each difficulty**, the hardest first. **Enter** or
+**Escape** closes the leaderboard.
 
 You changed your file? Press **R** in the Custom map tab and start it again.
 A map that you change gets a **new, empty leaderboard**: the times are kept per

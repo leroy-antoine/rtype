@@ -66,7 +66,7 @@ another machine.
 | Key | Action |
 |---|---|
 | Arrow keys | move the ship (in the lobby, Up and Down choose a map) |
-| Tab | in the lobby, next tab: **Custom map** (your own maps), then its **Leaderboard** |
+| Tab | in the lobby, switch to the **Custom map** list (your own maps) |
 | Space | fire (hold to keep firing) |
 | Enter | come back after a death; in the lobby, start the map (host only) |
 | Escape | quit |

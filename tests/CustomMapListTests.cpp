@@ -110,11 +110,46 @@ TEST(the_lobby_goes_back_one_screen_at_a_time)
 
     menu.openCustom();
     CHECK(menu.step() == LobbyStep::Custom);
-    menu.openCustomScores();
+    menu.openScores(true);
+    CHECK(menu.step() == LobbyStep::Scores);
     menu.back();
     CHECK(menu.step() == LobbyStep::Custom);
     menu.back();
     CHECK(menu.step() == LobbyStep::Map);
+}
+
+TEST(the_scores_opened_from_the_game_list_go_back_to_it)
+{
+    LobbyMenu menu;
+
+    menu.openScores();
+    CHECK(menu.step() == LobbyStep::Scores);
+    menu.back();
+    CHECK(menu.step() == LobbyStep::Map);
+}
+
+TEST(the_scores_have_a_page_for_the_custom_maps_after_those_of_the_game)
+{
+    LobbyMenu menu;
+
+    menu.openScores();
+    for (std::size_t page = 0; page < rtype::MAP_COUNT; ++page) {
+        CHECK(!menu.onCustomScores());
+        menu.moveScoresMap(1);
+    }
+    CHECK(menu.onCustomScores());
+    menu.moveScoresMap(1);
+    CHECK(menu.scoresMap() == 0);
+    menu.moveScoresMap(-1);
+    CHECK(menu.onCustomScores());
+}
+
+TEST(the_scores_opened_from_the_custom_list_show_the_custom_page)
+{
+    LobbyMenu menu;
+
+    menu.openScores(true);
+    CHECK(menu.onCustomScores());
 }
 
 TEST(the_settings_of_a_custom_map_go_back_to_the_custom_list)

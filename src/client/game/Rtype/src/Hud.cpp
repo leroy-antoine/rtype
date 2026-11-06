@@ -10,6 +10,7 @@
 #include "client/AugmentStyle.hpp"
 #include "client/DifficultyStyle.hpp"
 #include "client/Hud.hpp"
+#include "client/TimeFormat.hpp"
 
 namespace client {
     namespace {
@@ -38,30 +39,6 @@ namespace client {
                 return "ON";
             }
             return "OFF";
-        }
-
-        constexpr std::uint32_t MS_PER_MINUTE = 60000;
-        constexpr std::uint32_t MS_PER_SECOND = 1000;
-        constexpr std::uint32_t MS_PER_TENTH = 100;
-
-        std::string twoDigits(const std::uint32_t value)
-        {
-            std::string text = std::to_string(value);
-
-            if (text.size() < 2) {
-                text.insert(0, "0");
-            }
-            return text;
-        }
-
-        std::string formatTime(const std::uint32_t ms)
-        {
-            const std::uint32_t minutes = ms / MS_PER_MINUTE;
-            const std::uint32_t seconds = ms / MS_PER_SECOND % 60;
-            const std::uint32_t tenths = ms / MS_PER_TENTH % 10;
-
-            return twoDigits(minutes) + ":" + twoDigits(seconds) + "."
-                + std::to_string(tenths);
         }
 
         constexpr std::array<Color, 4> SLOT_COLORS = {{
@@ -336,10 +313,10 @@ namespace client {
             return;
         }
         if (step == LobbyStep::Scores) {
-            drawScoresStep(replica);
+            drawScoresStep(replica, custom);
             return;
         }
-        if (step == LobbyStep::Custom || step == LobbyStep::CustomScores) {
+        if (step == LobbyStep::Custom) {
             drawCustomStep(replica, custom);
             return;
         }
@@ -483,8 +460,15 @@ namespace client {
     }
 
     // Toutes les victoires de la map choisie, la plus rapide en premier.
-    void Hud::drawScoresStep(const Replica &replica)
+    void Hud::drawScoresStep(const Replica &replica,
+        const CustomMapList &custom)
     {
+        if (replica.menu().onCustomScores()) {
+            _font.drawCentered("LEADERBOARD", _width / 2.f, 50.f, 6.f,
+                WHITE);
+            drawCustomScores(replica, custom);
+            return;
+        }
         constexpr float TOP = 190.f;
         constexpr float STEP = 34.f;
         constexpr std::size_t VISIBLE = 13;

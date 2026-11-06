@@ -6,10 +6,10 @@
 #include "logic/Settings.hpp"
 
 namespace client {
-    // Map, Settings and Scores are the screens of the maps of the game.
-    // Custom lists the maps written by the players, CustomScores shows the
-    // best times of one of them. The settings screen serves both.
-    enum class LobbyStep { Map, Settings, Scores, Custom, CustomScores };
+    // Map lists the maps of the game, Custom the maps written by the players.
+    // The settings and the scores screens serve both: the scores have one page
+    // for each map of the game, then one page for the custom maps.
+    enum class LobbyStep { Map, Settings, Scores, Custom };
 
     enum class SettingsRow { Difficulty, FriendlyFire };
 
@@ -57,25 +57,34 @@ namespace client {
             _step = LobbyStep::Custom;
         }
 
-        void openCustomScores()
-        {
-            _step = LobbyStep::CustomScores;
-        }
-
-        void openScores()
+        // `fromCustom`: opened from the list of custom maps, so it shows the
+        // custom page and the way back leads to that list.
+        void openScores(const bool fromCustom = false)
         {
             _step = LobbyStep::Scores;
             _scroll = 0;
+            _scoresFromCustom = fromCustom;
+            if (fromCustom) {
+                _scoresMap = rtype::CUSTOM_MAP;
+            }
         }
 
-        // One screen back: from the scores or the settings of a custom map to
-        // the list of custom maps, from anything else to the maps of the game.
+        // True when the scores page shown is the one of the custom maps.
+        [[nodiscard]] bool onCustomScores() const
+        {
+            return _scoresMap == rtype::CUSTOM_MAP;
+        }
+
+        // One screen back: to the list of custom maps from the settings of a
+        // custom map or from the scores opened from that list, to the maps of
+        // the game from anything else.
         void back()
         {
-            const bool customSettings = _step == LobbyStep::Settings
-                && _forCustom;
+            const bool fromCustomList =
+                (_step == LobbyStep::Settings && _forCustom)
+                || (_step == LobbyStep::Scores && _scoresFromCustom);
 
-            if (_step == LobbyStep::CustomScores || customSettings) {
+            if (fromCustomList) {
                 _step = LobbyStep::Custom;
                 return;
             }
@@ -87,6 +96,7 @@ namespace client {
         {
             _step = LobbyStep::Map;
             _forCustom = false;
+            _scoresFromCustom = false;
         }
 
         [[nodiscard]] rtype::Difficulty shownDifficulty() const
@@ -109,9 +119,10 @@ namespace client {
             return _scoresMap;
         }
 
+        // One page per map of the game, then the page of the custom maps.
         void moveScoresMap(const int delta)
         {
-            const int count = static_cast<int>(rtype::MAP_COUNT);
+            const int count = static_cast<int>(rtype::MAP_COUNT) + 1;
             const int next = (static_cast<int>(_scoresMap) + delta + count)
                 % count;
 
@@ -162,5 +173,6 @@ namespace client {
         rtype::MapId _scoresMap = 0;
         std::size_t _shownRank = 0;
         bool _forCustom = false;
+        bool _scoresFromCustom = false;
     };
 }
