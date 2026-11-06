@@ -22,3 +22,8 @@ add_custom_command(TARGET r-type_client POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
                 ${CMAKE_SOURCE_DIR}/src/client/game/Rtype/assets
                 $<TARGET_FILE_DIR:r-type_client>/assets)
+
+add_custom_command(TARGET r-type_client POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_SOURCE_DIR}/src/client/game/Rtype/CustomMaps
+                $<TARGET_FILE_DIR:r-type_client>/CustomMaps)

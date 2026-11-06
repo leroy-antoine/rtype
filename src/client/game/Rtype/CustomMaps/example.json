@@ -1,0 +1,39 @@
+{
+  "name": "Example map",
+  "author": "R-Type team",
+  "version": 1,
+  "levels": [
+    {
+      "length": 2400,
+      "zone": "DeepSpace",
+      "waves": [
+        {"at": 200, "kind": "Basic", "count": 5, "y": "random",
+         "interval": 0.5},
+        {"at": 700, "kind": "Tank", "count": 3, "y": 250, "dy": 250,
+         "interval": 0},
+        {"at": 1300, "kind": "Elite", "count": 6, "shape": "Wedge",
+         "y": 540}
+      ],
+      "obstacles": [
+        {"type": "Gate", "at": 500, "gapY": 400, "gapHeight": 300,
+         "width": 80},
+        {"type": "FastPortal", "at": 900},
+        {"type": "Gate", "at": 1100, "gapY": 300, "gapHeight": 260,
+         "width": 80, "wall": "Spike", "amplitude": 80, "period": 3}
+      ],
+      "bosses": [
+        {"kind": "Standard", "at": 2000}
+      ]
+    },
+    {
+      "length": 1800,
+      "zone": "Nebula",
+      "waves": [
+        {"at": 200, "kind": "Kamikaze", "count": 8, "interval": 0.2}
+      ],
+      "bosses": [
+        {"kind": "Fortress", "at": 1500}
+      ]
+    }
+  ]
+}
