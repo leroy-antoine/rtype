@@ -3,6 +3,7 @@
 #include <iostream>
 #include "engine/core/Registry.hpp"
 #include "Components.hpp"
+#include "Difficulty.hpp"
 
 namespace rtype {
     inline bool absorbHit(Engine::Registry &reg, const Engine::Entity victim)
@@ -26,6 +27,8 @@ namespace rtype {
         if (absorbHit(reg, victim)) {
             return;
         }
-        reg.get<Health>(victim).hp -= reg.get<Damage>(attacker).value;
+        reg.get<Health>(victim).hp -= scaledAmount(
+            reg.get<Damage>(attacker).value,
+            damageFactor(reg, victim, attacker));
     }
 }

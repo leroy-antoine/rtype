@@ -40,6 +40,11 @@ namespace client {
         [[nodiscard]] bool inLobby() const;
         [[nodiscard]] bool isPaused() const;
         void useMenu();
+        void useMapStep();
+        [[nodiscard]] rtype::Settings currentSettings() const;
+        void useSettingsStep();
+        void useScoresStep();
+        void handleBack(Engine::Window &window);
         void useMatch();
         void usePause();
         void sendReady();

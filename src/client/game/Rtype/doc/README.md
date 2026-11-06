@@ -113,7 +113,12 @@ Headers only include the layers below them, which avoids circular includes.
 | `Secondary.hpp` | the secondary slot: `SecondaryWeapon`, `SECONDARY_DEFS`, `equipSecondary`, `secondarySystem` |
 | `Rocket.hpp`, `Laser.hpp`, `Lightning.hpp` | the three secondary weapons |
 | `Drone.hpp` | the drone: levels, following, shooting (`DroneLevel` tiers) |
-| `Leaderboard.hpp` | `Leaderboard`: best times of each map, sorted, 5 per map, saved in a text file |
+| `Leaderboard.hpp` | `Leaderboard`: the 3 best times of each map and each difficulty, and the whole history of victories (with difficulty and friendly fire), saved in a text file; `runsOf` sorts the runs of one map |
+| `Settings.hpp` | `Difficulty`, `Settings` (difficulty and friendly fire), the table `DIFFICULTY_SCALES` of multipliers and lives, `scaleOf`, `shiftedDifficulty` |
+| `Difficulty.hpp` | `ActiveSettings` (the settings held by one entity of the registry), `activeScale`, `scaledAmount`, `damageFactor`: what the systems read to apply the difficulty |
+| `Scaling.hpp` | `scaleNewEnemies` (health and fire rate of each new monster, once) and `densified` (size of a wave) |
+| `Lives.hpp` | `LifeBook`: lives of each player and the delay before they come back |
+| `Escort.hpp` | `escortFor`: the mini-bosses that come with a boss in Brutal |
 | `builder.hpp` | `buildRun` (puts the levels of a map one after another), `MAPS` (one function per map id) and `buildMap(id)`; the maps themselves are in `src/maps/` of this folder (library `rtype_maps`) |
 | `Levels.hpp` | `Segments`: the waves, the boss and the level numbers of the whole run, each with its distance |
 | `Events.hpp` | `EntitySpawned`, `EntityDestroyed`, `EntityState`: what is told to the clients |
@@ -168,6 +173,23 @@ These come from the engine (`engine/core`, not part of the game logic):
   `RESTART_DELAY` seconds, then the game goes back to the lobby (see
   [Maps and lobby](#maps-and-lobby)). If the last player leaves, the world is
   reset.
+- **Difficulty**: `Game::setSettings` stores a `Settings` (difficulty and
+  friendly fire) in an `ActiveSettings` component, so that the free-function
+  systems can read it without a parameter. The table `DIFFICULTY_SCALES`
+  gives the multipliers: `scaleNewEnemies` adjusts the health (and
+  `MaxHealth` of the bosses) and the fire rate of each monster once, when it
+  appears; `applyDamages` multiplies the damage by `damageFactor` according to
+  the teams; `coinPickupSystem` scales the coins; `queueWave` scales the size
+  of the waves with `densified`; `spawnDueBosses` queues the Brutal escort
+  (`escortFor`); the shop is given a level bonus and extra offers.
+- **Lives**: `LifeBook` holds the lives of each slot. A death outside a death
+  run costs one life (`trackLives`); the player comes back after
+  `RESPAWN_DELAY` unless the lives are gone. The defeat needs every player to
+  be dead *and* without lives (`nobodyCanFight`). Opening the shop revives
+  the eliminated players with one life. Settings apply to the next match:
+  `setSettings` and `reset` refill the lives.
+- **Friendly fire**: bullets carry a `Shooter` component; with the option on,
+  `collisionSystem` lets a player bullet hit another player, never its owner.
 - **Coins**: a monster that dies drops a coin; touching it adds to the purse
   shared by the players (`CoinCounter`, reset with each match).
 
@@ -444,7 +466,9 @@ game.removePlayer(*slot);                     // a client disconnects
 |---|---|
 | `std::optional<int> addPlayer()` | creates a player in the first free slot and returns the slot. Returns `std::nullopt` when the game is full, so the caller can refuse the connection. |
 | `void removePlayer(int slot)` | destroys the player of this slot and frees the slot. Does nothing if the slot is empty. |
-| `bool respawnPlayer(int slot)` | brings a dead player back. Returns `false` if the match is over, the slot is not used or the player is alive. |
+| `bool respawnPlayer(int slot)` | brings a dead player back before the end of the delay. Returns `false` if the match is over, the slot is not used, the player is alive or has no life left. |
+| `void setSettings(const Settings &)`, `Settings settings()` | the difficulty and friendly fire of the next match; the lives are given again. The server accepts them from the host in the lobby only. |
+| `int livesOf(int slot) const` | lives left of a player. |
 | `bool isPlayerAlive(int slot)` | is there a player entity in this slot? |
 | `void setInput(int slot, const PlayerInput &input)` | stores the **current state of the keys** of a player. It stays in effect until the next call. Does nothing if the slot is empty. |
 | `void openLobby()` | the game waits in the `Lobby` phase until `startMap`. The server calls it at startup. |
@@ -605,6 +629,12 @@ Every number lives in `Config.hpp`, namespace `rtype::config`, as a
 `constexpr`. Distances are in map units (1 unit = 1 pixel of a 1920x1080 map),
 speeds in units per second, durations in seconds. Changing the difficulty or
 the feel of the game never requires touching a system.
+
+The difficulty multipliers are the exception: they are a table
+(`DIFFICULTY_SCALES` in `Settings.hpp`), because they come as a set of seven
+values per level. The delay before a player comes back (`RESPAWN_DELAY`) and
+the size of the Brutal escort (`ESCORT_MAX`, `ESCORT_DELAY`) are in
+`Config.hpp`.
 
 Examples: `PLAYER_SPEED`, `PLAYER_FIRE_COOLDOWN`, `MONSTER_HP`,
 `MONSTER_SPAWN_INTERVAL`, `SPAWN_MARGIN`, `DESPAWN_MARGIN`,

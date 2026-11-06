@@ -20,6 +20,8 @@ namespace rtype::config {
     constexpr float FIXED_DT = 1.f / TICK_RATE;
 
     constexpr std::size_t MAX_PLAYERS = 4;
+    // Delai avant le retour d'un joueur mort.
+    constexpr float RESPAWN_DELAY = 3.f;
     constexpr int PLAYER_HP = 100;
     constexpr float PLAYER_SPEED = 500.f;
     constexpr float PLAYER_WIDTH = 96.f;
@@ -76,6 +78,8 @@ namespace rtype::config {
     constexpr float LEVIATHAN_BURST_PERIOD = 7.f;
     constexpr float LEVIATHAN_BURST_DURATION = 2.f;
     constexpr float LEVIATHAN_BURST_COOLDOWN = 0.35f;
+    constexpr std::size_t ESCORT_MAX = 3;
+    constexpr float ESCORT_DELAY = 1.f;
     constexpr int MINI_HP_FACTOR = 3;
     constexpr float MINI_SIZE_FACTOR = 1.6f;
     constexpr float MINI_DAMAGE_FACTOR = 1.5f;

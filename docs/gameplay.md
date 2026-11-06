@@ -24,10 +24,17 @@ map as fast as possible.
 ## Lobby and maps
 
 When the server starts, and after every match, the game shows the **lobby**:
-the list of maps and, under the cursor, the five best times of the highlighted
-map. Everybody can move their cursor with Up and Down to look at the times.
-The **host** (the first player connected) presses Enter to start the match on
-the highlighted map; the other players wait for them.
+the list of games (the three maps below, then **LEADERBOARD**) and, under the
+cursor, the three best times of the highlighted map for one difficulty. Everybody
+can move their cursor with Up and Down to look at the times, and change the
+difficulty of the ranking with Left and Right (brutal first, then hard,
+normal and easy).
+
+The **host** (the first player connected) presses Enter on a map to open the
+[settings](#difficulty-and-settings), then Enter again to start the match;
+Escape goes back to the list. The other players wait for them. Enter on
+**LEADERBOARD** opens the list of every victory since the start of the game,
+for any player (see [Leaderboard](#leaderboard)).
 
 | Map | Content |
 |---|---|
@@ -186,11 +193,45 @@ also makes it fire two bullets at a time. An item gives its level at once,
 whatever you bought before, and a cheaper one never lowers it. Like every
 augment, an item bought by one player is no longer sold to the team.
 
+## Difficulty and settings
+
+Before the match, the host picks a difficulty and decides whether friendly
+fire is on. The other players cannot change them. The difficulty changes the
+economy, the enemies and the number of lives; nothing else.
+
+| | Easy | Normal | Hard | Brutal |
+|---|---|---|---|---|
+| Lives per player | 5 | 3 | 2 | 1 |
+| Enemy health (bosses too) | x0.75 | x1 | x1.5 | x2 |
+| Enemy damage | x0.75 | x1 | x1.25 | x1.5 |
+| Your damage | x1.25 | x1 | x0.85 | x0.75 |
+| Enemy fire rate | x0.75 | x1 | x1.25 | x1.5 |
+| Enemy density (size of the waves) | x0.75 | x1 | x1.25 | x1.5 |
+| Coins gained | x1.25 | x1 | x0.85 | x0.75 |
+| Shop quality (rarity level) | -1 | 0 | +1 | +2 |
+| Offers in the shop | 3 | 3 | 3 | 4 |
+
+- **Brutal escort**: every boss comes with mini-bosses, one for the first
+  boss of the map, two for the second, three from the third on, one second
+  apart. They are mini-bosses of the Brutal difficulty, so tougher than usual.
+  The waves of mini-bosses are not made denser.
+- **Lives**: a death costs one life. Unless it was the last one, the player
+  comes back by themselves after three seconds (Enter makes it faster). A
+  player without lives is eliminated; the defeat comes when nobody is alive
+  and nobody can come back. Eliminated players return with one life when the
+  shop opens. In a **death run**, lives do not matter: if somebody dies,
+  everybody restarts the level.
+- **Friendly fire**: when it is on, a shot of a player hurts the other
+  players, with the normal damage of the shot. It never hurts the shooter.
+- The lives are shown as small squares at the right of each health bar
+  (`OUT` when a player is eliminated).
+
 ## Shop
 
 At the end of every level (the moment the next one begins) and after the last
 victory, the game **stops** and the shop opens: a few augments (the buffs, the weapons and the drone) are on sale,
 more and more powerful as the levels go by, and better after a boss level.
+The shop offers more augments, and rarer ones, as the difficulty rises.
 Everybody can buy with the team coins (left/right to choose, Enter to buy).
 Press **Space** to say you are ready: when every player is ready a five second
 countdown starts, then the next level begins (after the last victory the game
@@ -210,10 +251,20 @@ goes back to the lobby). The clock does not run while the shop is open.
 
 ## Leaderboard
 
-Every victory records its time and the number of players. The server keeps the
-five best times of each map and shows them in the lobby. A solo run and a run
-with four players are listed together, with the number of players next to the
-time.
+Every victory records its time, the number of players, the difficulty and
+whether friendly fire was on. Each difficulty has its own ranking, so an easy run never pushes a brutal
+one out. A solo run and a run with four players are ranked together. The
+difficulty is written next to the time, in a color that goes from green (easy)
+to orange, red and crimson (brutal), followed by `FF` when friendly fire was
+on.
+
+- The lobby shows the **three best times** of the highlighted map for the
+  chosen difficulty (brutal at first). Left and Right change the difficulty.
+- The **LEADERBOARD** entry of the list shows **every victory** since the
+  start of the game for one map, fastest first. Left and Right change the
+  map, Up and Down scroll, Enter or Escape goes back.
+- The server keeps everything in `leaderboard.txt`, so the scores survive a
+  restart.
 
 ## Winning and losing
 

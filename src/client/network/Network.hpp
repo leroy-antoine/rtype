@@ -7,6 +7,7 @@
 #include "engine/network/Event.hpp"
 #include "logic/Augments.hpp"
 #include "logic/Components.hpp"
+#include "logic/Settings.hpp"
 #include "client/Replica.hpp"
 
 namespace client {
@@ -22,6 +23,8 @@ namespace client {
         void setPause(bool paused);
         void buy(rtype::AugmentId id);
         void requestReady(bool ready);
+        void requestHistory();
+        void changeSettings(const rtype::Settings &settings);
         void flush();
         [[nodiscard]] bool connected() const;
 

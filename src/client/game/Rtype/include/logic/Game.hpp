@@ -21,11 +21,14 @@
 #include "Components.hpp"
 #include "Config.hpp"
 #include "Drone.hpp"
+#include "Difficulty.hpp"
+#include "Escort.hpp"
 #include "Events.hpp"
 #include "Formations.hpp"
 #include "Factories.hpp"
 #include "LevelSkip.hpp"
 #include "Levels.hpp"
+#include "Lives.hpp"
 #include "MapList.hpp"
 #include "MonsterBehavior.hpp"
 #include "Monsters.hpp"
@@ -33,6 +36,8 @@
 #include "Replication.hpp"
 #include "Rocket.hpp"
 #include "Secondary.hpp"
+#include "Scaling.hpp"
+#include "Settings.hpp"
 #include "Shop.hpp"
 #include "Status.hpp"
 #include "Systems.hpp"
@@ -51,6 +56,8 @@ namespace rtype {
             : _segments(std::move(segments)), _rng(seed)
         {
             _coinCounter = createCoinCounter(_reg);
+            createSettingsHolder(_reg);
+            _lives.refill(activeScale(_reg).lives);
         }
 
         std::optional<int> addPlayer()
@@ -63,6 +70,7 @@ namespace rtype {
             spawnPlayer(*slot);
             ++_alive;
             _usedSlots[static_cast<std::size_t>(*slot)] = true;
+            _lives.grantOne(*slot);
             return slot;
         }
 
@@ -82,11 +90,33 @@ namespace rtype {
             _ready.erase(slot);
         }
 
-        // Un joueur mort peut revenir tant que la partie n'est pas finie.
+        // Les reglages valent pour la prochaine partie (voir startMap).
+        void setSettings(const Settings &settings)
+        {
+            storeSettings(_reg, settings);
+            _lives.refill(scaleOf(settings).lives);
+        }
+
+        [[nodiscard]] Settings settings()
+        {
+            return activeSettings(_reg);
+        }
+
+        [[nodiscard]] int livesOf(const int slot) const
+        {
+            if (slot < 0 || slot >= SLOTS) {
+                return 0;
+            }
+            return _lives.lives(slot);
+        }
+
+        // Un joueur mort (dont la vie est deja perdue) revient seul apres un
+        // delai ; ceci l'accelere.
         bool respawnPlayer(const int slot)
         {
             if (_phase != Phase::Playing || !isUsedSlot(slot)
-                || isPlayerAlive(slot)) {
+                || isPlayerAlive(slot) || !_lives.isDown(slot)
+                || _lives.lives(slot) <= 0) {
                 return false;
             }
             spawnPlayer(slot);
@@ -126,8 +156,10 @@ namespace rtype {
 
         void restockShop(const ShopTier &tier)
         {
-            _shopOffers = rollOffers(_rng, config::SHOP_OFFER_COUNT, tier,
-                _purchased);
+            const std::size_t count = config::SHOP_OFFER_COUNT
+                + static_cast<std::size_t>(activeScale(_reg).extraOffers);
+
+            _shopOffers = rollOffers(_rng, count, tier, _purchased);
         }
 
         [[nodiscard]] const std::vector<AugmentId> &shopOffers() const
@@ -256,8 +288,7 @@ namespace rtype {
             describeMatch(status);
             for (const Engine::Entity boss : collectWith<BossTag>(_reg)) {
                 status.bossHp = std::max(0, _reg.get<Health>(boss).hp);
-                status.bossMaxHp =
-                    bossDef(_reg.get<BossType>(boss).kind).hp;
+                status.bossMaxHp = bossMaxHp(_reg, boss);
             }
             status.countdown = _countdown.value_or(0.f);
             for (int slot = 0; slot < SLOTS; ++slot) {
@@ -328,6 +359,7 @@ namespace rtype {
             status.phase = _phase;
             status.paused = _paused;
             status.deaths = _deaths;
+            status.settings = settings();
             status.map = _map;
             status.coins = static_cast<std::uint32_t>(
                 _reg.get<CoinCounter>(_coinCounter).total);
@@ -341,7 +373,8 @@ namespace rtype {
         {
             const std::optional<Engine::Entity> player =
                 findPlayerBySlot(_reg, slot);
-            PlayerStatus status{slot, 0, false, _ready.contains(slot)};
+            PlayerStatus status{slot, 0, false, _ready.contains(slot),
+                _lives.lives(slot)};
 
             if (player) {
                 status.alive = true;
@@ -377,6 +410,7 @@ namespace rtype {
             bossSystem(_reg, dt);
             chargeSystem(_reg, dt);
             secondarySystem(_reg, dt);
+            scaleNewEnemies(_reg);
             shootingSystem(_reg);
             movementSystem(_reg, dt);
             droneSystem(_reg, dt);
@@ -388,6 +422,7 @@ namespace rtype {
             deleteUnitsOutOfBounds(_reg);
             protectPlayers();
             skipLevel(deathSystem(_reg, _rng));
+            trackLives(dt);
             failRun(countDeaths());
             updatePhase();
         }
@@ -614,7 +649,9 @@ namespace rtype {
                 clearField();
             }
             resetCharges(_reg);
-            restockShop(ShopTier{static_cast<int>(finished),
+            reviveEveryone();
+            restockShop(ShopTier{static_cast<int>(finished)
+                + activeScale(_reg).shopLevelBonus,
                 last || levelHadBoss(finished)});
         }
 
@@ -693,7 +730,18 @@ namespace rtype {
             while (_nextBoss < bosses.size()
                 && bosses[_nextBoss].second <= _scroll) {
                 spawnBoss(_reg, bosses[_nextBoss].first);
+                queueEscort(_nextBoss);
                 ++_nextBoss;
+            }
+        }
+
+        // En Brutal, des mini-boss arrivent avec le boss.
+        void queueEscort(const std::size_t bossIndex)
+        {
+            const Difficulty difficulty = activeSettings(_reg).difficulty;
+
+            for (const EscortSpawn &spawn : escortFor(difficulty, bossIndex)) {
+                _pending.push_back({spawn.delay, spawn.y, spawn.kind});
             }
         }
 
@@ -719,7 +767,8 @@ namespace rtype {
             const auto &waves = _segments.waves;
 
             while (_nextWave < waves.size() && waves[_nextWave].at <= _scroll) {
-                queueWave(waves[_nextWave]);
+                queueWave(densified(waves[_nextWave],
+                    activeScale(_reg).density));
                 ++_nextWave;
             }
         }
@@ -842,19 +891,47 @@ namespace rtype {
         {
             if (allBossesSpawned() && collectWith<BossTag>(_reg).empty()) {
                 endGame(Phase::Victory);
-            } else if (allPlayersDead()) {
+            } else if (nobodyCanFight()) {
                 endGame(Phase::Defeat);
             }
         }
 
-        bool allPlayersDead()
+        // Defait : plus personne en vie, et plus personne qui puisse revenir.
+        bool nobodyCanFight()
         {
             for (int slot = 0; slot < SLOTS; ++slot) {
-                if (isUsedSlot(slot) && isPlayerAlive(slot)) {
+                if (isUsedSlot(slot)
+                    && (isPlayerAlive(slot) || _lives.lives(slot) > 0)) {
                     return false;
                 }
             }
             return true;
+        }
+
+        // Une mort coute une vie, sauf en death run (toute l'equipe repart).
+        void trackLives(const float dt)
+        {
+            for (int slot = 0; slot < SLOTS && !inDeathRun(); ++slot) {
+                if (isUsedSlot(slot) && !isPlayerAlive(slot)
+                    && !_lives.isDown(slot)) {
+                    _lives.lose(slot);
+                }
+            }
+            for (const int slot : _lives.tick(dt)) {
+                respawnPlayer(slot);
+            }
+        }
+
+        // Au shop, les joueurs elimines reviennent avec une vie.
+        void reviveEveryone()
+        {
+            for (int slot = 0; slot < SLOTS; ++slot) {
+                if (isUsedSlot(slot) && !isPlayerAlive(slot)) {
+                    _lives.grantOne(slot);
+                    spawnPlayer(slot);
+                }
+            }
+            _alive = aliveCount();
         }
 
         // Fin de partie : on retire les ennemis et leurs balles.
@@ -897,6 +974,7 @@ namespace rtype {
             _ready.clear();
             _countdown.reset();
             _shopOffers.clear();
+            _lives.refill(activeScale(_reg).lives);
             for (int slot = 0; slot < SLOTS; ++slot) {
                 if (isUsedSlot(slot)) {
                     spawnPlayer(slot);
@@ -909,6 +987,7 @@ namespace rtype {
         {
             const Engine::Entity player = createPlayer(_reg, slot);
 
+            _lives.revive(slot);
             for (const AugmentId id : ownedAugments(slot)) {
                 applyAugment(_reg, player, id);
             }
@@ -970,5 +1049,6 @@ namespace rtype {
         std::uint32_t _nextNetId = 1;
         std::mt19937 _rng;
         Engine::Entity _coinCounter;
+        LifeBook _lives;
     };
 }

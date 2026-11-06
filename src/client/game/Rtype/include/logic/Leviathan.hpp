@@ -65,7 +65,7 @@ namespace rtype {
     inline std::size_t leviathanPhase(Engine::Registry &reg,
         const Engine::Entity e)
     {
-        const float max = static_cast<float>(bossDef(BossKind::Fortress).hp);
+        const float max = static_cast<float>(bossMaxHp(reg, e));
         const float ratio = static_cast<float>(reg.get<Health>(e).hp) / max;
 
         if (ratio > 2.f / 3.f) {

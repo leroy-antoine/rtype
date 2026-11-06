@@ -8,6 +8,7 @@
 #include <vector>
 #include "logic/Config.hpp"
 #include "client/AugmentStyle.hpp"
+#include "client/DifficultyStyle.hpp"
 #include "client/Hud.hpp"
 
 namespace client {
@@ -23,6 +24,22 @@ namespace client {
         constexpr Color CYAN{90, 230, 255, 255};
 
         // Une couleur par slot, comme les vaisseaux.
+        std::string entryName(const std::size_t entry)
+        {
+            if (entry == LEADERBOARD_ENTRY) {
+                return "LEADERBOARD";
+            }
+            return rtype::MAP_NAMES[entry];
+        }
+
+        std::string onOff(const bool value)
+        {
+            if (value) {
+                return "ON";
+            }
+            return "OFF";
+        }
+
         constexpr std::uint32_t MS_PER_MINUTE = 60000;
         constexpr std::uint32_t MS_PER_SECOND = 1000;
         constexpr std::uint32_t MS_PER_TENTH = 100;
@@ -133,6 +150,7 @@ namespace client {
             drawBar({BAR_X, top}, {BAR_WIDTH, BAR_HEIGHT}, ratio, GREEN);
             float x = BAR_X + BAR_WIDTH + AUGMENT_GAP;
 
+            x = drawLives(player.lives, x, top);
             if (status.phase == rtype::Phase::Shop) {
                 x = drawReady(player, x, top);
             }
@@ -141,6 +159,24 @@ namespace client {
             }
             top += ROW_STEP;
         }
+    }
+
+    // Un carre par vie restante, a droite de la barre de vie.
+    float Hud::drawLives(const int lives, const float x, const float top)
+    {
+        constexpr float SIZE = 10.f;
+        constexpr float GAP = 4.f;
+        constexpr Color HEART{235, 70, 110, 255};
+
+        if (lives <= 0) {
+            _font.draw("OUT", {x, top}, 2.f, RED);
+            return x + Font::width("OUT", 2.f) + AUGMENT_GAP;
+        }
+        for (int i = 0; i < lives; ++i) {
+            _renderer.drawRect({x + static_cast<float>(i) * (SIZE + GAP),
+                top + 2.f}, {SIZE, SIZE}, HEART);
+        }
+        return x + static_cast<float>(lives) * (SIZE + GAP) + AUGMENT_GAP;
     }
 
     float Hud::textTop()
@@ -291,17 +327,93 @@ namespace client {
 
     void Hud::drawLobby(const Replica &replica)
     {
-        const rtype::MapId cursor = replica.mapCursor();
-        std::string footer = "WAITING FOR P1 TO CHOOSE THE MAP";
-
-        if (replica.isHost()) {
-            footer = "UP/DOWN: CHOOSE   ENTER: START";
-        }
         _renderer.drawRect({0.f, 0.f}, {_width, _height}, {0, 0, 0, 210});
-        _font.drawCentered("SELECT A MAP", _width / 2.f, 50.f, 6.f, WHITE);
+        if (replica.isHost()
+            && replica.menu().step() == LobbyStep::Settings) {
+            drawSettingsStep(replica);
+            return;
+        }
+        if (replica.menu().step() == LobbyStep::Scores) {
+            drawScoresStep(replica);
+            return;
+        }
+        drawMapStep(replica);
+    }
+
+    void Hud::drawMapStep(const Replica &replica)
+    {
+        const rtype::MapId cursor = replica.mapCursor();
+        std::string footer = "WAITING FOR P1 TO CHOOSE   LEFT/RIGHT: RANKING";
+
+        if (replica.onLeaderboard()) {
+            footer = "ENTER: SEE ALL THE SCORES";
+        } else if (replica.isHost()) {
+            footer = "UP/DOWN: CHOOSE  ENTER: SETTINGS  LEFT/RIGHT: RANKING";
+        }
+        _font.drawCentered("SELECT A GAME", _width / 2.f, 50.f, 6.f, WHITE);
         drawMapList(cursor);
-        drawRecords(replica.records()[cursor]);
+        if (!replica.onLeaderboard()) {
+            drawRecords(replica.records()[cursor][static_cast<std::size_t>(
+                replica.menu().shownDifficulty())],
+                replica.menu().shownDifficulty());
+        }
         _font.drawCentered(footer, _width / 2.f, _height - 50.f, 3.f, WHITE);
+    }
+
+    void Hud::drawSettingsStep(const Replica &replica)
+    {
+        constexpr float ROW_TOP = 190.f;
+        constexpr float ROW_GAP = 64.f;
+        const rtype::Settings &settings = replica.menu().settings();
+        const bool onFire = replica.menu().row() == SettingsRow::FriendlyFire;
+
+        _font.drawCentered("GAME SETTINGS", _width / 2.f, 50.f, 6.f, WHITE);
+        _font.drawCentered(rtype::MAP_NAMES[replica.mapCursor()],
+            _width / 2.f, 120.f, 4.f, YELLOW);
+        drawSettingRow("DIFFICULTY", difficultyName(settings.difficulty),
+            difficultyColor(settings.difficulty), !onFire, ROW_TOP);
+        drawSettingRow("FRIENDLY FIRE", onOff(settings.friendlyFire), WHITE,
+            onFire, ROW_TOP + ROW_GAP);
+        drawScaleSummary(settings.difficulty);
+        _font.drawCentered("UP/DOWN: ROW  LEFT/RIGHT: CHANGE  ENTER: START"
+            "  ESC: BACK", _width / 2.f, _height - 50.f, 2.f, WHITE);
+    }
+
+    void Hud::drawSettingRow(const std::string &label,
+        const std::string &value, const Color color, const bool selected,
+        const float y)
+    {
+        constexpr float STRIP_WIDTH = 700.f;
+        constexpr float PADDING = 20.f;
+        const float left = (_width - STRIP_WIDTH) / 2.f;
+        const float right = left + STRIP_WIDTH - PADDING;
+
+        if (selected) {
+            _renderer.drawRect({left, y - 10.f}, {STRIP_WIDTH, 52.f},
+                {40, 70, 140, 255});
+        }
+        _font.draw(label, {left + PADDING, y}, 4.f, WHITE);
+        _font.draw(value, {right - Font::width(value, 4.f), y}, 4.f, color);
+    }
+
+    void Hud::drawScaleSummary(const rtype::Difficulty difficulty)
+    {
+        constexpr float TOP = 350.f;
+        constexpr float STEP = 34.f;
+        const rtype::DifficultyScale &scale = rtype::scaleOf(difficulty);
+        const std::array<std::string, 7> lines = {
+            "LIVES " + std::to_string(scale.lives),
+            "ENEMY HP " + multiplierText(scale.enemyHp),
+            "ENEMY DAMAGE " + multiplierText(scale.enemyDamage),
+            "YOUR DAMAGE " + multiplierText(scale.allyDamage),
+            "ENEMY FIRE RATE " + multiplierText(scale.enemyFireRate),
+            "ENEMY DENSITY " + multiplierText(scale.density),
+            "COINS " + multiplierText(scale.economy)};
+
+        for (std::size_t i = 0; i < lines.size(); ++i) {
+            _font.drawCentered(lines[i], _width / 2.f,
+                TOP + STEP * static_cast<float>(i), 3.f, WHITE);
+        }
     }
 
     void Hud::drawMapList(const rtype::MapId cursor)
@@ -310,7 +422,7 @@ namespace client {
         constexpr float STEP = 52.f;
         constexpr float STRIP_WIDTH = 520.f;
 
-        for (std::size_t i = 0; i < rtype::MAP_COUNT; ++i) {
+        for (std::size_t i = 0; i < ENTRY_COUNT; ++i) {
             const float y = TOP + static_cast<float>(i) * STEP;
             Color color = WHITE;
 
@@ -319,29 +431,71 @@ namespace client {
                     {STRIP_WIDTH, STEP - 6.f}, {40, 70, 140, 255});
                 color = YELLOW;
             }
-            _font.drawCentered(rtype::MAP_NAMES[i], _width / 2.f, y, 4.f,
-                color);
+            _font.drawCentered(entryName(i), _width / 2.f, y, 4.f, color);
         }
     }
 
-    void Hud::drawRecords(const rtype::MapRecords &records)
+    void Hud::drawRecords(const rtype::MapRecords &records,
+        const rtype::Difficulty difficulty)
     {
         constexpr float TOP = 360.f;
         constexpr float STEP = 36.f;
 
-        _font.drawCentered("BEST TIMES", _width / 2.f, TOP, 3.f, WHITE);
+        _font.drawCentered("BEST TIMES", _width / 2.f - 80.f, TOP, 3.f,
+            WHITE);
+        _font.drawCentered(difficultyName(difficulty), _width / 2.f + 120.f,
+            TOP, 3.f, difficultyColor(difficulty));
         if (records.empty()) {
             _font.drawCentered("NO RECORD YET", _width / 2.f, TOP + STEP,
                 3.f, GREEN);
         }
         for (std::size_t i = 0; i < records.size(); ++i) {
-            const std::string line = std::to_string(i + 1) + ". "
-                + formatTime(records[i].timeMs) + "  "
-                + std::to_string(records[i].players) + "P";
-
-            _font.drawCentered(line, _width / 2.f,
-                TOP + STEP * static_cast<float>(i + 1), 3.f, GREEN);
+            drawRunRow(i + 1, records[i],
+                TOP + STEP * static_cast<float>(i + 1));
         }
+    }
+
+    // Une partie gagnee : rang, temps, joueurs, difficulte et tir allie.
+    void Hud::drawRunRow(const std::size_t rank,
+        const rtype::RunRecord &record, const float y)
+    {
+        const float left = _width / 2.f - RUN_ROW_WIDTH / 2.f;
+        const rtype::Settings &settings = record.settings;
+
+        _font.draw(std::to_string(rank) + ".", {left, y}, 3.f, WHITE);
+        _font.draw(formatTime(record.timeMs), {left + 60.f, y}, 3.f, GREEN);
+        _font.draw(std::to_string(record.players) + "P", {left + 230.f, y},
+            3.f, WHITE);
+        _font.draw(difficultyName(settings.difficulty), {left + 300.f, y},
+            3.f, difficultyColor(settings.difficulty));
+        if (settings.friendlyFire) {
+            _font.draw("FF", {left + 470.f, y}, 3.f, YELLOW);
+        }
+    }
+
+    // Toutes les victoires de la map choisie, la plus rapide en premier.
+    void Hud::drawScoresStep(const Replica &replica)
+    {
+        constexpr float TOP = 190.f;
+        constexpr float STEP = 34.f;
+        constexpr std::size_t VISIBLE = 13;
+        const rtype::MapId map = replica.menu().scoresMap();
+        const rtype::MapRecords &runs = replica.runs(map);
+        const std::size_t first = replica.menu().scroll();
+
+        _font.drawCentered("LEADERBOARD", _width / 2.f, 50.f, 6.f, WHITE);
+        _font.drawCentered(rtype::MAP_NAMES[map], _width / 2.f, 120.f, 4.f,
+            YELLOW);
+        if (runs.empty()) {
+            _font.drawCentered("NO RECORD YET", _width / 2.f, TOP, 3.f, GREEN);
+        }
+        for (std::size_t i = first; i < runs.size() && i < first + VISIBLE;
+            ++i) {
+            drawRunRow(i + 1, runs[i],
+                TOP + STEP * static_cast<float>(i - first));
+        }
+        _font.drawCentered("LEFT/RIGHT: GAME  UP/DOWN: SCROLL  ENTER: BACK",
+            _width / 2.f, _height - 50.f, 3.f, WHITE);
     }
 
     float Hud::drawReady(const rtype::PlayerStatus &player, const float x,

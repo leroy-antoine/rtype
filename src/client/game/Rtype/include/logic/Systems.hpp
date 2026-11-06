@@ -8,6 +8,7 @@
 #include "utils/Vectors.hpp"
 #include "Components.hpp"
 #include "Colisions.hpp"
+#include "Difficulty.hpp"
 #include "Factories.hpp"
 #include "Collectibles.hpp"
 #include "Movements.hpp"
@@ -49,12 +50,13 @@ namespace rtype {
     inline void collisionSystem(Engine::Registry &reg)
     {
         const std::vector<Collider> targets = collectTargets(reg);
+        const bool friendlyFire = activeSettings(reg).friendlyFire;
         std::vector<Engine::Entity> spent;
 
         for (const Collider &bullet : collectProjectiles(reg)) {
             if (reg.has<Pierce>(bullet.entity)) {
-                pierceTargets(reg, bullet, targets);
-            } else if (hitFirstTarget(reg, bullet, targets)) {
+                pierceTargets(reg, bullet, targets, friendlyFire);
+            } else if (hitFirstTarget(reg, bullet, targets, friendlyFire)) {
                 spent.push_back(bullet.entity);
             }
         }
@@ -138,6 +140,15 @@ namespace rtype {
         }
     }
 
+    inline void destroyFarCoins(Engine::Registry &reg)
+    {
+        for (const Collider &coin : collectCoins(reg)) {
+            if (isFarOutOfBounds(coin)) {
+                reg.destroy(coin.entity);
+            }
+        }
+    }
+
     inline void healPlayers(Engine::Registry &reg)
     {
         for (const Engine::Entity e : collectPlayers(reg)) {
@@ -151,6 +162,7 @@ namespace rtype {
         killPlayersOutOfBounds(reg);
         destroyFarEntities(reg, collectMonsters(reg));
         destroyFarEntities(reg, collectProjectileEntities(reg));
+        destroyFarCoins(reg);
         destroyFarObstacles(reg);
     }
 

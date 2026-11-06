@@ -413,3 +413,32 @@ TEST(the_rockets_in_flight_are_cleared_when_a_level_shop_opens)
     CHECK(game.phase() == Phase::Shop);
     CHECK(collectWith<Missile>(game.registry()).empty());
 }
+
+TEST(the_brutal_shop_offers_one_more_augment)
+{
+    Game game(1, twoLevels());
+
+    game.setSettings(Settings{Difficulty::Brutal, false});
+    game.addPlayer();
+    runFor(game, 5.f);
+    CHECK(game.phase() == Phase::Shop);
+    CHECK(game.shopOffers().size() == config::SHOP_OFFER_COUNT + 1);
+}
+
+TEST(an_eliminated_player_comes_back_with_one_life_at_the_shop)
+{
+    Game game(1, twoLevels());
+
+    game.setSettings(Settings{Difficulty::Brutal, false});
+    game.addPlayer();
+    game.addPlayer();
+    runFor(game, 1.f);
+    game.registry().get<Health>(*findPlayerBySlot(game.registry(), 0)).hp = 0;
+    runFor(game, 0.2f);
+    CHECK(game.livesOf(0) == 0);
+    CHECK(!game.isPlayerAlive(0));
+    runFor(game, 4.f);
+    CHECK(game.phase() == Phase::Shop);
+    CHECK(game.isPlayerAlive(0));
+    CHECK(game.livesOf(0) == 1);
+}
