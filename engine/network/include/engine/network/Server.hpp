@@ -5,6 +5,7 @@
 #include <random>
 #include <vector>
 #include <cstdint>
+#include <mutex>
 #include <cstddef>
 #include <optional>
 #include "engine/network/Event.hpp"
@@ -70,5 +71,6 @@ namespace Engine {
         std::deque<ServerEvent> _events;
         ClientId _nextClientId = 0;
         std::random_device _random;
+        mutable std::mutex _mutex;
     };
 }
