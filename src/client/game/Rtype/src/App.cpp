@@ -11,7 +11,7 @@ namespace client {
     App::App(std::filesystem::path assets, std::filesystem::path customMaps,
         const std::string &host, const std::uint16_t port)
         : _assets(std::move(assets)), _network(host, port),
-        _menu(std::move(customMaps))
+        _custom(std::move(customMaps))
     {
     }
 
@@ -41,6 +41,7 @@ namespace client {
                 return false;
             }
             _controls.poll(window);
+            handleBack(window);
             const float dt = advance();
             if (const std::optional<rtype::protocol::BuyResult> result = _replica.takeBuyResult()) {
                 shop.showResult(*result, elapsed());
@@ -49,7 +50,7 @@ namespace client {
             _replica.update(dt);
             playSounds(audio);
             window.clear(4, 4, 18);
-            view.draw(_replica, _menu, elapsed());
+            view.draw(_replica, _custom, elapsed());
             shop.draw(_replica, elapsed());
             window.display();
         }
@@ -82,6 +83,10 @@ namespace client {
     {
         sendReady();
         rtype::PlayerInput input = _controls.input();
+
+        if (!inLobby()) {
+            _replica.menu().reset();
+        }
 
         if (ShopPanel::isOpen(_replica)) {
             useShop(shop);
@@ -143,51 +148,178 @@ namespace client {
         return status && status->phase == rtype::Phase::Lobby;
     }
 
-    void App::useMenu()
+    // Echap revient au choix de la map, ou quitte depuis ailleurs.
+    void App::handleBack(Engine::Window &window)
     {
-        if (const auto result = _replica.takeUploadResult()) {
-            _menu.setMessage(result->error);
-        }
-        _menu.navigate(_controls.pressedKeys());
-        if (_menu.tab() != Tab::Maps) {
-            useCustomMenu();
+        if (!_controls.backRequested()) {
             return;
         }
-        _replica.moveMapCursor(_controls.menuMove());
-        if (_controls.respawnRequested() && _replica.isHost()) {
-            _network.selectMap(_replica.mapCursor());
+        if (inLobby() && _replica.menu().step() != LobbyStep::Map) {
+            _replica.menu().back();
+            return;
+        }
+        window.close();
+    }
+
+    void App::useMenu()
+    {
+        const LobbyStep step = _replica.menu().step();
+
+        if (const auto result = _replica.takeUploadResult()) {
+            _custom.setMessage(result->error);
+        }
+        if (!_replica.isHost() && step == LobbyStep::Settings) {
+            _replica.menu().back();
+        } else if (step == LobbyStep::Settings) {
+            useSettingsStep();
+        } else if (step == LobbyStep::Scores) {
+            useScoresStep();
+        } else if (step == LobbyStep::Custom) {
+            useCustomStep();
+        } else if (step == LobbyStep::CustomScores) {
+            useCustomScoresStep();
+        } else {
+            useMapStep();
         }
     }
 
-    // The maps written by the players: the host picks one, it is sent to the
-    // server, which checks it again and starts it.
-    void App::useCustomMenu()
+    bool App::pressed(const Engine::Key key) const
     {
-        _menu.moveCursor(_controls.menuMove());
-        if (const auto hash = _menu.takeRecordsRequest()) {
-            _network.requestCustomRecords(*hash);
+        const std::vector<Engine::Key> &keys = _controls.pressedKeys();
+
+        return std::ranges::find(keys, key) != keys.end();
+    }
+
+    rtype::Settings App::currentSettings() const
+    {
+        if (_replica.status()) {
+            return _replica.status()->settings;
         }
-        if (_menu.tab() == Tab::Custom && _controls.respawnRequested()
-            && _replica.isHost()) {
+        return rtype::Settings{};
+    }
+
+    void App::useMapStep()
+    {
+        if (pressed(Engine::Key::Tab)) {
+            _custom.rescan();
+            _replica.menu().openCustom();
+            return;
+        }
+        _replica.moveMapCursor(_controls.menuMove());
+        _replica.menu().moveShown(_controls.menuSide());
+        if (!_controls.respawnRequested()) {
+            return;
+        }
+        if (_replica.onLeaderboard()) {
+            _replica.menu().openScores();
+            _network.requestHistory();
+        } else if (_replica.isHost()) {
+            _replica.menu().openSettings(currentSettings());
+        }
+    }
+
+    void App::useScoresStep()
+    {
+        LobbyMenu &menu = _replica.menu();
+
+        menu.moveScoresMap(_controls.menuSide());
+        menu.scrollBy(_controls.menuMove(),
+            _replica.runs(menu.scoresMap()).size());
+        if (_controls.respawnRequested()) {
+            menu.back();
+        }
+    }
+
+    void App::useSettingsStep()
+    {
+        LobbyMenu &menu = _replica.menu();
+
+        menu.moveRow(_controls.menuMove());
+        if (_controls.menuSide() != 0) {
+            _network.changeSettings(menu.change(_controls.menuSide()));
+        }
+        if (!_controls.respawnRequested()) {
+            return;
+        }
+        if (menu.settingsForCustom()) {
             startCustomMap();
+        } else {
+            _network.selectMap(_replica.mapCursor());
+        }
+        menu.back();
+    }
+
+    // The maps written by the players: the host picks one, chooses the
+    // settings, and the map is sent to the server, which checks it again and
+    // starts it.
+    void App::useCustomStep()
+    {
+        LobbyMenu &menu = _replica.menu();
+
+        _custom.moveCursor(_controls.menuMove());
+        if (pressed(Engine::Key::R)) {
+            _custom.rescan();
+        }
+        if (pressed(Engine::Key::Tab) || _controls.menuSide() > 0) {
+            askCustomRecords();
+            return;
+        }
+        if (!_controls.respawnRequested() || !_replica.isHost()) {
+            return;
+        }
+        if (_custom.selected() == nullptr) {
+            _custom.setMessage("CHOOSE A MAP WITHOUT A MISTAKE");
+            return;
+        }
+        menu.openSettings(currentSettings(), true);
+    }
+
+    // Tab and Right open the leaderboard of a map without a mistake: the
+    // server only knows those.
+    void App::askCustomRecords()
+    {
+        const rtype::mapjson::MapEntry *entry = _custom.selected();
+
+        if (entry == nullptr) {
+            _custom.setMessage("NO LEADERBOARD FOR A MAP WITH A MISTAKE");
+            if (pressed(Engine::Key::Tab)) {
+                _replica.menu().reset();
+            }
+            return;
+        }
+        _replica.menu().openCustomScores();
+        _network.requestCustomRecords(entry->hash);
+    }
+
+    void App::useCustomScoresStep()
+    {
+        LobbyMenu &menu = _replica.menu();
+
+        menu.moveShown(_controls.menuSide());
+        if (pressed(Engine::Key::Tab)) {
+            menu.reset();
+            return;
+        }
+        _custom.moveCursor(_controls.menuMove());
+        if (_controls.menuMove() != 0 && _custom.selected() != nullptr) {
+            _network.requestCustomRecords(_custom.selected()->hash);
         }
     }
 
     void App::startCustomMap()
     {
         std::string text;
+        const std::string error = _custom.readSelected(text);
 
         if (_network.uploading()) {
             return;
         }
-        const std::string error = _menu.readSelected(text);
-
         if (!error.empty()) {
-            _menu.setMessage(error);
+            _custom.setMessage(error);
             return;
         }
         _network.uploadMap(std::move(text));
-        _menu.setMessage("SENDING THE MAP...");
+        _custom.setMessage("SENDING THE MAP...");
     }
 
     void App::sendReady()

@@ -81,18 +81,29 @@ The rules of JSON, to avoid the usual mistakes:
 3. Choose a map with **Up** and **Down**. For a map with a mistake, the reason
    is written under the list (see
    [When the game says your map is wrong](#when-the-game-says-your-map-is-wrong)).
-4. Press **Enter**. The game sends the map to the server, which checks it
-   again and starts it for every player. The other players do not need the
-   file.
+4. Press **Enter**: the **settings** screen opens. Choose the difficulty and
+   whether friendly fire is on (Up / Down to change the row, Left / Right to
+   change the value), then press **Enter** again. The game sends the map to
+   the server, which checks it again and starts it for every player. The other
+   players do not need the file.
 
 | Key (Custom map tab) | Action |
 |---|---|
 | Up / Down | choose a map |
-| Enter | start the map (host only) |
-| Right or Tab | open the **Leaderboard** tab: the five best times of this map |
-| Left | back to the list (from the Leaderboard tab) |
+| Enter | open the settings, then start the map (host only) |
+| Right or Tab | open the **Leaderboard** tab: the best times of this map |
 | R | read the folder again, after you edited a file |
-| Tab (from the Leaderboard tab) | back to the maps of the game |
+| Escape | back one screen (quit from the first screen) |
+
+| Key (Leaderboard tab) | Action |
+|---|---|
+| Left / Right | change the difficulty of the ranking |
+| Up / Down | look at the leaderboard of another map |
+| Tab | back to the maps of the game |
+| Escape | back to the list of your maps |
+
+The leaderboard keeps the **three best times for each difficulty**, like the
+maps of the game.
 
 You changed your file? Press **R** in the Custom map tab and start it again.
 A map that you change gets a **new, empty leaderboard**: the times are kept per

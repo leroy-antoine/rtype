@@ -73,6 +73,8 @@ namespace client {
         add(Id::MonsterBullet, "r-typesheet1.gif",
             {.firstFrame = {226, 276, 16, 11}, .frameCount = 2, .step = 16,
                 .frameDuration = 0.15f});
+        add(Id::PlayerRocket, "player_rocket.png",
+            {.firstFrame = {0, 0, 15, 6}, .frameCount = 1});
         add(Id::RocketMissile, "r-typesheet10.gif",
             {.firstFrame = {148, 78, 15, 6}, .frameCount = 1});
         add(Id::Bomb, "r-typesheet3.gif",

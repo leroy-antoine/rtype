@@ -22,7 +22,8 @@ guide for the players is [Create your own map](custom-maps.md).
  CustomMaps/*.json
    │ scanMaps()  ─ parse + check each file
    ▼
- LobbyMenu (tab "Custom map") ── host presses Enter
+ CustomMapList + LobbyMenu step "Custom"
+   │ host: Enter, then the settings screen, then Enter
    │ readSelected()  ─ read the file again
    ▼
  Network::uploadMap ── MAP_UPLOAD_BEGIN / CHUNK × n / END ──►  MapUpload
@@ -106,8 +107,10 @@ Rules the parsers follow:
 
 1. `scanMaps` calls `parseMap` on each `.json` file. The result keeps, for
    each file, the map **or** the error, and the hash of the content.
-2. The host chooses a valid map. `LobbyMenu::readSelected` reads the file again
-   (so a change made after the scan is taken into account).
+2. The host chooses a valid map, then the settings (the settings screen of the
+   lobby serves both kinds of maps and sends `SETTINGS` as usual).
+   `CustomMapList::readSelected` reads the file again, so a change made after
+   the scan is taken into account.
 3. `Network::uploadMap` queues the text. At each `Network::update` it sends
    `MAP_UPLOAD_BEGIN` once, then at most 8 pieces of 1100 bytes
    (`MAP_UPLOAD_CHUNK`), then `MAP_UPLOAD_END`. The pacing keeps the number of
@@ -125,11 +128,12 @@ The message formats are in [the protocol](protocol.md#maps-written-by-the-player
 
 | File | Role |
 |---|---|
-| `LobbyMenu` | the tabs (`Maps`, `Custom`, `Records`), the list found by `scanMaps`, the cursor, the message. It knows nothing of the network or of the drawing |
-| `HudLobby.cpp` | draws the lobby: tab bar, list, error of the selected map, leaderboard |
+| `CustomMapList` | the maps found by `scanMaps`, the cursor, the message. It knows nothing of the network or of the drawing |
+| `LobbyMenu` | which screen of the lobby is shown. Two steps are for custom maps (`Custom`, `CustomScores`), and `Settings` serves both kinds of maps (`settingsForCustom`). `back()` goes back one screen |
+| `HudLobby.cpp` | draws the custom screens: tab bar, list, error of the selected map, leaderboard |
 | `Network` | `uploadMap`, `requestCustomRecords`, decoding of the three new messages |
 | `Replica` | `customInfo()` (name, hash, zones), `zone()` (scenery of the current level, built-in or custom), `customRecords(hash)`, `takeUploadResult()` |
-| `App` | `useMenu` / `useCustomMenu`: Tab (cycles the three tabs), Right, Left, R and Enter |
+| `App` | `useCustomStep`, `useCustomScoresStep`, `startCustomMap`: Tab, Right, R, Enter and the difficulty of the ranking |
 
 The folder is `CustomMaps` **next to the executable** (`argv[0]`), like
 `assets`. CMake copies `src/client/game/Rtype/CustomMaps` there after each
@@ -201,6 +205,6 @@ old one working.
 | File | Covers |
 |---|---|
 | `tests/MapJsonTests.cpp` | the reader (valid maps, one test per kind of error, the caps), the folder scan, the two example maps, a map played by `Game` |
-| `tests/CustomMapTests.cpp` | `MapUpload`, the five new messages, `CustomLeaderboard`, `startMap` with zones |
-| `tests/LobbyMenuTests.cpp` | the tabs, the cursor, `R`, the reading of the chosen map, `utils::wrap` |
+| `tests/CustomMapTests.cpp` | `MapUpload`, the five new messages, `CustomLeaderboard` (per difficulty, saved and loaded), `startMap` with zones |
+| `tests/CustomMapListTests.cpp` | `CustomMapList` (cursor, rescan, reading of the chosen map), the steps of `LobbyMenu`, `utils::wrap` |
 | `tests/ProtocolTests.cpp` | `STATUS` with the custom map id |

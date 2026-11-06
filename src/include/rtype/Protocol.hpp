@@ -45,7 +45,7 @@ namespace rtype::protocol {
         std::uint8_t speedPercent = 100;
     };
 
-    constexpr std::uint8_t VERSION = 21;
+    constexpr std::uint8_t VERSION = 25;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
@@ -54,6 +54,8 @@ namespace rtype::protocol {
     constexpr Engine::MessageType PAUSE = 0x14;
     constexpr Engine::MessageType BUY = 0x15;
     constexpr Engine::MessageType READY = 0x16;
+    constexpr Engine::MessageType SETTINGS = 0x17;
+    constexpr Engine::MessageType HISTORY_REQUEST = 0x18;
 
     constexpr Engine::MessageType SPAWN = 0x20;
     constexpr Engine::MessageType DESTROY = 0x21;
@@ -62,13 +64,15 @@ namespace rtype::protocol {
     constexpr Engine::MessageType YOU = 0x24;
     constexpr Engine::MessageType OWN_STATE = 0x25;
     constexpr Engine::MessageType LEADERBOARD = 0x29;
+    constexpr Engine::MessageType HISTORY = 0x2A;
 
     constexpr std::uint8_t KEY_UP = 1 << 0;
     constexpr std::uint8_t KEY_DOWN = 1 << 1;
     constexpr std::uint8_t KEY_LEFT = 1 << 2;
     constexpr std::uint8_t KEY_RIGHT = 1 << 3;
     constexpr std::uint8_t KEY_FIRE = 1 << 4;
-    constexpr std::uint8_t KEYS_MASK = 0x1F;
+    constexpr std::uint8_t KEY_ALT = 1 << 5;
+    constexpr std::uint8_t KEYS_MASK = 0x3F;
 
     constexpr std::size_t INPUT_SIZE = 5;
     constexpr std::size_t OWN_STATE_SIZE = 14;
@@ -80,12 +84,21 @@ namespace rtype::protocol {
         (Engine::Protocol::MAX_PAYLOAD_SIZE - STATES_HEADER_SIZE) / STATE_SIZE;
 
     // STATUS : phase (1), boss hp (2), boss max hp (2), pieces (4), temps
-    // en ms (4), morts (2), niveau (1), map (1), nombre de joueurs (1),
-    // puis par joueur : slot (1), hp (2), vivant (1), pret (1) ; enfin le
-    // compte a rebours du shop en millisecondes (2).
-    constexpr std::size_t STATUS_HEADER_SIZE = 18;
-    constexpr std::size_t RECORD_SIZE = 5;
-    constexpr std::size_t PLAYER_STATUS_SIZE = 5;
+    // en ms (4), morts (2), difficulte (1), tir allie (1), niveau (1),
+    // map (1), nombre de joueurs (1), puis par joueur : slot (1), hp (2),
+    // vivant (1), pret (1), vies (1) ; enfin le compte a rebours du shop
+    // en millisecondes (2).
+    constexpr std::size_t STATUS_HEADER_SIZE = 20;
+    constexpr std::size_t RECORD_SIZE = 6;
+    constexpr std::size_t ENTRY_SIZE = 7;
+    constexpr std::size_t HISTORY_HEADER_SIZE = 5;
+    constexpr std::size_t HISTORY_PAGE_ENTRIES =
+        (Engine::Protocol::MAX_PAYLOAD_SIZE - HISTORY_HEADER_SIZE)
+        / ENTRY_SIZE;
+    constexpr std::uint8_t FIRE_FLAG = 1 << 2;
+    constexpr std::uint8_t DIFFICULTY_MASK = 0x03;
+    constexpr std::size_t PLAYER_STATUS_SIZE = 6;
+    constexpr std::size_t SETTINGS_SIZE = 2;
     constexpr std::size_t COUNTDOWN_SIZE = 2;
 
     constexpr Engine::MessageType AUGMENTS = 0x26;
@@ -135,6 +148,8 @@ namespace rtype::protocol {
             keys |= KEY_RIGHT;
         if (input.fire)
             keys |= KEY_FIRE;
+        if (input.alt)
+            keys |= KEY_ALT;
         return keys;
     }
 
@@ -160,7 +175,8 @@ namespace rtype::protocol {
         }
         return InputMessage{*sequence, PlayerInput{hasKey(*keys, KEY_UP),
             hasKey(*keys, KEY_DOWN), hasKey(*keys, KEY_LEFT),
-            hasKey(*keys, KEY_RIGHT), hasKey(*keys, KEY_FIRE)}};
+            hasKey(*keys, KEY_RIGHT), hasKey(*keys, KEY_FIRE),
+            hasKey(*keys, KEY_ALT)}};
     }
 
     inline Payload encode(const OwnState &state)
@@ -360,12 +376,15 @@ namespace rtype::protocol {
         writer.writeU8(status.level);
         writer.writeU8(status.map);
         writer.writeU16(status.deaths);
+        writer.writeU8(static_cast<std::uint8_t>(status.settings.difficulty));
+        writer.writeU8(status.settings.friendlyFire ? 1 : 0);
         writer.writeU8(static_cast<std::uint8_t>(status.players.size()));
         for (const PlayerStatus &player : status.players) {
             writer.writeU8(static_cast<std::uint8_t>(player.slot));
             writer.writeU16(static_cast<std::uint16_t>(player.hp));
             writer.writeU8(player.alive ? 1 : 0);
             writer.writeU8(player.ready ? 1 : 0);
+            writer.writeU8(static_cast<std::uint8_t>(player.lives));
         }
         writer.writeU16(static_cast<std::uint16_t>(
             std::lround(status.countdown * 1000.f)));
@@ -379,12 +398,13 @@ namespace rtype::protocol {
         const std::optional<std::uint16_t> hp = reader.readU16();
         const std::optional<std::uint8_t> alive = reader.readU8();
         const std::optional<std::uint8_t> ready = reader.readU8();
+        const std::optional<std::uint8_t> lives = reader.readU8();
 
-        if (!slot || !hp || !alive || !ready || *slot >= config::MAX_PLAYERS
-            || *alive > 1 || *ready > 1) {
+        if (!slot || !hp || !alive || !ready || !lives
+            || *slot >= config::MAX_PLAYERS || *alive > 1 || *ready > 1) {
             return std::nullopt;
         }
-        return PlayerStatus{*slot, *hp, *alive == 1, *ready == 1};
+        return PlayerStatus{*slot, *hp, *alive == 1, *ready == 1, *lives};
     }
 
     struct StatusHeader {
@@ -396,6 +416,8 @@ namespace rtype::protocol {
         std::uint8_t level = 0;
         std::uint8_t map = 0;
         std::uint16_t deaths = 0;
+        std::uint8_t difficulty = 0;
+        std::uint8_t friendlyFire = 0;
         std::uint8_t count = 0;
     };
 
@@ -410,14 +432,17 @@ namespace rtype::protocol {
         const std::optional<std::uint8_t> level = reader.readU8();
         const std::optional<std::uint8_t> map = reader.readU8();
         const std::optional<std::uint16_t> deaths = reader.readU16();
+        const std::optional<std::uint8_t> difficulty = reader.readU8();
+        const std::optional<std::uint8_t> friendlyFire = reader.readU8();
         const std::optional<std::uint8_t> count = reader.readU8();
 
         if (!phase || !bossHp || !bossMaxHp || !coins || !elapsedMs
-            || !level || !map || !deaths || !count) {
+            || !level || !map || !deaths || !difficulty || !friendlyFire
+            || !count) {
             return std::nullopt;
         }
         return StatusHeader{*phase, *bossHp, *bossMaxHp, *coins, *elapsedMs,
-            *level, *map, *deaths, *count};
+            *level, *map, *deaths, *difficulty, *friendlyFire, *count};
     }
 
     inline bool isValid(const StatusHeader &header, const std::size_t left)
@@ -425,6 +450,8 @@ namespace rtype::protocol {
         return (header.phase & ~PAUSED_FLAG)
                 <= static_cast<std::uint8_t>(Phase::Shop)
             && header.map <= CUSTOM_MAP
+            && isValidDifficulty(header.difficulty)
+            && header.friendlyFire <= 1
             && header.count <= config::MAX_PLAYERS
             && header.bossHp <= header.bossMaxHp
             && left == header.count * PLAYER_STATUS_SIZE + COUNTDOWN_SIZE;
@@ -462,6 +489,9 @@ namespace rtype::protocol {
         status.level = header->level;
         status.map = header->map;
         status.deaths = header->deaths;
+        status.settings.difficulty =
+            static_cast<Difficulty>(header->difficulty);
+        status.settings.friendlyFire = header->friendlyFire == 1;
         if (!readPlayers(reader, header->count, status.players)) {
             return std::nullopt;
         }
@@ -483,6 +513,22 @@ namespace rtype::protocol {
         return payload[0];
     }
 
+    // SETTINGS : difficulte (1), tir allie (1), choisis par l'hote.
+    inline Payload encodeSettings(const Settings &settings)
+    {
+        return {static_cast<std::uint8_t>(settings.difficulty),
+            static_cast<std::uint8_t>(settings.friendlyFire)};
+    }
+
+    inline std::optional<Settings> decodeSettings(const Payload &payload)
+    {
+        if (payload.size() != SETTINGS_SIZE || !isValidDifficulty(payload[0])
+            || payload[1] > 1) {
+            return std::nullopt;
+        }
+        return Settings{static_cast<Difficulty>(payload[0]), payload[1] == 1};
+    }
+
     // PAUSE : 1 pour mettre la partie en pause, 0 pour la reprendre.
     inline Payload encodePause(const bool paused)
     {
@@ -497,17 +543,65 @@ namespace rtype::protocol {
         return payload[0] == 1;
     }
 
-    // LEADERBOARD : pour chaque map, le nombre de records (1) puis par
-    // record le temps en ms (4) et le nombre de joueurs (1).
+    inline std::uint8_t settingsFlags(const Settings &settings)
+    {
+        auto flags = static_cast<std::uint8_t>(settings.difficulty);
+
+        if (settings.friendlyFire) {
+            flags |= FIRE_FLAG;
+        }
+        return flags;
+    }
+
+    inline std::optional<Settings> readSettingsFlags(const std::uint8_t flags)
+    {
+        if ((flags & ~(DIFFICULTY_MASK | FIRE_FLAG)) != 0) {
+            return std::nullopt;
+        }
+        return Settings{static_cast<Difficulty>(flags & DIFFICULTY_MASK),
+            (flags & FIRE_FLAG) != 0};
+    }
+
+    inline void writeRecord(Engine::BinaryWriter &writer,
+        const RunRecord &record)
+    {
+        writer.writeU32(record.timeMs);
+        writer.writeU8(record.players);
+        writer.writeU8(settingsFlags(record.settings));
+    }
+
+    inline std::optional<RunRecord> readRecord(Engine::BinaryReader &reader)
+    {
+        const std::optional<std::uint32_t> time = reader.readU32();
+        const std::optional<std::uint8_t> players = reader.readU8();
+        const std::optional<std::uint8_t> flags = reader.readU8();
+
+        if (!time || !players || !flags || *players == 0
+            || *players > config::MAX_PLAYERS) {
+            return std::nullopt;
+        }
+        const std::optional<Settings> settings = readSettingsFlags(*flags);
+
+        if (!settings) {
+            return std::nullopt;
+        }
+        return RunRecord{*time, *players, *settings};
+    }
+
+    // LEADERBOARD : pour chaque map et chaque difficulte (dans l'ordre de
+    // l'enum), le nombre de records (1) puis par record le temps en ms (4),
+    // le nombre de joueurs (1) et les reglages (1 : difficulte dans les deux
+    // bits bas, bit 2 pour le tir allie).
     inline Payload encode(const AllRecords &records)
     {
         Engine::BinaryWriter writer;
 
-        for (const MapRecords &map : records) {
-            writer.writeU8(static_cast<std::uint8_t>(map.size()));
-            for (const RunRecord &record : map) {
-                writer.writeU32(record.timeMs);
-                writer.writeU8(record.players);
+        for (const DifficultyRecords &map : records) {
+            for (const MapRecords &runs : map) {
+                writer.writeU8(static_cast<std::uint8_t>(runs.size()));
+                for (const RunRecord &record : runs) {
+                    writeRecord(writer, record);
+                }
             }
         }
         return writer.data();
@@ -522,16 +616,24 @@ namespace rtype::protocol {
             return false;
         }
         for (std::size_t i = 0; i < *count; ++i) {
-            const std::optional<std::uint32_t> time = reader.readU32();
-            const std::optional<std::uint8_t> players = reader.readU8();
+            const std::optional<RunRecord> record = readRecord(reader);
 
-            if (!time || !players || *players == 0
-                || *players > config::MAX_PLAYERS) {
+            if (!record) {
                 return false;
             }
-            out.push_back({*time, *players});
+            out.push_back(*record);
         }
         return true;
+    }
+
+    // Un bloc ne contient que des records de sa propre difficulte.
+    inline bool isOfDifficulty(const MapRecords &runs,
+        const std::size_t difficulty)
+    {
+        return std::ranges::all_of(runs, [difficulty](const RunRecord &run) {
+            return static_cast<std::size_t>(run.settings.difficulty)
+                == difficulty;
+        });
     }
 
     inline std::optional<AllRecords> decodeLeaderboard(const Payload &payload)
@@ -539,15 +641,87 @@ namespace rtype::protocol {
         Engine::BinaryReader reader(payload);
         AllRecords records;
 
-        for (MapRecords &map : records) {
-            if (!readRecords(reader, map)) {
-                return std::nullopt;
+        for (DifficultyRecords &map : records) {
+            for (std::size_t d = 0; d < DIFFICULTY_COUNT; ++d) {
+                if (!readRecords(reader, map[d]) || !isOfDifficulty(map[d], d)) {
+                    return std::nullopt;
+                }
             }
         }
         if (reader.remaining() != 0) {
             return std::nullopt;
         }
         return records;
+    }
+
+    // HISTORY : une page de toutes les parties gagnees. Position de la
+    // page (2), nombre total de parties (2), nombre dans la page (1), puis
+    // par partie : map (1) et le record.
+    struct HistoryPage {
+        std::uint16_t start = 0;
+        std::uint16_t total = 0;
+        std::vector<RunEntry> entries;
+    };
+
+    inline Payload encode(const HistoryPage &page)
+    {
+        Engine::BinaryWriter writer;
+
+        writer.writeU16(page.start);
+        writer.writeU16(page.total);
+        writer.writeU8(static_cast<std::uint8_t>(page.entries.size()));
+        for (const RunEntry &entry : page.entries) {
+            writer.writeU8(entry.map);
+            writeRecord(writer, entry.record);
+        }
+        return writer.data();
+    }
+
+    // Toutes les pages d'un historique, au moins une meme s'il est vide.
+    inline std::vector<Payload> historyPages(
+        const std::vector<RunEntry> &history)
+    {
+        std::vector<Payload> pages;
+        const auto total = static_cast<std::uint16_t>(history.size());
+        std::size_t start = 0;
+
+        do {
+            const std::size_t end = std::min(history.size(),
+                start + HISTORY_PAGE_ENTRIES);
+
+            pages.push_back(encode(HistoryPage{
+                static_cast<std::uint16_t>(start), total,
+                {history.begin() + static_cast<std::ptrdiff_t>(start),
+                    history.begin() + static_cast<std::ptrdiff_t>(end)}}));
+            start = end;
+        } while (start < history.size());
+        return pages;
+    }
+
+    inline std::optional<HistoryPage> decodeHistory(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+        const std::optional<std::uint16_t> start = reader.readU16();
+        const std::optional<std::uint16_t> total = reader.readU16();
+        const std::optional<std::uint8_t> count = reader.readU8();
+        HistoryPage page;
+
+        if (!start || !total || !count || *start + *count > *total
+            || reader.remaining() != *count * ENTRY_SIZE) {
+            return std::nullopt;
+        }
+        page.start = *start;
+        page.total = *total;
+        for (std::size_t i = 0; i < *count; ++i) {
+            const std::optional<std::uint8_t> map = reader.readU8();
+            const std::optional<RunRecord> record = readRecord(reader);
+
+            if (!map || *map >= MAP_COUNT || !record) {
+                return std::nullopt;
+            }
+            page.entries.push_back({*map, *record});
+        }
+        return page;
     }
 
     inline std::optional<AugmentId> readAugmentId(Engine::BinaryReader &reader)

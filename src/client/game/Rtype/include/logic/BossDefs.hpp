@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include "engine/core/Registry.hpp"
 #include "Components.hpp"
 #include "Config.hpp"
 #include "Kinds.hpp"
@@ -40,5 +41,14 @@ namespace rtype {
     inline const MonsterDef &bossDef(const BossKind kind)
     {
         return BOSSES[static_cast<std::size_t>(kind)];
+    }
+
+    // La vie maximale du boss, difficulte comprise.
+    inline int bossMaxHp(const Engine::Registry &reg, const Engine::Entity e)
+    {
+        if (reg.has<MaxHealth>(e)) {
+            return reg.get<MaxHealth>(e).hp;
+        }
+        return bossDef(reg.get<BossType>(e).kind).hp;
     }
 }

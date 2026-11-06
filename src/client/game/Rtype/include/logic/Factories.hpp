@@ -34,6 +34,7 @@ namespace rtype {
         reg.add(e, Health{config::PLAYER_HP});
         reg.add(e, MaxHealth{config::PLAYER_HP});
         reg.add(e, Weapon{config::PLAYER_FIRE_COOLDOWN});
+        reg.add(e, Charge{});
         reg.add(e, Damage{config::PLAYER_DAMAGE});
         reg.add(e, Team{TeamId::Player});
         reg.add(e, PlayerEffects{});
@@ -115,6 +116,7 @@ namespace rtype {
             direction = -1.f;
         }
         reg.add(e, ProjectileTag{});
+        reg.add(e, Shooter{shooter});
         reg.add(e, bulletStartPos(pos, box, look, direction));
         reg.add(e, gameLogic::Vec2Hitbox{{look.width, look.height}});
         reg.add(e, gameLogic::Vec2Velocity{velocity});
@@ -174,6 +176,7 @@ namespace rtype {
         reg.add(e, coins{dist(rng)});
         reg.add(e, gameLogic::Vec2Hitbox{{config::COIN_WIDTH,
             config::COIN_HEIGHT}});
+        reg.add(e, gameLogic::Vec2Velocity{{-config::SCROLL_SPEED, 0.f}});
         reg.add(e, Renderable{SpriteId::Coin});
         return e;
     }

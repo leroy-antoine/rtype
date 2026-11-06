@@ -139,16 +139,20 @@ TEST(an_upload_result_survives_a_round_trip)
 TEST(the_records_of_a_custom_map_survive_a_round_trip)
 {
     protocol::CustomRecords records;
+    const std::size_t normal = static_cast<std::size_t>(Difficulty::Normal);
+    const std::size_t brutal = static_cast<std::size_t>(Difficulty::Brutal);
 
     records.hash = 0x0123456789ABCDEFULL;
-    records.records = {{1000, 1}, {2000, 4}};
+    records.records[normal] = {{1000, 1, {Difficulty::Normal, false}}};
+    records.records[brutal] = {{2000, 4, {Difficulty::Brutal, true}}};
     const auto decoded = protocol::decodeCustomRecords(
         protocol::encode(records));
 
     CHECK(decoded.has_value());
     CHECK(decoded->hash == records.hash);
-    CHECK(decoded->records.size() == 2);
-    CHECK(decoded->records[1].timeMs == 2000);
+    CHECK(decoded->records[normal].size() == 1);
+    CHECK(decoded->records[brutal][0].timeMs == 2000);
+    CHECK(decoded->records[brutal][0].settings.friendlyFire);
     CHECK(protocol::decodeCustomRecordsGet(
         protocol::encodeCustomRecordsGet(records.hash)) == records.hash);
     CHECK(!protocol::decodeCustomRecordsGet({1, 2, 3}));
@@ -156,16 +160,28 @@ TEST(the_records_of_a_custom_map_survive_a_round_trip)
         protocol::encode(records))));
 }
 
-TEST(the_records_of_a_custom_map_are_sorted_and_capped)
+TEST(a_record_of_the_wrong_difficulty_block_is_rejected)
+{
+    protocol::CustomRecords records;
+
+    records.records[0] = {{1000, 1, {Difficulty::Brutal, false}}};
+    CHECK(!protocol::decodeCustomRecords(protocol::encode(records)));
+}
+
+TEST(the_records_of_a_custom_map_are_sorted_and_capped_per_difficulty)
 {
     CustomLeaderboard board;
+    const std::size_t normal = static_cast<std::size_t>(Difficulty::Normal);
 
     for (unsigned int i = 0; i < 8; ++i) {
-        board.add(7, {9000 - i * 100, 1});
+        board.add(7, {9000 - i * 100, 1, {Difficulty::Normal, false}});
     }
-    CHECK(board.records(7).size() == MAX_RECORDS);
-    CHECK(board.records(7).front().timeMs == 8300);
-    CHECK(board.records(8).empty());
+    board.add(7, {5000, 1, {Difficulty::Hard, false}});
+    CHECK(board.records(7)[normal].size() == MAX_RECORDS);
+    CHECK(board.records(7)[normal].front().timeMs == 8300);
+    CHECK(board.records(7)[static_cast<std::size_t>(Difficulty::Hard)]
+        .size() == 1);
+    CHECK(board.records(8)[normal].empty());
 }
 
 TEST(the_number_of_custom_maps_in_the_records_is_capped)
@@ -173,27 +189,30 @@ TEST(the_number_of_custom_maps_in_the_records_is_capped)
     CustomLeaderboard board;
 
     for (std::uint64_t hash = 0; hash < CustomLeaderboard::MAX_MAPS; ++hash) {
-        CHECK(board.add(hash, {1000, 1}));
+        CHECK(board.add(hash, {1000, 1, {}}));
     }
-    CHECK(!board.add(CustomLeaderboard::MAX_MAPS, {1000, 1}));
-    CHECK(board.add(0, {900, 1}));
+    CHECK(!board.add(CustomLeaderboard::MAX_MAPS, {1000, 1, {}}));
+    CHECK(board.add(0, {900, 1, {}}));
 }
 
 TEST(the_records_of_custom_maps_are_saved_and_loaded)
 {
     const std::filesystem::path file =
         std::filesystem::temp_directory_path() / "rtype_custom_records.txt";
+    const std::size_t normal = static_cast<std::size_t>(Difficulty::Normal);
     CustomLeaderboard board;
     CustomLeaderboard loaded;
 
-    board.add(42, {5000, 2});
-    board.add(42, {4000, 1});
+    board.add(42, {5000, 2, {Difficulty::Normal, true}});
+    board.add(42, {4000, 1, {Difficulty::Normal, false}});
     CHECK(board.save(file));
-    std::ofstream(file, std::ios::app) << "43 9000 0\n43 9000 9\n";
+    std::ofstream(file, std::ios::app) << "43 9000 0 1 0\n43 9000 9 1 0\n"
+        << "43 9000 1 9 0\nnot a line\n";
     loaded.load(file);
-    CHECK(loaded.records(42).size() == 2);
-    CHECK(loaded.records(42).front().timeMs == 4000);
-    CHECK(loaded.records(43).empty());
+    CHECK(loaded.records(42)[normal].size() == 2);
+    CHECK(loaded.records(42)[normal].front().timeMs == 4000);
+    CHECK(loaded.records(42)[normal][1].settings.friendlyFire);
+    CHECK(loaded.records(43)[normal].empty());
     std::filesystem::remove(file);
 }
 

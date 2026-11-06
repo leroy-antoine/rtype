@@ -3,6 +3,7 @@
 #include <cstdint>
 #include "logic/Config.hpp"
 #include "client/GameView.hpp"
+#include "logic/Charge.hpp"
 
 namespace client {
     GameView::GameView(Engine::Renderer &renderer, const SpriteBank &sprites, const float worldToScreen,
@@ -14,13 +15,14 @@ namespace client {
     {
     }
 
-    void GameView::draw(Replica &replica, const LobbyMenu &menu,
+    void GameView::draw(Replica &replica, const CustomMapList &custom,
         const float elapsed)
     {
         trackBossHurt(replica, elapsed);
         _background.draw(_renderer, sceneOf(replica), elapsed);
         drawWorld(replica.registry(), elapsed);
-        _hud.draw(replica, menu, elapsed);
+        drawCharge(replica);
+        _hud.draw(replica, custom, elapsed);
     }
 
     void GameView::trackBossHurt(const Replica &replica, const float elapsed)
@@ -91,6 +93,116 @@ namespace client {
         return scene;
     }
 
+    void GameView::drawGauge(const Engine::Vector2f at, const float width,
+        const float ratio, const Engine::Color fill)
+    {
+        constexpr float HEIGHT = 6.f;
+
+        _renderer.drawRect(at, {width, HEIGHT}, {20, 20, 30, 220});
+        _renderer.drawRect(at, {width * ratio, HEIGHT}, fill);
+    }
+
+    // Les jauges de charge, sous le vaisseau du joueur : le tir de base,
+    // puis le rayon laser quand il est equipe.
+    void GameView::drawCharge(Replica &replica)
+    {
+        constexpr float GAP = 8.f;
+        constexpr float ROW = 10.f;
+        const auto ship = replica.localShip();
+
+        if (!ship) {
+            return;
+        }
+        const float width = ship->second.x * _worldToScreen;
+        const Engine::Vector2f at{ship->first.x * _worldToScreen,
+            (ship->first.y + ship->second.y) * _worldToScreen + GAP};
+        const float time = replica.chargeTime();
+
+        if (rtype::isCharging(time)) {
+            const float ratio = rtype::chargeRatio(time);
+
+            drawGauge(at, width, ratio, gaugeColor(ratio, {255, 220, 40, 255}));
+        }
+        if (replica.laserEquipped() && replica.altTime() > 0.f) {
+            const float ratio = replica.altTime()
+                / rtype::config::LASER_CHARGE_TIME;
+
+            drawGauge({at.x, at.y + ROW}, width, ratio,
+                gaugeColor(ratio, {255, 120, 40, 255}));
+        }
+    }
+
+    Engine::Color GameView::gaugeColor(const float ratio,
+        const Engine::Color filling)
+    {
+        if (ratio >= 1.f) {
+            return {90, 230, 255, 255};
+        }
+        return filling;
+    }
+
+    // Le drone : un carre cyan a coeur blanc qui pulse.
+    void GameView::drawDrone(const gameLogic::Vec2Pos &pos,
+        const gameLogic::Vec2Hitbox &box, const float elapsed)
+    {
+        const float pulse = 0.85f + 0.15f * std::sin(elapsed * 8.f);
+        const float side = box.x * _worldToScreen * pulse;
+        const float lift = (box.x * _worldToScreen - side) / 2.f;
+        const Engine::Vector2f at{pos.x * _worldToScreen + lift,
+            pos.y * _worldToScreen + lift};
+
+        _renderer.drawRect(at, {side, side}, {90, 230, 255, 255});
+        _renderer.drawRect({at.x + side * 0.3f, at.y + side * 0.3f},
+            {side * 0.4f, side * 0.4f}, {255, 255, 255, 255});
+    }
+
+    // Un segment d'eclair : des petits carres le long de la diagonale de sa
+    // boite, qui tremblent pour donner l'air electrique.
+    void GameView::drawBolt(const gameLogic::Vec2Pos &pos,
+        const gameLogic::Vec2Hitbox &box, const bool rising,
+        const float elapsed)
+    {
+        constexpr int STEPS = 14;
+        constexpr float DOT = 5.f;
+        constexpr float JITTER = 4.f;
+
+        for (int i = 0; i <= STEPS; ++i) {
+            const float t = static_cast<float>(i) / STEPS;
+            float y = pos.y + box.y * t;
+
+            if (rising) {
+                y = pos.y + box.y * (1.f - t);
+            }
+            const float shake = std::sin(elapsed * 90.f + static_cast<float>(i)
+                * 2.3f) * JITTER;
+
+            _renderer.drawRect({(pos.x + box.x * t) * _worldToScreen,
+                y * _worldToScreen + shake}, {DOT + 3.f, DOT + 3.f},
+                {90, 230, 255, 160});
+            _renderer.drawRect({(pos.x + box.x * t) * _worldToScreen + 1.5f,
+                y * _worldToScreen + shake + 1.5f}, {DOT, DOT},
+                {255, 255, 255, 255});
+        }
+    }
+
+    // Le rayon du joueur : un coeur blanc dans une lueur cyan qui pulse.
+    void GameView::drawPlayerLaser(const gameLogic::Vec2Pos &pos,
+        const gameLogic::Vec2Hitbox &box, const float elapsed)
+    {
+        const float pulse = 0.8f + 0.2f * std::sin(elapsed * 60.f);
+        const Engine::Vector2f at{pos.x * _worldToScreen,
+            pos.y * _worldToScreen};
+        const Engine::Vector2f size{box.x * _worldToScreen,
+            box.y * _worldToScreen * pulse};
+        const float inset = size.y * 0.3f;
+
+        const float lift = (box.y * _worldToScreen - size.y) / 2.f;
+
+        _renderer.drawRect({at.x, at.y + lift}, size, {90, 230, 255, 140});
+        _renderer.drawRect({at.x, at.y + inset}, {size.x, size.y - 2.f * inset},
+            {255, 255, 255, 255});
+    }
+
     void GameView::drawWorld(Engine::Registry &reg, const float elapsed)
     {
         drawLayer(reg, elapsed, false);
@@ -114,6 +226,19 @@ namespace client {
     {
         if (id == rtype::SpriteId::Meteor) {
             drawMeteor(reg, e, pos, box);
+            return;
+        }
+        if (id == rtype::SpriteId::PlayerBoltUp
+            || id == rtype::SpriteId::PlayerBoltDown) {
+            drawBolt(pos, box, id == rtype::SpriteId::PlayerBoltUp, elapsed);
+            return;
+        }
+        if (id == rtype::SpriteId::PlayerDrone) {
+            drawDrone(pos, box, elapsed);
+            return;
+        }
+        if (id == rtype::SpriteId::PlayerLaser) {
+            drawPlayerLaser(pos, box, elapsed);
             return;
         }
         if (id == rtype::SpriteId::LaserPost || id == rtype::SpriteId::BeamOn

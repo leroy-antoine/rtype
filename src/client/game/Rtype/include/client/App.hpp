@@ -10,8 +10,8 @@
 #include "Audio.hpp"
 #include "logic/Config.hpp"
 #include "Controls.hpp"
+#include "CustomMapList.hpp"
 #include "GameView.hpp"
-#include "LobbyMenu.hpp"
 #include "Replica.hpp"
 #include "ShopPanel.hpp"
 
@@ -42,8 +42,16 @@ namespace client {
         [[nodiscard]] bool inLobby() const;
         [[nodiscard]] bool isPaused() const;
         void useMenu();
-        void useCustomMenu();
+        void useMapStep();
+        [[nodiscard]] rtype::Settings currentSettings() const;
+        void useSettingsStep();
+        void useScoresStep();
+        void useCustomStep();
+        void useCustomScoresStep();
         void startCustomMap();
+        void askCustomRecords();
+        [[nodiscard]] bool pressed(Engine::Key key) const;
+        void handleBack(Engine::Window &window);
         void useMatch();
         void usePause();
         void sendReady();
@@ -54,7 +62,7 @@ namespace client {
         std::filesystem::path _assets;
         Network _network;
         Replica _replica;
-        LobbyMenu _menu;
+        CustomMapList _custom;
         Controls _controls;
         Clock::time_point _start;
         Clock::time_point _last;

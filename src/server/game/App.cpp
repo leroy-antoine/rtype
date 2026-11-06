@@ -77,7 +77,8 @@ namespace server {
         }
         const rtype::GameStatus status = _game.status();
         const rtype::RunRecord record{status.elapsedMs,
-            static_cast<std::uint8_t>(status.players.size())};
+            static_cast<std::uint8_t>(status.players.size()),
+            status.settings};
 
         if (_game.map() == rtype::CUSTOM_MAP) {
             recordCustomVictory(record);
@@ -238,6 +239,14 @@ namespace server {
             }
             return;
         }
+        if (event.type == rtype::protocol::HISTORY_REQUEST) {
+            sendHistory(event.client);
+            return;
+        }
+        if (event.type == rtype::protocol::SETTINGS) {
+            changeSettings(*slot, event.payload);
+            return;
+        }
         if (event.type == rtype::protocol::RESPAWN) {
             _game.respawnPlayer(*slot);
             return;
@@ -270,6 +279,27 @@ namespace server {
 
         if (paused && _game.host() == slot) {
             _game.setPaused(*paused);
+        }
+    }
+
+    void App::sendHistory(const Engine::ClientId client)
+    {
+        for (const rtype::protocol::Payload &page
+            : rtype::protocol::historyPages(_leaderboard.history())) {
+            _server.send(client, rtype::protocol::HISTORY, page,
+                Engine::Delivery::Reliable);
+        }
+    }
+
+    void App::changeSettings(const int slot,
+        const rtype::protocol::Payload &payload)
+    {
+        const std::optional<rtype::Settings> settings =
+            rtype::protocol::decodeSettings(payload);
+
+        if (settings && _game.host() == slot
+            && _game.phase() == rtype::Phase::Lobby) {
+            _game.setSettings(*settings);
         }
     }
 

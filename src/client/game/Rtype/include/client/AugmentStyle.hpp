@@ -16,6 +16,12 @@ namespace client {
             case rtype::AugmentId::Regeneration: return "REG";
             case rtype::AugmentId::Shield: return "SHD";
             case rtype::AugmentId::MultiShot: return "MS";
+            case rtype::AugmentId::Rocket: return "RKT";
+            case rtype::AugmentId::Laser: return "LAS";
+            case rtype::AugmentId::Lightning: return "ARC";
+            case rtype::AugmentId::Drone: return "DRN";
+            case rtype::AugmentId::DroneBoost: return "BST";
+            case rtype::AugmentId::DroneTwin: return "TWN";
             case rtype::AugmentId::Count: break;
         }
         return "?";

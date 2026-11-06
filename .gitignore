@@ -6,6 +6,7 @@
 /.rsc/
 
 rtype-project(sans appendix).pdf
+rtype-project.pdf
 # IDE build dirs
 /cmake-build-*/
 cmake-build-*/
@@ -26,6 +27,6 @@ a.out
 # Personal notes
 leaderboard.txt
 
-# Roadmap (personal planning)
-/docs/roadmap.md
+# Working roadmap
+roadmap.md
 custom_leaderboard.txt

@@ -39,6 +39,9 @@ namespace server {
         void recordVictory();
         void recordCustomVictory(const rtype::RunRecord &record);
         void selectMap(int slot, const rtype::protocol::Payload &payload);
+        void sendHistory(Engine::ClientId client);
+        void changeSettings(int slot,
+            const rtype::protocol::Payload &payload);
         void leaveMatch(int slot);
         void pauseMatch(int slot, const rtype::protocol::Payload &payload);
         void sendOwnStates();

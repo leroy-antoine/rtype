@@ -9,7 +9,7 @@ add_executable(r-type_client
         game/Rtype/src/Hud.cpp
         game/Rtype/src/HudLobby.cpp
         game/Rtype/src/HudVictory.cpp
-        game/Rtype/src/LobbyMenu.cpp
+        game/Rtype/src/CustomMapList.cpp
         game/Rtype/src/Controls.cpp
         game/Rtype/src/GameView.cpp
         game/Rtype/src/Prediction.cpp

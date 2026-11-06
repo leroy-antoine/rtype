@@ -16,15 +16,15 @@
 // The messages of the maps written by the players (see docs/protocol.md).
 namespace rtype::protocol {
     // Client to server: the host sends the JSON of its map, in pieces.
-    constexpr Engine::MessageType MAP_UPLOAD_BEGIN = 0x17;
-    constexpr Engine::MessageType MAP_UPLOAD_CHUNK = 0x18;
-    constexpr Engine::MessageType MAP_UPLOAD_END = 0x19;
-    constexpr Engine::MessageType CUSTOM_RECORDS_GET = 0x1A;
+    constexpr Engine::MessageType MAP_UPLOAD_BEGIN = 0x19;
+    constexpr Engine::MessageType MAP_UPLOAD_CHUNK = 0x1A;
+    constexpr Engine::MessageType MAP_UPLOAD_END = 0x1B;
+    constexpr Engine::MessageType CUSTOM_RECORDS_GET = 0x1C;
 
     // Server to client.
-    constexpr Engine::MessageType CUSTOM_INFO = 0x2A;
-    constexpr Engine::MessageType MAP_UPLOAD_RESULT = 0x2B;
-    constexpr Engine::MessageType CUSTOM_RECORDS = 0x2C;
+    constexpr Engine::MessageType CUSTOM_INFO = 0x2B;
+    constexpr Engine::MessageType MAP_UPLOAD_RESULT = 0x2C;
+    constexpr Engine::MessageType CUSTOM_RECORDS = 0x2D;
 
     constexpr std::size_t MAX_UPLOAD_SIZE = mapjson::MAX_FILE_BYTES;
     // 1100 bytes: a full upload is 239 pieces at most, so even if no Ack came
@@ -45,9 +45,10 @@ namespace rtype::protocol {
         std::string error;
     };
 
+    // The best times of one custom map, for each difficulty.
     struct CustomRecords {
         std::uint64_t hash = 0;
-        MapRecords records;
+        DifficultyRecords records;
     };
 
     // A reason can quote the text of the map, which may hold anything: the
@@ -232,17 +233,19 @@ namespace rtype::protocol {
         return hash;
     }
 
-    // CUSTOM_RECORDS: the hash, then the records as in LEADERBOARD
-    // (count u8, then time u32 and players u8 for each).
+    // CUSTOM_RECORDS: the hash, then for each difficulty (in the order of the
+    // enum) the records as in LEADERBOARD: count u8, then per record the time
+    // u32, the players u8 and the settings u8.
     inline Payload encode(const CustomRecords &custom)
     {
         Engine::BinaryWriter writer;
 
         writeHash(writer, custom.hash);
-        writer.writeU8(static_cast<std::uint8_t>(custom.records.size()));
-        for (const RunRecord &record : custom.records) {
-            writer.writeU32(record.timeMs);
-            writer.writeU8(record.players);
+        for (const MapRecords &runs : custom.records) {
+            writer.writeU8(static_cast<std::uint8_t>(runs.size()));
+            for (const RunRecord &record : runs) {
+                writeRecord(writer, record);
+            }
         }
         return writer.data();
     }
@@ -254,8 +257,16 @@ namespace rtype::protocol {
         const std::optional<std::uint64_t> hash = readHash(reader);
         CustomRecords custom;
 
-        if (!hash || !readRecords(reader, custom.records)
-            || reader.remaining() != 0) {
+        if (!hash) {
+            return std::nullopt;
+        }
+        for (std::size_t d = 0; d < DIFFICULTY_COUNT; ++d) {
+            if (!readRecords(reader, custom.records[d])
+                || !isOfDifficulty(custom.records[d], d)) {
+                return std::nullopt;
+            }
+        }
+        if (reader.remaining() != 0) {
             return std::nullopt;
         }
         custom.hash = *hash;

@@ -4,11 +4,19 @@ add_executable(rtype_tests
         AugmentTests.cpp
         MapTests.cpp
         ShopTests.cpp
+        ChargeTests.cpp
+        SecondaryTests.cpp
+        RocketTests.cpp
+        LaserTests.cpp
+        LightningTests.cpp
+        DroneTests.cpp
+        SettingsTests.cpp
+        DifficultyTests.cpp
         ProtocolTests.cpp
         MapJsonTests.cpp
         CustomMapTests.cpp
-        LobbyMenuTests.cpp
-        ${CMAKE_SOURCE_DIR}/src/client/game/Rtype/src/LobbyMenu.cpp)
+        CustomMapListTests.cpp
+        ${CMAKE_SOURCE_DIR}/src/client/game/Rtype/src/CustomMapList.cpp)
 target_include_directories(rtype_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/src/client/game/Rtype/include
         ${CMAKE_SOURCE_DIR}/engine/window/include)

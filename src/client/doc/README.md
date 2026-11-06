@@ -69,13 +69,12 @@ tests: the client only uses its types (components, events, status, config).
 | `App` | the main loop: receive, poll the input, send it, draw |
 | `Replica` | the local copy of the world, the interpolation, the last `STATUS`, the slot of this player, the lobby cursor, the leaderboard, the sound cues |
 | `Prediction` | the predicted position of this player's ship, with the effects of the portals and the push of the rocks, and its reconciliation with `OWN_STATE` |
-| `Controls` | turns window events into the five keys of a `PlayerInput`, plus the menu actions (cursor up or down, Enter) |
+| `Controls` | turns window events into the five keys of a `PlayerInput`, plus the menu actions (cursor up or down, left or right, Enter, Escape) |
 | `GameView` | draws the entities of the replica |
 | `SpriteBank` | maps each kind of entity to a texture and a source rectangle |
 | `Background` | the scenery: sky gradient, nebula, zone decor, star-field and boss aura (see [Background](#background)) |
 | `Hud` | health bars, boss bar, coin counter, timer, level, respawn hint, end screens |
-| `LobbyMenu`, `HudLobby.cpp` | the lobby: the tabs (maps of the game, **Custom map**, **Leaderboard**), the list of the JSON maps found in `CustomMaps`, their errors. `LobbyMenu` holds the state, `HudLobby.cpp` draws it |
-| `TimeFormat.hpp` | writes a time in ms as `MM:SS.T` |
+| `CustomMapList`, `HudLobby.cpp` | the maps written by the players that the client found in `CustomMaps`, with their errors (`CustomMapList`), and the two screens that show them: the list and their leaderboard (`HudLobby.cpp`). The screen shown is a step of `LobbyMenu` (`Custom`, `CustomScores`) |
 | `Font` | small bitmap font for the HUD, drawn with rectangles |
 | `Audio` | sounds and music |
 
@@ -99,13 +98,14 @@ animations use this time, never the speed of the CPU.
 | Key | Action |
 |---|---|
 | Arrow keys | move the ship |
-| Space | fire (hold to keep firing) |
-| Enter | come back after being killed (while the match is running); in the lobby, start the selected map (host only) |
-| Up / Down | move the ship; in the lobby, move the cursor on the list of maps |
+| Space | fire: a tap shoots once, holding charges a piercing shot released with the key |
+| X | fire the secondary weapon (rocket launcher, laser or chain lightning) |
+| Enter | come back after being killed (while the match is running); in the lobby, open the settings of the selected map (host only), start the match from the settings, open the leaderboard |
+| Up / Down | move the ship; in the lobby, move the cursor on the list of games |
 | Tab | in the lobby, go to the next tab: maps of the game, **Custom map**, **Leaderboard** of the selected custom map |
-| Right / Left | in the Custom map tab, open / close the leaderboard of the selected map |
+| Right | in the Custom map tab, open the leaderboard of the selected map (Left / Right then change the difficulty) |
 | R | in the Custom map tab, read the `CustomMaps` folder again |
-| Escape | quit |
+| Escape | back one screen from the settings or the scores; quit from the first screen |
 
 The client sends the **state** of the keys every frame, with a sequence number
 (see `INPUT` in
@@ -140,17 +140,43 @@ The window is 1280 x 720. The world is 1920 x 1080, so everything is scaled by
   end screen, so the final time stays readable.
   The top centre shows the level being played (`LEVEL 3`), in the same text
   size. The server sends the number in `STATUS`.
-- **Lobby**: when the phase is `Lobby`, a screen covers the game: the title
-  `SELECT A MAP`, the list of maps with a highlighted cursor (each player moves
-  their own with Up / Down) and the five best times of the map under the
-  cursor (`1. 02:13.4  2P`). The host (the first player of the `STATUS` list)
-  starts the match with Enter; the others see `WAITING FOR P1 TO CHOOSE THE
-  MAP`. The times come from the `LEADERBOARD` message.
+- **Lobby**: when the phase is `Lobby`, a screen covers the game. It has
+  steps kept by `LobbyMenu` (client side only; `Custom` and `CustomScores` show
+  the maps written by the players, see `CustomMapList`):
+  - *Games*: the title `SELECT A GAME`, the list (the maps, then
+    `LEADERBOARD`) with a highlighted cursor (each player moves their own with
+    Up / Down) and the three best times of the map under the cursor for one difficulty
+    (`1. 02:13.4  2P  BRUTAL FF`, the difficulty in its color; Left / Right
+    change the difficulty of the ranking, brutal first). Enter on a map
+    opens the settings for the host (the first player of the `STATUS` list);
+    the others see `WAITING FOR P1 TO CHOOSE`. Enter on `LEADERBOARD` opens
+    the scores for anyone.
+  - *Settings* (host only): `GAME SETTINGS`, the rows difficulty and friendly
+    fire (Up / Down to change row, Left / Right to change the value), and a
+    summary of the multipliers of the difficulty. Every change is sent with
+    `SETTINGS`; Enter starts the match with `SELECT_MAP`, Escape goes back.
+  - *Scores*: every victory of one map, fastest first (Left / Right changes
+    the map, Up / Down scrolls, Enter or Escape goes back). The list is asked
+    with `HISTORY_REQUEST` when the entry is opened and rebuilt from the
+    `HISTORY` pages by the `Replica`.
+
+  The times come from `LEADERBOARD`. The difficulty colors (green, orange,
+  red, crimson) are in `DifficultyStyle.hpp`.
+- **Lives**: small squares at the right of each health bar, `OUT` when the
+  player is eliminated. They come from the `lives` of each player in `STATUS`.
 - **Walls and portals**: drawn by repeating a 64 x 64 tile (`obstacle_rock.png`,
   `obstacle_spike.png`) over the size of the wall; a portal repeats an animated
   tile (`portal_reverse.png`, `portal_fast.png`, `portal_normal.png`). The
   HUD writes `CONTROLS REVERSED` or `SPEED UP` at the bottom left while the
   effect lasts.
+- **Charge gauges**: under the ship, a yellow bar (cyan when full) fills while
+  Space is held for more than 0.3 s, and an orange bar fills while X is held
+  when the laser is equipped (`Replica::chargeTime`, `altTime`,
+  `laserEquipped`, drawn by `GameView::drawCharge`). The client measures the
+  hold time itself, from the keys it sends.
+- **Weapons**: the player rocket uses its own sprite (`player_rocket.png`);
+  the laser flash, the lightning segments and the drone are drawn with
+  rectangles by `GameView` (`drawPlayerLaser`, `drawBolt`, `drawDrone`).
 - **Coins**: dropped by monsters, drawn from a sprite sheet of 6 frames
   (`coin_spin_sheet.png`). The animated GIF is not used directly, because SFML
   only reads its first image.

@@ -24,10 +24,17 @@ map as fast as possible.
 ## Lobby and maps
 
 When the server starts, and after every match, the game shows the **lobby**:
-the list of maps and, under the cursor, the five best times of the highlighted
-map. Everybody can move their cursor with Up and Down to look at the times.
-The **host** (the first player connected) presses Enter to start the match on
-the highlighted map; the other players wait for them.
+the list of games (the three maps below, then **LEADERBOARD**) and, under the
+cursor, the three best times of the highlighted map for one difficulty. Everybody
+can move their cursor with Up and Down to look at the times, and change the
+difficulty of the ranking with Left and Right (brutal first, then hard,
+normal and easy).
+
+The **host** (the first player connected) presses Enter on a map to open the
+[settings](#difficulty-and-settings), then Enter again to start the match;
+Escape goes back to the list. The other players wait for them. Enter on
+**LEADERBOARD** opens the list of every victory since the start of the game,
+for any player (see [Leaderboard](#leaderboard)).
 
 | Map | Content |
 |---|---|
@@ -37,8 +44,9 @@ the highlighted map; the other players wait for them.
 
 A **Custom map** tab (press Tab in the lobby) lists the maps written by the
 players in the `CustomMaps` folder. A map with a mistake is marked and its
-error is shown. The host starts a valid one with Enter. Right opens the
-leaderboard of the selected map. See [Create your own map](custom-maps.md).
+error is shown. The host picks a valid one with Enter, chooses the
+difficulty and friendly fire like for any map, and starts it. Right or Tab
+opens the leaderboard of the selected map. See [Create your own map](custom-maps.md).
 
 The level number is shown at the top centre of the screen.
 
@@ -47,7 +55,8 @@ The level number is shown at the top centre of the screen.
 | Key | Action |
 |---|---|
 | Arrow keys | move the ship |
-| Space | fire (hold to keep firing) |
+| Space | tap: fire one shot; hold: charge a piercing shot, released when you let go of the key |
+| X | fire the secondary weapon bought in the shop (see [Weapons](#weapons)) |
 | Enter | come back after your ship is destroyed, if a teammate is still alive |
 | Backspace | host only: pause the match and show the pause menu; again to resume |
 | Enter (paused) | host only: leave the match and go back to the map menu |
@@ -153,11 +162,82 @@ the scenery takes its colour: a pulsing red glow for the Standard boss, fast
 cyan streaks for the Dasher, a violet tint for the Summoner, a heavy
 red vignette and a rumble for the Fortress. The Leviathan shakes for a quarter of a second every time it is hit. Nothing flashes.
 
+## Weapons
+
+### Charged shot
+
+The base weapon on **Space** fires one shot each time you tap the key (a tap
+is shorter than 0.3 s). The shot leaves when you release the key, at the pace
+of the weapon cooldown. If you keep the key pressed for more than 0.3 s, a
+gauge under your ship fills for up to 1.2 s. When you release it, a large
+bullet goes through every enemy on its way and hits each of them once: twice
+the damage at the start of the charge, six times the damage and four times
+the size when the gauge is full (it turns cyan). The charge is lost when your
+ship is destroyed, when the game is paused and when the shop opens.
+
+### Secondary weapons
+
+Three weapons are sold in the shop like augments. They go in a **secondary
+slot** and are fired with **X**. Only one is equipped at a time: buying
+another one replaces it, and the last one bought comes back when you respawn.
+
+| Weapon | How it works |
+|---|---|
+| **Rocket launcher** | hold X: a rocket every 1.2 s, slow (half the speed of a bullet), that explodes when it passes within 60 of an enemy, on a wall or at the right edge of the map. The explosion hurts every enemy within 120 and deals three times your damage; it never hurts the players |
+| **Laser ray** | hold X for 2 s while a gauge fills under your ship, release to fire a flash across the screen up to the first wall. It deals eight times your damage, once, to everything on its line (bosses too). Releasing too early cancels it for free. 6 s before the next one |
+| **Chain lightning** | hold X: a bolt every 0.8 s hits the first enemy on the screen in front of your ship (within 40 of the height of the nose, up to 600 away) for one and a half times your damage, then jumps to the enemies stuck to it (100 at most between two enemies, 4 jumps), 20 % weaker at each jump. You aim by moving the ship. Without a target nothing is fired |
+
+### Drone
+
+The drone is a small ship that flies ahead of your ship and above it and fires
+by itself at the closest enemy within 700 that is already on the screen, with half your damage. It cannot be
+hit. It disappears with your ship and comes back with it when you respawn.
+Three shop items, each one better and more expensive than the last, give it
+a level: **Drone** (level 1) gives you the drone, **Drone Boost** (level 2)
+makes it fire faster (0.45 s instead of 0.6 s) and **Drone Twin** (level 3)
+also makes it fire two bullets at a time. An item gives its level at once,
+whatever you bought before, and a cheaper one never lowers it. Like every
+augment, an item bought by one player is no longer sold to the team.
+
+## Difficulty and settings
+
+Before the match, the host picks a difficulty and decides whether friendly
+fire is on. The other players cannot change them. The difficulty changes the
+economy, the enemies and the number of lives; nothing else.
+
+| | Easy | Normal | Hard | Brutal |
+|---|---|---|---|---|
+| Lives per player | 5 | 3 | 2 | 1 |
+| Enemy health (bosses too) | x0.75 | x1 | x1.5 | x2 |
+| Enemy damage | x0.75 | x1 | x1.25 | x1.5 |
+| Your damage | x1.25 | x1 | x0.85 | x0.75 |
+| Enemy fire rate | x0.75 | x1 | x1.25 | x1.5 |
+| Enemy density (size of the waves) | x0.75 | x1 | x1.25 | x1.5 |
+| Coins gained | x1.25 | x1 | x0.85 | x0.75 |
+| Shop quality (rarity level) | -1 | 0 | +1 | +2 |
+| Offers in the shop | 3 | 3 | 3 | 4 |
+
+- **Brutal escort**: every boss comes with mini-bosses, one for the first
+  boss of the map, two for the second, three from the third on, one second
+  apart. They are mini-bosses of the Brutal difficulty, so tougher than usual.
+  The waves of mini-bosses are not made denser.
+- **Lives**: a death costs one life. Unless it was the last one, the player
+  comes back by themselves after three seconds (Enter makes it faster). A
+  player without lives is eliminated; the defeat comes when nobody is alive
+  and nobody can come back. Eliminated players return with one life when the
+  shop opens. In a **death run**, lives do not matter: if somebody dies,
+  everybody restarts the level.
+- **Friendly fire**: when it is on, a shot of a player hurts the other
+  players, with the normal damage of the shot. It never hurts the shooter.
+- The lives are shown as small squares at the right of each health bar
+  (`OUT` when a player is eliminated).
+
 ## Shop
 
 At the end of every level (the moment the next one begins) and after the last
-victory, the game **stops** and the shop opens: a few augments are on sale,
+victory, the game **stops** and the shop opens: a few augments (the buffs, the weapons and the drone) are on sale,
 more and more powerful as the levels go by, and better after a boss level.
+The shop offers more augments, and rarer ones, as the difficulty rises.
 Everybody can buy with the team coins (left/right to choose, Enter to buy).
 Press **Space** to say you are ready: when every player is ready a five second
 countdown starts, then the next level begins (after the last victory the game
@@ -177,11 +257,23 @@ goes back to the lobby). The clock does not run while the shop is open.
 
 ## Leaderboard
 
-Every victory records its time and the number of players. The server keeps the
-five best times of each map and shows them in the lobby. A solo run and a run
-with four players are listed together, with the number of players next to the
-time. Each map written by a player has its own leaderboard, kept as long as
-its file is not changed.
+Every victory records its time, the number of players, the difficulty and
+whether friendly fire was on. Each difficulty has its own ranking, so an easy run never pushes a brutal
+one out. A solo run and a run with four players are ranked together. The
+difficulty is written next to the time, in a color that goes from green (easy)
+to orange, red and crimson (brutal), followed by `FF` when friendly fire was
+on.
+
+- The lobby shows the **three best times** of the highlighted map for the
+  chosen difficulty (brutal at first). Left and Right change the difficulty.
+- The **LEADERBOARD** entry of the list shows **every victory** since the
+  start of the game for one map, fastest first. Left and Right change the
+  map, Up and Down scroll, Enter or Escape goes back.
+- The server keeps everything in `leaderboard.txt`, so the scores survive a
+  restart.
+- Each map written by a player has its own leaderboard, kept as long as its
+  file is not changed, with the same three rankings by difficulty (see
+  [Create your own map](custom-maps.md)).
 
 ## Winning and losing
 

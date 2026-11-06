@@ -1,10 +1,12 @@
 #include <algorithm>
 #include <array>
 #include <string>
+#include "client/DifficultyStyle.hpp"
 #include "client/Hud.hpp"
-#include "client/TimeFormat.hpp"
 #include "utils/Wrap.hpp"
 
+// The part of the lobby that shows the maps written by the players. The maps
+// of the game, the settings and the history are drawn in Hud.cpp.
 namespace client {
     namespace {
         using Engine::Color;
@@ -16,6 +18,9 @@ namespace client {
         constexpr Color GREY{150, 150, 150, 255};
         constexpr Color SELECTED_STRIP{40, 70, 140, 255};
 
+        constexpr std::size_t TAB_MAPS = 0;
+        constexpr std::size_t TAB_CUSTOM = 1;
+        constexpr std::size_t TAB_SCORES = 2;
         constexpr std::size_t VISIBLE_MAPS = 6;
         constexpr std::size_t ERROR_COLUMNS = 90;
         constexpr float CUSTOM_ROW_TOP = 170.f;
@@ -41,25 +46,18 @@ namespace client {
         }
     }
 
-    void Hud::drawLobby(const Replica &replica, const LobbyMenu &menu)
+    std::string Hud::settingsMapName(const Replica &replica,
+        const CustomMapList &custom)
     {
-        _renderer.drawRect({0.f, 0.f}, {_width, _height}, {0, 0, 0, 210});
-        _font.drawCentered("SELECT A MAP", _width / 2.f, 40.f, 6.f, WHITE);
-        drawTabs(menu.tab());
-        if (menu.tab() == Tab::Maps) {
-            drawMapList(replica.mapCursor());
-            drawRecords(replica.records()[replica.mapCursor()]);
-        } else if (menu.tab() == Tab::Custom) {
-            drawCustomList(menu);
-        } else {
-            drawCustomRecords(replica, menu);
+        const rtype::mapjson::MapEntry *entry = custom.selected();
+
+        if (replica.menu().settingsForCustom() && entry != nullptr) {
+            return entry->map->name;
         }
-        drawLines(utils::wrap(menu.message(), ERROR_COLUMNS), 600.f, 2.f,
-            RED);
-        drawLobbyFooter(menu, replica.isHost());
+        return rtype::MAP_NAMES[replica.mapCursor() % rtype::MAP_COUNT];
     }
 
-    void Hud::drawTabs(const Tab tab)
+    void Hud::drawTabs(const std::size_t active)
     {
         constexpr float TOP = 104.f;
         constexpr float GAP = 330.f;
@@ -69,7 +67,7 @@ namespace client {
         for (std::size_t i = 0; i < names.size(); ++i) {
             Color color = GREY;
 
-            if (i == static_cast<std::size_t>(tab)) {
+            if (i == active) {
                 color = YELLOW;
             }
             _font.drawCentered(names[i],
@@ -78,50 +76,28 @@ namespace client {
         }
     }
 
-    void Hud::drawMapList(const rtype::MapId cursor)
+    void Hud::drawCustomStep(const Replica &replica,
+        const CustomMapList &custom)
     {
-        constexpr float TOP = 150.f;
-        constexpr float STEP = 52.f;
-        constexpr float STRIP = 520.f;
+        const LobbyStep step = replica.menu().step();
 
-        for (std::size_t i = 0; i < rtype::MAP_COUNT; ++i) {
-            const float y = TOP + static_cast<float>(i) * STEP;
-            Color color = WHITE;
-
-            if (i == cursor) {
-                _renderer.drawRect({(_width - STRIP) / 2.f, y - 8.f},
-                    {STRIP, STEP - 6.f}, SELECTED_STRIP);
-                color = YELLOW;
-            }
-            _font.drawCentered(rtype::MAP_NAMES[i], _width / 2.f, y, 4.f,
-                color);
+        _font.drawCentered("SELECT A GAME", _width / 2.f, 50.f, 6.f, WHITE);
+        if (step == LobbyStep::CustomScores) {
+            drawTabs(TAB_SCORES);
+            drawCustomScores(replica, custom);
+        } else {
+            drawTabs(TAB_CUSTOM);
+            drawCustomList(custom);
         }
+        drawLines(utils::wrap(custom.message(), ERROR_COLUMNS), 600.f, 2.f,
+            RED);
+        drawCustomFooter(step, replica.isHost());
     }
 
-    void Hud::drawRecords(const rtype::MapRecords &records)
+    void Hud::drawCustomList(const CustomMapList &custom)
     {
-        constexpr float TOP = 360.f;
-        constexpr float STEP = 36.f;
-
-        _font.drawCentered("BEST TIMES", _width / 2.f, TOP, 3.f, WHITE);
-        if (records.empty()) {
-            _font.drawCentered("NO RECORD YET", _width / 2.f, TOP + STEP,
-                3.f, GREEN);
-        }
-        for (std::size_t i = 0; i < records.size(); ++i) {
-            const std::string line = std::to_string(i + 1) + ". "
-                + formatTime(records[i].timeMs) + "  "
-                + std::to_string(records[i].players) + "P";
-
-            _font.drawCentered(line, _width / 2.f,
-                TOP + STEP * static_cast<float>(i + 1), 3.f, GREEN);
-        }
-    }
-
-    void Hud::drawCustomList(const LobbyMenu &menu)
-    {
-        const auto &entries = menu.entries();
-        const std::size_t first = firstVisible(menu.cursor());
+        const auto &entries = custom.entries();
+        const std::size_t first = firstVisible(custom.cursor());
         const std::size_t last = std::min(entries.size(),
             first + VISIBLE_MAPS);
 
@@ -133,9 +109,9 @@ namespace client {
             const auto row = static_cast<float>(i - first);
 
             drawCustomRow(entries[i], CUSTOM_ROW_TOP + row * CUSTOM_ROW_STEP,
-                i == menu.cursor());
+                i == custom.cursor());
         }
-        drawCustomDetail(entries[menu.cursor()]);
+        drawCustomDetail(entries[custom.cursor()]);
     }
 
     void Hud::drawCustomRow(const rtype::mapjson::MapEntry &entry,
@@ -179,16 +155,22 @@ namespace client {
         _font.drawCentered("THEN PRESS R", _width / 2.f, 330.f, 2.f, GREY);
     }
 
-    void Hud::drawCustomRecords(const Replica &replica, const LobbyMenu &menu)
+    // The best times of the selected map, for the difficulty being shown.
+    void Hud::drawCustomScores(const Replica &replica,
+        const CustomMapList &custom)
     {
-        const rtype::mapjson::MapEntry *entry = menu.selected();
+        const rtype::mapjson::MapEntry *entry = custom.selected();
+        const rtype::Difficulty shown = replica.menu().shownDifficulty();
 
         if (entry == nullptr) {
+            _font.drawCentered("NO LEADERBOARD FOR A MAP WITH A MISTAKE",
+                _width / 2.f, 230.f, 3.f, RED);
             return;
         }
         _font.drawCentered(entry->map->name, _width / 2.f, 200.f, 4.f,
             YELLOW);
-        drawRecords(replica.customRecords(entry->hash));
+        drawRecords(replica.customRecords(entry->hash)[
+            static_cast<std::size_t>(shown)], shown);
     }
 
     void Hud::drawLines(const std::vector<std::string> &lines,
@@ -202,17 +184,15 @@ namespace client {
         }
     }
 
-    void Hud::drawLobbyFooter(const LobbyMenu &menu, const bool host)
+    void Hud::drawCustomFooter(const LobbyStep step, const bool host)
     {
-        std::string footer = "WAITING FOR P1 TO CHOOSE   TAB: SWITCH";
+        std::string footer = "WAITING FOR P1 TO CHOOSE   TAB: MAPS";
 
-        if (menu.tab() == Tab::Records) {
-            footer = "LEFT: BACK   UP/DOWN: OTHER MAP   TAB: MAPS";
-        } else if (host && menu.tab() == Tab::Custom) {
-            footer = "UP/DOWN: CHOOSE  ENTER: START  TAB/RIGHT: LEADERBOARD  "
-                "R: REFRESH";
+        if (step == LobbyStep::CustomScores) {
+            footer = "LEFT/RIGHT: DIFFICULTY  UP/DOWN: OTHER MAP  TAB: MAPS";
         } else if (host) {
-            footer = "UP/DOWN: CHOOSE   ENTER: START   TAB: CUSTOM MAPS";
+            footer = "UP/DOWN: CHOOSE  ENTER: SETTINGS  TAB/RIGHT: "
+                "LEADERBOARD  R: REFRESH";
         }
         _font.drawCentered(footer, _width / 2.f, _height - 50.f, 2.f, WHITE);
     }

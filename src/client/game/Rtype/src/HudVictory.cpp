@@ -17,19 +17,22 @@ namespace client {
         constexpr float FALL_SPEED = 90.f;
         constexpr float PI = 3.14159265f;
 
-        // The best times of the map that has just been played.
+        // The best times of the map that has just been played, at the
+        // difficulty it was played.
         const rtype::MapRecords &recordsOfMatch(const rtype::GameStatus &status,
             const Replica &replica)
         {
             static const rtype::MapRecords NONE;
+            const auto level = static_cast<std::size_t>(
+                status.settings.difficulty);
 
             if (status.map == rtype::CUSTOM_MAP) {
-                return replica.customRecords(replica.customInfo().hash);
+                return replica.customRecords(replica.customInfo().hash)[level];
             }
             if (status.map >= replica.records().size()) {
                 return NONE;
             }
-            return replica.records()[status.map];
+            return replica.records()[status.map][level];
         }
 
         std::string clock(const std::uint32_t ms)
