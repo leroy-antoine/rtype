@@ -45,7 +45,7 @@ namespace rtype::protocol {
         std::uint8_t speedPercent = 100;
     };
 
-    constexpr std::uint8_t VERSION = 20;
+    constexpr std::uint8_t VERSION = 21;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
@@ -96,6 +96,28 @@ namespace rtype::protocol {
     constexpr std::size_t MAX_OWNED_AUGMENTS = 32;
 
     using OwnedAugment = std::array<std::vector<AugmentId>, config::MAX_PLAYERS>;
+
+    constexpr Engine::MessageType ROOM_CREATE = 0x31;
+    constexpr Engine::MessageType ROOM_JOIN = 0x32;
+    constexpr Engine::MessageType ROOM_LEAVE = 0x33;
+    constexpr Engine::MessageType ROOM_LIST = 0x38;
+    constexpr Engine::MessageType ROOM_JOINED = 0x39;
+    constexpr Engine::MessageType ROOM_REFUSED = 0x3A;
+    constexpr std::size_t MAX_ROOMS = 8;
+    constexpr std::size_t ROOM_ID_SIZE = 2;
+    constexpr std::size_t ROOM_INFO_SIZE = 4;
+
+    using RoomId = std::uint16_t;
+
+    struct RoomInfo {
+        RoomId id = 0;
+        std::uint8_t players = 0;
+        Phase phase = Phase::Lobby;
+
+        bool operator==(const RoomInfo &) const = default;
+    };
+
+    enum class RoomRefusal : std::uint8_t { NotFound, Full, TooManyRooms, AlreadyInRoom };
 
     inline void writeVec2(Engine::BinaryWriter &writer,
         const gameLogic::Vec2 &v)
@@ -709,5 +731,74 @@ namespace rtype::protocol {
             return std::nullopt;
         }
         return BuyResult{*id, *ok == 1};
+    }
+
+
+    inline Payload encodeRoomId(const RoomId room)
+    {
+        Engine::BinaryWriter writer;
+
+        writer.writeU16(room);
+        return writer.data();
+    }
+
+    inline std::optional<RoomId> decodeRoomId(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+
+        if (payload.size() != ROOM_ID_SIZE) {
+            return std::nullopt;
+        }
+        return reader.readU16();
+    }
+
+    inline Payload encode(const std::vector<RoomInfo> &rooms)
+    {
+        Engine::BinaryWriter writer;
+        const std::size_t count = std::min(rooms.size(), MAX_ROOMS);
+
+        writer.writeU8(static_cast<std::uint8_t>(count));
+        for (std::size_t i = 0; i < count; ++i) {
+            writer.writeU16(rooms[i].id);
+            writer.writeU8(rooms[i].players);
+            writer.writeU8(static_cast<std::uint8_t>(rooms[i].phase));
+        }
+        return writer.data();
+    }
+
+    inline std::optional<std::vector<RoomInfo>> decodeRoomList(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+        const std::optional<std::uint8_t> count = reader.readU8();
+        std::vector<RoomInfo> rooms;
+
+        if (!count || *count > MAX_ROOMS || reader.remaining() != *count * ROOM_INFO_SIZE) {
+            return std::nullopt;
+        }
+        for (std::size_t i = 0; i < *count; ++i) {
+            const std::optional<std::uint16_t> id = reader.readU16();
+            const std::optional<std::uint8_t> players = reader.readU8();
+            const std::optional<std::uint8_t> phase = reader.readU8();
+
+            if (!id || !players || !phase || *players > config::MAX_PLAYERS
+                || *phase > static_cast<std::uint8_t>(Phase::Shop)) {
+                return std::nullopt;
+            }
+            rooms.push_back({*id, *players, static_cast<Phase>(*phase)});
+        }
+        return rooms;
+    }
+
+    inline Payload encode(const RoomRefusal reason)
+    {
+        return {static_cast<std::uint8_t>(reason)};
+    }
+
+    inline std::optional<RoomRefusal> decodeRoomRefusal(const Payload &payload)
+    {
+        if (payload.size() != 1 || payload[0] > static_cast<std::uint8_t>(RoomRefusal::AlreadyInRoom)) {
+            return std::nullopt;
+        }
+        return static_cast<RoomRefusal>(payload[0]);
     }
 }
