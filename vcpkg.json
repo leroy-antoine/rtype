@@ -1,6 +1,7 @@
 {
   "dependencies": [
     "asio",
+    "nlohmann-json",
     "sfml",
     "vcpkg-tool-ninja"
   ]

@@ -6,7 +6,10 @@
 #include "logic/Settings.hpp"
 
 namespace client {
-    enum class LobbyStep { Map, Settings, Scores };
+    // Map, Settings and Scores are the screens of the maps of the game.
+    // Custom lists the maps written by the players, CustomScores shows the
+    // best times of one of them. The settings screen serves both.
+    enum class LobbyStep { Map, Settings, Scores, Custom, CustomScores };
 
     enum class SettingsRow { Difficulty, FriendlyFire };
 
@@ -34,11 +37,29 @@ namespace client {
             return _draft;
         }
 
-        void openSettings(const rtype::Settings &current)
+        void openSettings(const rtype::Settings &current,
+            const bool forCustom = false)
         {
             _step = LobbyStep::Settings;
             _row = SettingsRow::Difficulty;
             _draft = current;
+            _forCustom = forCustom;
+        }
+
+        // True when the settings are those of a map written by a player.
+        [[nodiscard]] bool settingsForCustom() const
+        {
+            return _forCustom;
+        }
+
+        void openCustom()
+        {
+            _step = LobbyStep::Custom;
+        }
+
+        void openCustomScores()
+        {
+            _step = LobbyStep::CustomScores;
         }
 
         void openScores()
@@ -47,9 +68,25 @@ namespace client {
             _scroll = 0;
         }
 
+        // One screen back: from the scores or the settings of a custom map to
+        // the list of custom maps, from anything else to the maps of the game.
         void back()
         {
+            const bool customSettings = _step == LobbyStep::Settings
+                && _forCustom;
+
+            if (_step == LobbyStep::CustomScores || customSettings) {
+                _step = LobbyStep::Custom;
+                return;
+            }
             _step = LobbyStep::Map;
+        }
+
+        // Back to the first screen, whatever the current one.
+        void reset()
+        {
+            _step = LobbyStep::Map;
+            _forCustom = false;
         }
 
         [[nodiscard]] rtype::Difficulty shownDifficulty() const
@@ -124,5 +161,6 @@ namespace client {
         std::size_t _scroll = 0;
         rtype::MapId _scoresMap = 0;
         std::size_t _shownRank = 0;
+        bool _forCustom = false;
     };
 }

@@ -157,9 +157,7 @@ namespace client {
             case rtype::SpriteId::FortressBoss: return Track::BossFortress;
             default: break;
         }
-        const auto &status = replica.status();
-
-        return trackOfZone(rtype::zoneOf(status->map, status->level));
+        return trackOfZone(replica.zone());
     }
 
     void Audio::onPhase(const rtype::Phase phase)

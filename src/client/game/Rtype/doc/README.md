@@ -113,12 +113,13 @@ Headers only include the layers below them, which avoids circular includes.
 | `Secondary.hpp` | the secondary slot: `SecondaryWeapon`, `SECONDARY_DEFS`, `equipSecondary`, `secondarySystem` |
 | `Rocket.hpp`, `Laser.hpp`, `Lightning.hpp` | the three secondary weapons |
 | `Drone.hpp` | the drone: levels, following, shooting (`DroneLevel` tiers) |
-| `Leaderboard.hpp` | `Leaderboard`: the 3 best times of each map and each difficulty, and the whole history of victories (with difficulty and friendly fire), saved in a text file; `runsOf` sorts the runs of one map |
+| `Leaderboard.hpp` | `Leaderboard`: the 3 best times of each map and each difficulty, and the whole history of victories (with difficulty and friendly fire), saved in a text file; `runsOf` sorts the runs of one map; `addRecord` is shared with `CustomLeaderboard` |
 | `Settings.hpp` | `Difficulty`, `Settings` (difficulty and friendly fire), the table `DIFFICULTY_SCALES` of multipliers and lives, `scaleOf`, `shiftedDifficulty` |
 | `Difficulty.hpp` | `ActiveSettings` (the settings held by one entity of the registry), `activeScale`, `scaledAmount`, `damageFactor`: what the systems read to apply the difficulty |
 | `Scaling.hpp` | `scaleNewEnemies` (health and fire rate of each new monster, once) and `densified` (size of a wave) |
 | `Lives.hpp` | `LifeBook`: lives of each player and the delay before they come back |
 | `Escort.hpp` | `escortFor`: the mini-bosses that come with a boss in Brutal |
+| `CustomLeaderboard.hpp` | the best times of the maps written by the players, per difficulty, indexed by the hash of the map, at most 500 maps |
 | `builder.hpp` | `buildRun` (puts the levels of a map one after another), `MAPS` (one function per map id) and `buildMap(id)`; the maps themselves are in `src/maps/` of this folder (library `rtype_maps`) |
 | `Levels.hpp` | `Segments`: the waves, the boss and the level numbers of the whole run, each with its distance |
 | `Events.hpp` | `EntitySpawned`, `EntityDestroyed`, `EntityState`: what is told to the clients |
@@ -361,6 +362,13 @@ There are three maps (`MAPS` in `Builder.hpp`, names in `MapList.hpp`):
 | 1 | BOSS RUSH | 5 short levels, one to three bosses each, ending with the Fortress, the Summoner and the Dasher |
 | 2 | DEATH RUNS | 4 courses of about a minute, then a level with the Fortress and the Dasher: *Rhythm* (speed 1.3), *Minefield* (1.5), *Pinch* (1.7, gates that close and open) and *Gauntlet* (2.0, swinging gates). Each one mixes gates, lasers, mines and turrets, with a fast portal at the start and two reversed stretches |
 
+A fourth id, `CUSTOM_MAP` (3, `MapList.hpp`), stands for a **map written by a
+player**. It has no entry in `MAP_NAMES`: its name and its zones come from the
+JSON, which the game logic does not know. Another library reads the JSON and
+hands the game a plain `Segments`, so the game logic needs nothing more than
+this id and a list of zones. See
+[custom maps](../../../../../docs/custom-maps-internals.md).
+
 `Game` has a `Lobby` phase, entered with `openLobby()` (the server does it at
 startup). In the lobby nothing is simulated except the movement of the ships.
 `startMap(segments, id)` is accepted only in the lobby; it resets the world
@@ -472,7 +480,7 @@ game.removePlayer(*slot);                     // a client disconnects
 | `bool isPlayerAlive(int slot)` | is there a player entity in this slot? |
 | `void setInput(int slot, const PlayerInput &input)` | stores the **current state of the keys** of a player. It stays in effect until the next call. Does nothing if the slot is empty. |
 | `void openLobby()` | the game waits in the `Lobby` phase until `startMap`. The server calls it at startup. |
-| `bool startMap(Segments segments, MapId map)` | starts a match on this map. Accepted only in the lobby, returns `false` otherwise. |
+| `bool startMap(Segments segments, MapId map, std::vector<Zone> zones = {})` | starts a match on this map. Accepted only in the lobby, returns `false` otherwise. `zones` (one per level) is only used for `CUSTOM_MAP`; `zoneOf(map, level)` gives the zone of the maps of the game, `customZone(zones, level)` the one of a custom map. |
 | `std::optional<int> host() const`, `MapId map() const` | the slot allowed to choose the map (lowest slot connected), the map being played. |
 | `void update(float dt)` | advances the game by `dt` seconds. |
 | `std::vector<GameEvent> takeEvents()` | the `EntitySpawned` and `EntityDestroyed` since the last call (and empties the list). |
@@ -674,6 +682,8 @@ Examples: `PLAYER_SPEED`, `PLAYER_FIRE_COOLDOWN`, `MONSTER_HP`,
 - A level: one more `LevelDef` in the list returned by `mapN()`. Distances are
   relative to the start of the level; everything must happen before
   `length`, and no wall may still be on screen when a boss appears.
+- A map written by a player does not need any code: it is a JSON file, see
+  [Create your own map](../../../../../docs/custom-maps.md).
 - A map: a new file `src/maps/mapN.cpp` returning the list of levels, added to
   `rtype_maps` in `CMakeLists.txt`, declared and added to `MAPS` in
   `Builder.hpp`, with its name in `MAP_NAMES` (`MapList.hpp`). The tests in

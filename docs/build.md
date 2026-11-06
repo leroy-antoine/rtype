@@ -9,7 +9,7 @@
   audio development packages; vcpkg prints the exact missing packages when a
   build fails.
 
-Dependencies (`vcpkg.json`): **Asio**, **SFML 3**, installed by vcpkg. vcpkg
+Dependencies (`vcpkg.json`): **Asio**, **SFML 3**, **nlohmann-json**, installed by vcpkg. vcpkg
 itself is the submodule `external/vcpkg`. Nothing is copied into the repository.
 
 Supported platforms: Linux (preset `linux-debug`) and Windows
@@ -60,7 +60,10 @@ listens in **UDP** on every IPv4 interface. To play from another machine, give
 the client the IP address of the server and open the port in UDP in the
 firewall (for example `sudo ufw allow 4242/udp`).
 
-A client needs the `assets` folder that CMake copies next to its executable.
+A client needs the `assets` folder that CMake copies next to its executable. The
+`CustomMaps` folder is copied there too: put your own maps in it (see
+[Create your own map](custom-maps.md)). The server writes `leaderboard.txt` and
+`custom_leaderboard.txt` in the folder where it runs.
 
 ## IDE setup (CLion)
 
@@ -91,8 +94,10 @@ After changing the profile, reset the CMake cache.
 The tests cover the game logic (waves, bosses, monster behaviours, walls,
 coins, level skip, victory and defeat, respawn, the lobby, the events sent to
 the clients), the three maps (ordering, reachability of the gates, bosses),
-the leaderboard and the encoding of the protocol messages (round trips,
-truncated or invalid payloads). They are built with the rest of the project:
+the leaderboard, the encoding of the protocol messages (round trips,
+truncated or invalid payloads), the reader of the maps written by the players
+(valid and invalid files, the caps, the folder scan), the upload of a map and
+the state of the custom maps tab of the lobby. They are built with the rest of the project:
 
 ```
 ./build/binaries/rtype_tests

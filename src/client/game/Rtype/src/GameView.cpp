@@ -15,13 +15,14 @@ namespace client {
     {
     }
 
-    void GameView::draw(Replica &replica, const float elapsed)
+    void GameView::draw(Replica &replica, const CustomMapList &custom,
+        const float elapsed)
     {
         trackBossHurt(replica, elapsed);
         _background.draw(_renderer, sceneOf(replica), elapsed);
         drawWorld(replica.registry(), elapsed);
         drawCharge(replica);
-        _hud.draw(replica, elapsed);
+        _hud.draw(replica, custom, elapsed);
     }
 
     void GameView::trackBossHurt(const Replica &replica, const float elapsed)
@@ -80,7 +81,7 @@ namespace client {
         const auto &status = replica.status();
 
         if (status && status->phase != rtype::Phase::Lobby) {
-            scene.zone = rtype::zoneOf(status->map, status->level);
+            scene.zone = replica.zone();
         }
         replica.registry().each<rtype::Renderable>(
             [&scene](const Engine::Entity, const rtype::Renderable &sprite) {

@@ -25,7 +25,10 @@ int main(const int argc, char **argv)
         return RTYPE_ERROR;
     }
     try {
-        client::App app(std::filesystem::path(argv[0]).parent_path() / "assets", argv[1], parsePort(argv[2]));
+        const std::filesystem::path dir =
+            std::filesystem::path(argv[0]).parent_path();
+        client::App app(dir / "assets", dir / "CustomMaps", argv[1],
+            parsePort(argv[2]));
 
         return app.run();
     } catch (const std::exception &e) {

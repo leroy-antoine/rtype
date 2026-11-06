@@ -90,7 +90,8 @@ namespace client {
     {
     }
 
-    void Hud::draw(const Replica &replica, const float elapsed)
+    void Hud::draw(const Replica &replica, const CustomMapList &custom,
+        const float elapsed)
     {
         const std::optional<rtype::GameStatus> &status = replica.status();
 
@@ -101,7 +102,7 @@ namespace client {
         }
         trackPhase(status->phase, elapsed);
         if (status->phase == rtype::Phase::Lobby) {
-            drawLobby(replica);
+            drawLobby(replica, custom);
             return;
         }
         drawPlayers(*status, replica.augments());
@@ -325,16 +326,21 @@ namespace client {
             _width / 2.f, _height / 2.f + 50.f, 3.f, WHITE);
     }
 
-    void Hud::drawLobby(const Replica &replica)
+    void Hud::drawLobby(const Replica &replica, const CustomMapList &custom)
     {
+        const LobbyStep step = replica.menu().step();
+
         _renderer.drawRect({0.f, 0.f}, {_width, _height}, {0, 0, 0, 210});
-        if (replica.isHost()
-            && replica.menu().step() == LobbyStep::Settings) {
-            drawSettingsStep(replica);
+        if (replica.isHost() && step == LobbyStep::Settings) {
+            drawSettingsStep(replica, settingsMapName(replica, custom));
             return;
         }
-        if (replica.menu().step() == LobbyStep::Scores) {
+        if (step == LobbyStep::Scores) {
             drawScoresStep(replica);
+            return;
+        }
+        if (step == LobbyStep::Custom || step == LobbyStep::CustomScores) {
+            drawCustomStep(replica, custom);
             return;
         }
         drawMapStep(replica);
@@ -351,6 +357,7 @@ namespace client {
             footer = "UP/DOWN: CHOOSE  ENTER: SETTINGS  LEFT/RIGHT: RANKING";
         }
         _font.drawCentered("SELECT A GAME", _width / 2.f, 50.f, 6.f, WHITE);
+        drawTabs(0);
         drawMapList(cursor);
         if (!replica.onLeaderboard()) {
             drawRecords(replica.records()[cursor][static_cast<std::size_t>(
@@ -358,9 +365,12 @@ namespace client {
                 replica.menu().shownDifficulty());
         }
         _font.drawCentered(footer, _width / 2.f, _height - 50.f, 3.f, WHITE);
+        _font.drawCentered("TAB: CUSTOM MAPS", _width / 2.f, _height - 90.f,
+            2.f, WHITE);
     }
 
-    void Hud::drawSettingsStep(const Replica &replica)
+    void Hud::drawSettingsStep(const Replica &replica,
+        const std::string &mapName)
     {
         constexpr float ROW_TOP = 190.f;
         constexpr float ROW_GAP = 64.f;
@@ -368,8 +378,7 @@ namespace client {
         const bool onFire = replica.menu().row() == SettingsRow::FriendlyFire;
 
         _font.drawCentered("GAME SETTINGS", _width / 2.f, 50.f, 6.f, WHITE);
-        _font.drawCentered(rtype::MAP_NAMES[replica.mapCursor()],
-            _width / 2.f, 120.f, 4.f, YELLOW);
+        _font.drawCentered(mapName, _width / 2.f, 120.f, 4.f, YELLOW);
         drawSettingRow("DIFFICULTY", difficultyName(settings.difficulty),
             difficultyColor(settings.difficulty), !onFire, ROW_TOP);
         drawSettingRow("FRIENDLY FIRE", onOff(settings.friendlyFire), WHITE,

@@ -1,6 +1,9 @@
 #include <iostream>
 #include <optional>
 #include <variant>
+#include <algorithm>
+#include <utility>
+#include "rtype/CustomMapProtocol.hpp"
 #include "rtype/Protocol.hpp"
 #include "Network.hpp"
 
@@ -35,6 +38,7 @@ namespace client {
     bool Network::update(Replica &replica)
     {
         _client.update();
+        pumpUpload();
         while (const std::optional<Engine::ClientEvent> event = _client.pollEvent()) {
             std::visit([this, &replica](const auto &e) { handle(replica, e); }, *event);
         }
@@ -112,6 +116,60 @@ namespace client {
         }
     }
 
+    void Network::uploadMap(std::string text)
+    {
+        _upload = Upload{std::move(text), 0, false};
+    }
+
+    bool Network::uploading() const
+    {
+        return _upload.has_value();
+    }
+
+    void Network::requestCustomRecords(const std::uint64_t hash)
+    {
+        if (_client.connected()) {
+            _client.send(rtype::protocol::CUSTOM_RECORDS_GET,
+                rtype::protocol::encodeCustomRecordsGet(hash),
+                Engine::Delivery::Reliable);
+        }
+    }
+
+    void Network::pumpUpload()
+    {
+        if (!_upload || !_client.connected()) {
+            return;
+        }
+        if (!_upload->begun) {
+            _client.send(rtype::protocol::MAP_UPLOAD_BEGIN,
+                rtype::protocol::encodeUploadBegin(
+                    static_cast<std::uint32_t>(_upload->text.size())),
+                Engine::Delivery::Reliable);
+            _upload->begun = true;
+        }
+        sendChunks(*_upload);
+    }
+
+    void Network::sendChunks(Upload &upload)
+    {
+        for (std::size_t i = 0; i < CHUNKS_PER_UPDATE
+            && upload.sent < upload.text.size(); ++i) {
+            const std::size_t size = std::min(rtype::protocol::MAX_UPLOAD_CHUNK,
+                upload.text.size() - upload.sent);
+            const std::string piece = upload.text.substr(upload.sent, size);
+
+            _client.send(rtype::protocol::MAP_UPLOAD_CHUNK,
+                std::vector<std::uint8_t>(piece.begin(), piece.end()),
+                Engine::Delivery::Reliable);
+            upload.sent += size;
+        }
+        if (upload.sent >= upload.text.size()) {
+            _client.send(rtype::protocol::MAP_UPLOAD_END, {},
+                Engine::Delivery::Reliable);
+            _upload.reset();
+        }
+    }
+
     void Network::flush()
     {
         _client.flush();
@@ -153,6 +211,18 @@ namespace client {
             case rtype::protocol::AUGMENTS: applyDecoded(replica, rtype::protocol::decodeAugments(event.payload)); break;
             case rtype::protocol::SHOP: applyDecoded(replica, rtype::protocol::decodeShop(event.payload)); break;
             case rtype::protocol::BUY_RESULT: applyDecoded(replica, rtype::protocol::decodeBuyResult(event.payload)); break;
+            case rtype::protocol::CUSTOM_INFO:
+                applyDecoded(replica,
+                    rtype::protocol::decodeCustomInfo(event.payload));
+                break;
+            case rtype::protocol::MAP_UPLOAD_RESULT:
+                applyDecoded(replica,
+                    rtype::protocol::decodeUploadResult(event.payload));
+                break;
+            case rtype::protocol::CUSTOM_RECORDS:
+                applyDecoded(replica,
+                    rtype::protocol::decodeCustomRecords(event.payload));
+                break;
             case rtype::protocol::YOU: assignSlot(replica, rtype::protocol::decodeYou(event.payload)); break;
             default: break;
         }

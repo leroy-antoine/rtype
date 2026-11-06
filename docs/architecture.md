@@ -35,6 +35,7 @@ The subject asks for visible and decoupled layers for **rendering**,
 | `rtype::protocol` | `src/include/rtype/Protocol.hpp` | the encoding of the R-Type messages, shared by the server and the client |
 | `rtype::game` | `src/client/game/Rtype` | the game logic, header-only: rules, monsters, bosses, walls, lobby, leaderboard |
 | `rtype::maps` | `src/client/game/Rtype/src/maps` | the data of the maps (levels, waves, walls); linked by the server and the tests |
+| `rtype::mapjson` | `src/client/game/Rtype/src/mapjson` | reads and checks the maps written by the players (JSON) and turns them into the same levels as `rtype::maps`; linked by the client, the server and the tests |
 | `r-type_server` | `src/server` | the authoritative server |
 | `r-type_client` | `src/client` | the display |
 
@@ -43,6 +44,10 @@ The subject asks for visible and decoupled layers for **rendering**,
 - `engine::core` depends on nothing of the project.
 - `rtype::game` depends on `engine::core` and `rtype::common` only. It never
   includes SFML, Asio or any network code.
+- `rtype::mapjson` depends on `rtype::game` and on nlohmann-json (private to
+  the library). `rtype::game` does not know it: a map from a player is just a
+  list of levels, like the maps of the game. See
+  [custom maps for developers](custom-maps-internals.md).
 - `engine::network` knows messages and sessions, not R-Type. The meaning of a
   message is defined by `rtype::protocol`.
 - The client renders through `engine::window` and never includes the game
@@ -65,6 +70,17 @@ be run and tested without a window or a socket.
  draw ◄─── SPAWN / DESTROY / encode ◄── events, states, status
            STATES / STATUS / LEADERBOARD
 ```
+
+## Maps written by the players
+
+A player writes a map as a JSON file in the `CustomMaps` folder of the client.
+The lobby lists the files (the client reads and checks them), the host picks
+one and the client sends its text to the server in pieces. The server checks it
+again, builds the levels and starts the match, so the server stays the
+authority and never reads a file of a client machine. The format is explained
+in [Create your own map](custom-maps.md), the code in
+[custom maps for developers](custom-maps-internals.md), the messages in
+[the protocol](protocol.md#maps-written-by-the-players).
 
 ## The life of a match
 
@@ -94,3 +110,4 @@ the leaderboard of the map.
 - Server: [src/server/doc](../src/server/doc/README.md)
 - Network module: [engine/docs/network.md](../engine/docs/network.md)
 - Client: [src/client/doc](../src/client/doc/README.md)
+- Custom maps: [for players](custom-maps.md), [for developers](custom-maps-internals.md)

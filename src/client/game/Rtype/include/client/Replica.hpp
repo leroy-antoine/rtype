@@ -11,6 +11,8 @@
 #include "client/Prediction.hpp"
 #include "logic/Events.hpp"
 #include "logic/Status.hpp"
+#include "logic/Zones.hpp"
+#include "rtype/CustomMapProtocol.hpp"
 #include "rtype/Protocol.hpp"
 #include "utils/Vectors.hpp"
 
@@ -31,6 +33,9 @@ namespace client {
         void apply(const rtype::protocol::OwnedAugment &augments);
         void apply(const std::vector<rtype::AugmentId> &shopOffers);
         void apply(const rtype::protocol::BuyResult &result);
+        void apply(const rtype::protocol::CustomInfo &info);
+        void apply(const rtype::protocol::UploadResult &result);
+        void apply(const rtype::protocol::CustomRecords &records);
         void assignSlot(int slot);
         std::uint32_t predict(const rtype::PlayerInput &input, float dt);
         void update(float dt);
@@ -56,6 +61,14 @@ namespace client {
         [[nodiscard]] const std::vector<rtype::AugmentId> &shopOffers() const;
         std::vector<Cue> takeCues();
         std::optional<rtype::protocol::BuyResult> takeBuyResult();
+        std::optional<rtype::protocol::UploadResult> takeUploadResult();
+
+        // The map written by a player that is being played, if any.
+        [[nodiscard]] const rtype::protocol::CustomInfo &customInfo() const;
+        [[nodiscard]] const rtype::DifficultyRecords &customRecords(
+            std::uint64_t hash) const;
+        // The scenery of the level that is being played.
+        [[nodiscard]] rtype::Zone zone() const;
 
     private:
         static constexpr double INTERPOLATION_DELAY = 3.0;
@@ -97,6 +110,10 @@ namespace client {
         rtype::protocol::OwnedAugment _augments{};
         std::vector<rtype::AugmentId> _shopOffers;
         std::optional<rtype::protocol::BuyResult> _buyResult;
+        rtype::protocol::CustomInfo _customInfo;
+        std::optional<rtype::protocol::UploadResult> _uploadResult;
+        std::unordered_map<std::uint64_t, rtype::DifficultyRecords>
+            _customRecords;
         std::vector<Cue> _cues;
     };
 }

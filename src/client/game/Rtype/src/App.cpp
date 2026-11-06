@@ -8,8 +8,10 @@
 #include "client/SpriteBank.hpp"
 
 namespace client {
-    App::App(std::filesystem::path assets, const std::string &host, const std::uint16_t port)
-        : _assets(std::move(assets)), _network(host, port)
+    App::App(std::filesystem::path assets, std::filesystem::path customMaps,
+        const std::string &host, const std::uint16_t port)
+        : _assets(std::move(assets)), _network(host, port),
+        _custom(std::move(customMaps))
     {
     }
 
@@ -48,7 +50,7 @@ namespace client {
             _replica.update(dt);
             playSounds(audio);
             window.clear(4, 4, 18);
-            view.draw(_replica, elapsed());
+            view.draw(_replica, _custom, elapsed());
             shop.draw(_replica, elapsed());
             window.display();
         }
@@ -83,7 +85,7 @@ namespace client {
         rtype::PlayerInput input = _controls.input();
 
         if (!inLobby()) {
-            _replica.menu().back();
+            _replica.menu().reset();
         }
 
         if (ShopPanel::isOpen(_replica)) {
@@ -163,15 +165,29 @@ namespace client {
     {
         const LobbyStep step = _replica.menu().step();
 
+        if (const auto result = _replica.takeUploadResult()) {
+            _custom.setMessage(result->error);
+        }
         if (!_replica.isHost() && step == LobbyStep::Settings) {
             _replica.menu().back();
         } else if (step == LobbyStep::Settings) {
             useSettingsStep();
         } else if (step == LobbyStep::Scores) {
             useScoresStep();
+        } else if (step == LobbyStep::Custom) {
+            useCustomStep();
+        } else if (step == LobbyStep::CustomScores) {
+            useCustomScoresStep();
         } else {
             useMapStep();
         }
+    }
+
+    bool App::pressed(const Engine::Key key) const
+    {
+        const std::vector<Engine::Key> &keys = _controls.pressedKeys();
+
+        return std::ranges::find(keys, key) != keys.end();
     }
 
     rtype::Settings App::currentSettings() const
@@ -184,6 +200,11 @@ namespace client {
 
     void App::useMapStep()
     {
+        if (pressed(Engine::Key::Tab)) {
+            _custom.rescan();
+            _replica.menu().openCustom();
+            return;
+        }
         _replica.moveMapCursor(_controls.menuMove());
         _replica.menu().moveShown(_controls.menuSide());
         if (!_controls.respawnRequested()) {
@@ -217,10 +238,88 @@ namespace client {
         if (_controls.menuSide() != 0) {
             _network.changeSettings(menu.change(_controls.menuSide()));
         }
-        if (_controls.respawnRequested()) {
-            _network.selectMap(_replica.mapCursor());
-            menu.back();
+        if (!_controls.respawnRequested()) {
+            return;
         }
+        if (menu.settingsForCustom()) {
+            startCustomMap();
+        } else {
+            _network.selectMap(_replica.mapCursor());
+        }
+        menu.back();
+    }
+
+    // The maps written by the players: the host picks one, chooses the
+    // settings, and the map is sent to the server, which checks it again and
+    // starts it.
+    void App::useCustomStep()
+    {
+        LobbyMenu &menu = _replica.menu();
+
+        _custom.moveCursor(_controls.menuMove());
+        if (pressed(Engine::Key::R)) {
+            _custom.rescan();
+        }
+        if (pressed(Engine::Key::Tab) || _controls.menuSide() > 0) {
+            askCustomRecords();
+            return;
+        }
+        if (!_controls.respawnRequested() || !_replica.isHost()) {
+            return;
+        }
+        if (_custom.selected() == nullptr) {
+            _custom.setMessage("CHOOSE A MAP WITHOUT A MISTAKE");
+            return;
+        }
+        menu.openSettings(currentSettings(), true);
+    }
+
+    // Tab and Right open the leaderboard of a map without a mistake: the
+    // server only knows those.
+    void App::askCustomRecords()
+    {
+        const rtype::mapjson::MapEntry *entry = _custom.selected();
+
+        if (entry == nullptr) {
+            _custom.setMessage("NO LEADERBOARD FOR A MAP WITH A MISTAKE");
+            if (pressed(Engine::Key::Tab)) {
+                _replica.menu().reset();
+            }
+            return;
+        }
+        _replica.menu().openCustomScores();
+        _network.requestCustomRecords(entry->hash);
+    }
+
+    void App::useCustomScoresStep()
+    {
+        LobbyMenu &menu = _replica.menu();
+
+        menu.moveShown(_controls.menuSide());
+        if (pressed(Engine::Key::Tab)) {
+            menu.reset();
+            return;
+        }
+        _custom.moveCursor(_controls.menuMove());
+        if (_controls.menuMove() != 0 && _custom.selected() != nullptr) {
+            _network.requestCustomRecords(_custom.selected()->hash);
+        }
+    }
+
+    void App::startCustomMap()
+    {
+        std::string text;
+        const std::string error = _custom.readSelected(text);
+
+        if (_network.uploading()) {
+            return;
+        }
+        if (!error.empty()) {
+            _custom.setMessage(error);
+            return;
+        }
+        _network.uploadMap(std::move(text));
+        _custom.setMessage("SENDING THE MAP...");
     }
 
     void App::sendReady()

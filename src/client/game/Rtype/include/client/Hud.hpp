@@ -3,6 +3,7 @@
 #include <optional>
 #include <vector>
 #include "engine/window/Renderer.hpp"
+#include "CustomMapList.hpp"
 #include "Font.hpp"
 #include "Replica.hpp"
 #include "SpriteBank.hpp"
@@ -22,7 +23,8 @@ namespace client {
         Hud(Engine::Renderer &renderer, const SpriteBank &sprites,
             float screenWidth, float screenHeight);
 
-        void draw(const Replica &replica, float elapsed);
+        void draw(const Replica &replica, const CustomMapList &custom,
+            float elapsed);
 
     private:
         static constexpr float BAR_X = 70.f;
@@ -59,9 +61,26 @@ namespace client {
         void drawRespawnHint(const rtype::GameStatus &status,
             std::optional<int> self, float elapsed);
         void drawEndScreen(float elapsed);
-        void drawLobby(const Replica &replica);
+        void drawLobby(const Replica &replica, const CustomMapList &custom);
+        // The maps written by the players (see HudLobby.cpp).
+        void drawTabs(std::size_t active);
+        void drawCustomStep(const Replica &replica,
+            const CustomMapList &custom);
+        void drawCustomList(const CustomMapList &custom);
+        void drawCustomRow(const rtype::mapjson::MapEntry &entry, float y,
+            bool selected);
+        void drawCustomDetail(const rtype::mapjson::MapEntry &entry);
+        void drawNoCustomMap();
+        void drawCustomScores(const Replica &replica,
+            const CustomMapList &custom);
+        void drawLines(const std::vector<std::string> &lines, float top,
+            float scale, Engine::Color color);
+        void drawCustomFooter(LobbyStep step, bool host);
+        [[nodiscard]] static std::string settingsMapName(
+            const Replica &replica, const CustomMapList &custom);
         void drawMapStep(const Replica &replica);
-        void drawSettingsStep(const Replica &replica);
+        void drawSettingsStep(const Replica &replica,
+            const std::string &mapName);
         void drawSettingRow(const std::string &label,
             const std::string &value, Engine::Color color, bool selected,
             float y);

@@ -38,3 +38,20 @@ add_library(rtype_maps STATIC
         src/maps/map3.cpp)
 add_library(rtype::maps ALIAS rtype_maps)
 target_link_libraries(rtype_maps PUBLIC rtype::game)
+
+
+# Reader and validator of the maps written by the players (JSON).
+find_package(nlohmann_json CONFIG REQUIRED)
+
+add_library(rtype_mapjson STATIC
+        src/mapjson/Checks.cpp
+        src/mapjson/Folder.cpp
+        src/mapjson/LevelParser.cpp
+        src/mapjson/MapParser.cpp
+        src/mapjson/ObstacleParser.cpp
+        src/mapjson/Reader.cpp
+        src/mapjson/SpawnParser.cpp)
+add_library(rtype::mapjson ALIAS rtype_mapjson)
+target_link_libraries(rtype_mapjson
+        PUBLIC rtype::game
+        PRIVATE nlohmann_json::nlohmann_json)

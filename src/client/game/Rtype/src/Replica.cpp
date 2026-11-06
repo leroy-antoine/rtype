@@ -433,4 +433,55 @@ namespace client {
                 break;
         }
     }
+
+    void Replica::apply(const rtype::protocol::CustomInfo &info)
+    {
+        _customInfo = info;
+    }
+
+    void Replica::apply(const rtype::protocol::UploadResult &result)
+    {
+        _uploadResult = result;
+    }
+
+    void Replica::apply(const rtype::protocol::CustomRecords &records)
+    {
+        _customRecords[records.hash] = records.records;
+    }
+
+    std::optional<rtype::protocol::UploadResult> Replica::takeUploadResult()
+    {
+        std::optional<rtype::protocol::UploadResult> result;
+
+        result.swap(_uploadResult);
+        return result;
+    }
+
+    const rtype::protocol::CustomInfo &Replica::customInfo() const
+    {
+        return _customInfo;
+    }
+
+    const rtype::DifficultyRecords &Replica::customRecords(
+        const std::uint64_t hash) const
+    {
+        static const rtype::DifficultyRecords NONE{};
+        const auto found = _customRecords.find(hash);
+
+        if (found == _customRecords.end()) {
+            return NONE;
+        }
+        return found->second;
+    }
+
+    rtype::Zone Replica::zone() const
+    {
+        if (!_status) {
+            return rtype::Zone::DeepSpace;
+        }
+        if (_status->map == rtype::CUSTOM_MAP) {
+            return rtype::customZone(_customInfo.zones, _status->level);
+        }
+        return rtype::zoneOf(_status->map, _status->level);
+    }
 }

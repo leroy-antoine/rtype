@@ -76,13 +76,27 @@ namespace server {
             return;
         }
         const rtype::GameStatus status = _game.status();
-
-        _leaderboard.add(_game.map(), {status.elapsedMs,
+        const rtype::RunRecord record{status.elapsedMs,
             static_cast<std::uint8_t>(status.players.size()),
-            status.settings});
+            status.settings};
+
+        if (_game.map() == rtype::CUSTOM_MAP) {
+            recordCustomVictory(record);
+            return;
+        }
+        _leaderboard.add(_game.map(), record);
         _leaderboard.save(LEADERBOARD_FILE);
         _server.broadcast(rtype::protocol::LEADERBOARD,
             rtype::protocol::encode(_leaderboard.all()),
+            Engine::Delivery::Reliable);
+    }
+
+    void App::recordCustomVictory(const rtype::RunRecord &record)
+    {
+        const std::uint64_t hash = _custom.recordVictory(record);
+
+        _server.broadcast(rtype::protocol::CUSTOM_RECORDS,
+            rtype::protocol::encode(_custom.recordsOf(hash)),
             Engine::Delivery::Reliable);
     }
 
@@ -146,6 +160,11 @@ namespace server {
             Engine::Delivery::Reliable);
         _server.send(client, rtype::protocol::SHOP, rtype::protocol::encodeShop(_game.shopOffers()),
             Engine::Delivery::Reliable);
+        if (_game.map() == rtype::CUSTOM_MAP && _custom.selected()) {
+            _server.send(client, rtype::protocol::CUSTOM_INFO,
+                rtype::protocol::encode(_custom.info()),
+                Engine::Delivery::Reliable);
+        }
     }
 
     void App::sleep() const
@@ -190,6 +209,7 @@ namespace server {
         if (!slot) {
             return;
         }
+        _custom.cancel(*slot);
         _game.removePlayer(*slot);
         _slots.erase(event.client);
         _lastInputs.erase(event.client);
@@ -201,6 +221,9 @@ namespace server {
         const std::optional<int> slot = slotOf(event.client);
 
         if (!slot) {
+            return;
+        }
+        if (handleCustom(event, *slot)) {
             return;
         }
         if (event.type == rtype::protocol::INPUT) {
@@ -334,5 +357,93 @@ namespace server {
                 Engine::Delivery::Reliable);
             _sentOffers = _game.shopOffers();
         }
+    }
+
+    bool App::handleCustom(const Engine::ServerEvents::Message &event,
+        const int slot)
+    {
+        switch (event.type) {
+            case rtype::protocol::MAP_UPLOAD_BEGIN:
+                uploadBegin(event.client, slot, event.payload);
+                return true;
+            case rtype::protocol::MAP_UPLOAD_CHUNK:
+                if (_game.host() == slot) {
+                    _custom.add(slot, event.payload);
+                }
+                return true;
+            case rtype::protocol::MAP_UPLOAD_END:
+                uploadEnd(event.client, slot);
+                return true;
+            case rtype::protocol::CUSTOM_RECORDS_GET:
+                sendCustomRecords(event.client, event.payload);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    // Only the host chooses the map, so only the host can send one.
+    void App::uploadBegin(const Engine::ClientId client, const int slot,
+        const rtype::protocol::Payload &payload)
+    {
+        if (_game.host() != slot || _game.phase() != rtype::Phase::Lobby) {
+            return;
+        }
+        if (!_custom.begin(slot, payload)) {
+            sendUploadResult(client, {false, "the map is refused"});
+        }
+    }
+
+    void App::uploadEnd(const Engine::ClientId client, const int slot)
+    {
+        if (_game.host() != slot) {
+            _custom.cancel(slot);
+            return;
+        }
+        std::variant<LoadedMap, std::string> outcome = _custom.finish(slot);
+
+        if (const std::string *error = std::get_if<std::string>(&outcome)) {
+            sendUploadResult(client, {false, *error});
+            return;
+        }
+        startCustom(client, std::get<LoadedMap>(outcome));
+    }
+
+    void App::startCustom(const Engine::ClientId client,
+        const LoadedMap &loaded)
+    {
+        if (!_game.startMap(rtype::buildRun(loaded.map.levels),
+            rtype::CUSTOM_MAP, loaded.map.zones)) {
+            sendUploadResult(client, {false, "a game is already running"});
+            return;
+        }
+        _custom.select(loaded);
+        _server.broadcast(rtype::protocol::CUSTOM_INFO,
+            rtype::protocol::encode(_custom.info()),
+            Engine::Delivery::Reliable);
+        sendUploadResult(client, {true, ""});
+        std::cout << "custom map \"" << loaded.map.name << "\" started"
+            << std::endl;
+    }
+
+    void App::sendUploadResult(const Engine::ClientId client,
+        const rtype::protocol::UploadResult &result)
+    {
+        _server.send(client, rtype::protocol::MAP_UPLOAD_RESULT,
+            rtype::protocol::encode(result), Engine::Delivery::Reliable);
+    }
+
+    void App::sendCustomRecords(const Engine::ClientId client,
+        const rtype::protocol::Payload &payload)
+    {
+        const std::optional<std::uint64_t> hash =
+            rtype::protocol::decodeCustomRecordsGet(payload);
+
+        if (!hash) {
+            return;
+        }
+        _server.send(client, rtype::protocol::CUSTOM_RECORDS,
+            rtype::protocol::encode(_custom.recordsOf(*hash)),
+            Engine::Delivery::Reliable);
     }
 }

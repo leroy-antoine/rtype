@@ -32,6 +32,18 @@ namespace rtype {
     using AllRecords = std::array<DifficultyRecords, MAP_COUNT>;
     using RunsByMap = std::array<MapRecords, MAP_COUNT>;
 
+    // Ajoute un temps : le plus rapide en premier, MAX_RECORDS au plus.
+    inline void addRecord(MapRecords &records, const RunRecord &record)
+    {
+        records.push_back(record);
+        std::ranges::stable_sort(records, [](const auto &a, const auto &b) {
+            return a.timeMs < b.timeMs;
+        });
+        if (records.size() > MAX_RECORDS) {
+            records.resize(MAX_RECORDS);
+        }
+    }
+
     // Toutes les parties gagnees sur une map, la plus rapide en premier.
     inline MapRecords runsOf(const std::vector<RunEntry> &history,
         const MapId map)
@@ -59,16 +71,8 @@ namespace rtype {
                 return false;
             }
             _history.push_back({map, record});
-            MapRecords &records = _records[map][static_cast<std::size_t>(
-                record.settings.difficulty)];
-
-            records.push_back(record);
-            std::ranges::stable_sort(records, [](const auto &a, const auto &b) {
-                return a.timeMs < b.timeMs;
-            });
-            if (records.size() > MAX_RECORDS) {
-                records.resize(MAX_RECORDS);
-            }
+            addRecord(_records[map][static_cast<std::size_t>(
+                record.settings.difficulty)], record);
             return true;
         }
 

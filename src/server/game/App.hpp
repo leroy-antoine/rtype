@@ -9,6 +9,7 @@
 #include "engine/core/FixedTimestep.hpp"
 #include "engine/network/Event.hpp"
 #include "engine/network/Server.hpp"
+#include "CustomMaps.hpp"
 #include "logic/Config.hpp"
 #include "logic/Game.hpp"
 #include "logic/Leaderboard.hpp"
@@ -27,6 +28,8 @@ namespace server {
         // Le statut (HUD) est envoye 10 fois par seconde, pas a chaque tick.
         static constexpr std::size_t STATUS_EVERY_TICKS = 6;
         static constexpr const char *LEADERBOARD_FILE = "leaderboard.txt";
+        static constexpr const char *CUSTOM_LEADERBOARD_FILE =
+            "custom_leaderboard.txt";
 
         void tick();
         void receive();
@@ -34,6 +37,7 @@ namespace server {
         void broadcastStates();
         void broadcastStatus();
         void recordVictory();
+        void recordCustomVictory(const rtype::RunRecord &record);
         void selectMap(int slot, const rtype::protocol::Payload &payload);
         void sendHistory(Engine::ClientId client);
         void changeSettings(int slot,
@@ -49,6 +53,18 @@ namespace server {
         void handle(const Engine::ServerEvents::Disconnected &event);
         void handle(const Engine::ServerEvents::Message &event);
 
+        // The maps written by the players (see docs/custom-maps.md).
+        bool handleCustom(const Engine::ServerEvents::Message &event,
+            int slot);
+        void uploadBegin(Engine::ClientId client, int slot,
+            const rtype::protocol::Payload &payload);
+        void uploadEnd(Engine::ClientId client, int slot);
+        void startCustom(Engine::ClientId client, const LoadedMap &loaded);
+        void sendUploadResult(Engine::ClientId client,
+            const rtype::protocol::UploadResult &result);
+        void sendCustomRecords(Engine::ClientId client,
+            const rtype::protocol::Payload &payload);
+
         void syncAugments();
         void syncShop();
         void handleBuy(Engine::ClientId client, int slot, const rtype::protocol::Payload &payload);
@@ -61,6 +77,7 @@ namespace server {
         std::unordered_map<Engine::ClientId, std::uint32_t> _lastInputs;
         std::size_t _ticks = 0;
         rtype::Leaderboard _leaderboard;
+        CustomMaps _custom{CUSTOM_LEADERBOARD_FILE};
         rtype::Phase _lastPhase = rtype::Phase::Lobby;
         rtype::protocol::OwnedAugment _sentAugments{};
         std::vector<rtype::AugmentId> _sentOffers;

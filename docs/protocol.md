@@ -27,7 +27,7 @@ A new client can be written from these two pages alone.
 | Direction | the client sends keys, the server sends the world |
 | Datagram | at most **1200 bytes**, carries one or several messages |
 | Byte order | **big-endian** for every integer and float |
-| Protocol version | `24` (`rtype::protocol::VERSION`), checked at connection |
+| Protocol version | `25` (`rtype::protocol::VERSION`), checked at connection |
 | Tick | the server simulates at 60 Hz and sends the states every tick |
 
 The server is the authority. A client never sends a position, a hit or a
@@ -62,7 +62,7 @@ Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
 
 ```
  client                                   server
-   │ ── Connect(version=24) ─────────────►  │  every 500 ms, 10 tries at most
+   │ ── Connect(version=25) ─────────────►  │  every 500 ms, 10 tries at most
    │ ◄───────────── Accept(token) ──────── │  or Refuse(0 version, 1 full)
    │ ◄───────────────────── YOU(slot) ──── │  reliable
    │ ◄────────────────── SPAWN × n ─────── │  reliable, the whole world
@@ -108,6 +108,10 @@ Sender: **C** is the client, **S** is the server. Delivery: **R** is reliable
 | `0x16` | `READY` | C | R | 1 |
 | `0x17` | `SETTINGS` | C | R | 2 |
 | `0x18` | `HISTORY_REQUEST` | C | R | 0 |
+| `0x19` | `MAP_UPLOAD_BEGIN` | C | R | 4 |
+| `0x1A` | `MAP_UPLOAD_CHUNK` | C | R | 1 to 1100 |
+| `0x1B` | `MAP_UPLOAD_END` | C | R | 0 |
+| `0x1C` | `CUSTOM_RECORDS_GET` | C | R | 8 |
 | `0x20` | `SPAWN` | S | R | 22 |
 | `0x21` | `DESTROY` | S | R | 4 |
 | `0x22` | `STATES` | S | U | 5 + 12 × n |
@@ -119,6 +123,9 @@ Sender: **C** is the client, **S** is the server. Delivery: **R** is reliable
 | `0x28` | `BUY_RESULT` | S | R | 2 |
 | `0x29` | `LEADERBOARD` | S | R | 12 to 228 |
 | `0x2A` | `HISTORY` | S | R | 5 + 7 × n |
+| `0x2B` | `CUSTOM_INFO` | S | R | 10 + name + n |
+| `0x2C` | `MAP_UPLOAD_RESULT` | S | R | 2 + text |
+| `0x2D` | `CUSTOM_RECORDS` | S | R | 12 + 6 × n |
 
 ### `INPUT` (0x10)
 
@@ -183,6 +190,100 @@ match starts), and every client sees them in `STATUS`.
 Empty payload. Asks for the list of every victory since the start of the
 game (the leaderboard tab). The server answers with one or more
 [`HISTORY`](#history-0x2a) pages, to this client only.
+
+### Maps written by the players
+
+A player writes a map as a JSON file (see [custom maps](custom-maps.md)). The
+files stay on the client: the host sends the one it chooses, the server checks
+it and plays it. The server never reads a file of its own for this.
+
+```
+ host client                                   server
+ │ ── MAP_UPLOAD_BEGIN (size) ───────────────► │  size 1 to 262144, else refused
+ │ ── MAP_UPLOAD_CHUNK (≤ 1100 bytes) × n ───► │  appended in order
+ │ ── MAP_UPLOAD_END ────────────────────────► │  size must match, JSON is parsed
+ │ ◄── MAP_UPLOAD_RESULT (ok, text) ───────── │  and checked again
+ │ ◄── CUSTOM_INFO (to every client) ──────── │  if ok: the match starts
+```
+
+The messages are reliable and applied in order, so the pieces arrive in the
+order they were sent. The client sends at most 8 pieces per frame. A full upload is 239 pieces at
+most, so even with no Ack at all it stays under the 256 waiting messages that
+get a client kicked.
+
+The map has the id `3` (`CUSTOM_MAP`) in the `map` field of `STATUS`, which
+accepts the values 0 to 3. `SELECT_MAP` still only accepts 0 to 2. The host
+chooses the [`SETTINGS`](#settings-0x17) (difficulty, friendly fire) before
+sending the map, as for any other map; they are in `STATUS` and in the records.
+
+### `MAP_UPLOAD_BEGIN` (0x19)
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | size | `u32` | size in bytes of the JSON, 1 to 262144 |
+
+Starts an upload and drops the previous one. Ignored when the sender is not
+the host or when the game is not in the lobby. A wrong size is answered with a `MAP_UPLOAD_RESULT` that is not ok.
+
+### `MAP_UPLOAD_CHUNK` (0x1A)
+
+The payload is a piece of the JSON, 1 to 1100 bytes, with no other field. The
+upload is **dropped** when the sender is not the one that began it, when no
+upload is running, or when the pieces together would be bigger than the size
+announced. The server therefore never keeps more than 256 KiB for an upload.
+
+### `MAP_UPLOAD_END` (0x1B)
+
+No payload. The server checks that every byte arrived, parses the JSON, checks
+the map (types, ranges, totals, at least one boss) and starts it. It answers
+with `MAP_UPLOAD_RESULT`. Ignored when the sender is not the host.
+
+### `MAP_UPLOAD_RESULT` (0x2C)
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | ok | `u8` | 1 when the map starts, 0 otherwise |
+| 1 | size `n` | `u8` | length of the text, at most 200 |
+| 2 | text | `n` bytes | why the map was refused (empty when ok) |
+
+The text starts with the path of the faulty field, e.g.
+`map.levels[0].waves[2].kind: unknown "Tonk"`. A map is refused as a whole.
+It is also refused when a game is already running.
+
+### `CUSTOM_INFO` (0x2B)
+
+Sent to every client when a custom map starts, and to a client that connects
+while a custom map is played.
+
+| Field | Type | Meaning |
+|---|---|---|
+| name size `n` | `u8` | at most 40 |
+| name | `n` bytes | printable characters only |
+| hash | `u64` | FNV-1a of the JSON: identifies the map and its records |
+| levels `m` | `u8` | at most 100 |
+| zone (× m) | `u8` | scenery of each level, `0` to `6` (`Zone`) |
+
+### `CUSTOM_RECORDS_GET` (0x1C)
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | hash | `u64` | hash of the map, as in `CUSTOM_INFO` |
+
+Asks for the best times of a map. The server answers with `CUSTOM_RECORDS`
+(empty when the map was never won).
+
+### `CUSTOM_RECORDS` (0x2D)
+
+| Field | Type | Meaning |
+|---|---|---|
+| hash | `u64` | hash of the map |
+| records | 4 blocks | one block per difficulty, in the order of the enum, as in `LEADERBOARD`: count `n` (`u8`, at most 3), then per record the time (`u32`, milliseconds, fastest first), the players (`u8`, 1 to 4) and the settings (`u8`) |
+
+The best times of one map for each difficulty. A block only holds records of
+its own difficulty. Sent to a client that asks for them, and to everybody after
+the victory on a custom map. The server keeps the records of at most 500 maps,
+in `custom_leaderboard.txt`. Changing one byte of a map changes its hash, so a
+modified map starts with an empty leaderboard.
 
 ### `BUY` (0x15)
 
@@ -462,7 +563,7 @@ per message:
 
 - **Reliable** (`SPAWN`, `DESTROY`, `YOU`, `RESPAWN`, `SELECT_MAP`, `LEAVE_MATCH`, `PAUSE`, `LEADERBOARD`, `HISTORY`,
   `HISTORY_REQUEST`, `SETTINGS`, `AUGMENTS`, `SHOP`, `BUY`, `READY`,
-  `BUY_RESULT`): a spawn, a death or a purchase must
+  `BUY_RESULT`, and the messages of the custom maps): a spawn, a death or a purchase must
   not be missed, or the client would draw a wrong world. The sender resends
   until an Ack comes back, the receiver applies the messages in order.
 - **Unreliable** (`INPUT`, `STATES`, `STATUS`, `OWN_STATE`): they are repeated every tick
@@ -478,12 +579,17 @@ per message:
   from the address of the session.
 - Every game payload is decoded with a bounds-checked reader. The size must
   match exactly, a field out of range (`sprite`, `slot`, `alive`, keys bits,
-  a boss hp above its maximum, a map that does not exist) or a non-finite float makes the message be
+  a boss hp above its maximum, a map that does not exist, an unknown zone) or a non-finite float makes the message be
   ignored. A malformed message never reaches the game.
 - Bounds against memory abuse: 1200 bytes per datagram, 4096 datagrams queued
   by the socket, 64 early reliable messages kept, and a client with more than
   256 messages waiting for an Ack is kicked.
 - The server ignores any game message from an address that has no session.
+- A custom map comes from a client, so it is never trusted: only the host may
+  send one, the upload is capped at 256 KiB, one upload at a time, and the JSON
+  is parsed again with limits on its size, its nesting and its contents (see
+  [custom maps](custom-maps.md#limits)). A bad file is refused, it never
+  crashes the server.
 - A client can only choose the state of its five keys. It cannot move, hit or
   spawn anything by itself.
 

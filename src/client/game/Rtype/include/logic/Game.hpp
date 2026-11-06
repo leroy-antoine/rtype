@@ -228,13 +228,16 @@ namespace rtype {
             return std::nullopt;
         }
 
-        bool startMap(Segments segments, const MapId map)
+        // `zones` ne sert qu'aux maps de joueur (CUSTOM_MAP) : une par niveau.
+        bool startMap(Segments segments, const MapId map,
+            std::vector<Zone> zones = {})
         {
             if (_phase != Phase::Lobby) {
                 return false;
             }
             _segments = std::move(segments);
             _map = map;
+            _customZones = std::move(zones);
             reset();
             _phase = Phase::Playing;
             return true;
@@ -437,10 +440,18 @@ namespace rtype {
             bossHazardSystem(_reg, _hazards, _rng, bossIntensity(), dt);
         }
 
+        [[nodiscard]] Zone currentZone() const
+        {
+            if (_map == CUSTOM_MAP) {
+                return customZone(_customZones, level());
+            }
+            return zoneOf(_map, level());
+        }
+
         // La meteo de la zone : une meteorite de temps en temps.
         void storm(const float dt)
         {
-            const float every = stormInterval(zoneOf(_map, level()));
+            const float every = stormInterval(currentZone());
 
             if (every <= 0.f) {
                 return;
@@ -1034,6 +1045,7 @@ namespace rtype {
         float _storm = 2.f;
         int _alive = 0;
         MapId _map = 0;
+        std::vector<Zone> _customZones;
         float _phaseTimer = 0.f;
         float _elapsed = 0.f;
         float _scroll = 0.f;
