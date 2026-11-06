@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <deque>
 #include <optional>
+#include <utility>
 #include <unordered_map>
 #include <vector>
 #include "engine/core/Registry.hpp"
@@ -43,6 +44,11 @@ namespace client {
         [[nodiscard]] LobbyMenu &menu();
         [[nodiscard]] const LobbyMenu &menu() const;
         [[nodiscard]] bool isHost() const;
+        [[nodiscard]] float chargeTime() const;
+        [[nodiscard]] float altTime() const;
+        [[nodiscard]] bool laserEquipped() const;
+        [[nodiscard]] std::optional<std::pair<gameLogic::Vec2Pos,
+            gameLogic::Vec2Hitbox>> localShip();
         [[nodiscard]] bool onLeaderboard() const;
         [[nodiscard]] std::optional<rtype::SpriteId> bossSprite();
         [[nodiscard]] const Prediction &prediction() const;
@@ -69,6 +75,8 @@ namespace client {
         std::optional<Engine::Entity> localPlayer();
         void recordSpawnCue(const rtype::EntitySpawned &spawn);
         void refreshSolids();
+        void trackCharge(const rtype::PlayerInput &input, float dt);
+        [[nodiscard]] bool isPlaying() const;
 
         Engine::Registry _reg;
         std::unordered_map<std::uint32_t, Engine::Entity> _entities;
@@ -82,6 +90,9 @@ namespace client {
         std::vector<rtype::RunEntry> _history;
         rtype::RunsByMap _runs{};
         rtype::MapId _mapCursor = 0;
+        float _chargeTime = 0.f;
+        float _altTime = 0.f;
+        float _laserCooldown = 0.f;
         LobbyMenu _menu;
         rtype::protocol::OwnedAugment _augments{};
         std::vector<rtype::AugmentId> _shopOffers;

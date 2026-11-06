@@ -4,6 +4,12 @@ add_executable(rtype_tests
         AugmentTests.cpp
         MapTests.cpp
         ShopTests.cpp
+        ChargeTests.cpp
+        SecondaryTests.cpp
+        RocketTests.cpp
+        LaserTests.cpp
+        LightningTests.cpp
+        DroneTests.cpp
         SettingsTests.cpp
         DifficultyTests.cpp
         ProtocolTests.cpp)

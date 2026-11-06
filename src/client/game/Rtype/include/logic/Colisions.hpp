@@ -29,6 +29,22 @@ namespace rtype {
         return false;
     }
 
+    inline gameLogic::Vec2 centerOfBox(const Collider &box)
+    {
+        return {box.pos.x + box.box.x / 2.f, box.pos.y + box.box.y / 2.f};
+    }
+
+    // Ecart entre deux boites : 0 quand elles se touchent.
+    inline float gapBetween(const Collider &a, const Collider &b)
+    {
+        const float dx = std::max({0.f, a.pos.x - (b.pos.x + b.box.x),
+            b.pos.x - (a.pos.x + a.box.x)});
+        const float dy = std::max({0.f, a.pos.y - (b.pos.y + b.box.y),
+            b.pos.y - (a.pos.y + a.box.y)});
+
+        return std::hypot(dx, dy);
+    }
+
     inline bool overlaps(const Collider &a, const Collider &b)
     {
         const bool overlapX = a.pos.x < b.pos.x + b.box.x
@@ -106,6 +122,22 @@ namespace rtype {
         return false;
     }
 
+    // Une balle perforante touche chaque cible une seule fois en passant.
+    inline void pierceTargets(Engine::Registry &reg, const Collider &bullet,
+        const std::vector<Collider> &targets, const bool friendlyFire = false)
+    {
+        for (const Collider &target : targets) {
+            auto &hit = reg.get<Pierce>(bullet.entity).hit;
+
+            if (isAlive(reg, target.entity)
+                && canStrike(reg, bullet, target, friendlyFire)
+                && std::ranges::find(hit, target.entity) == hit.end()) {
+                hit.push_back(target.entity);
+                applyDamages(target.entity, bullet.entity, reg);
+            }
+        }
+    }
+
     inline void applyContact(Engine::Registry &reg, const Collider &player,
                              const Collider &monster)
     {
@@ -117,6 +149,21 @@ namespace rtype {
         if (!reg.has<BossTag>(monster.entity)) {
             applyDamages(monster.entity, player.entity, reg);
         }
+    }
+
+    // Les ennemis en vie qui sont deja entres sur la carte.
+    inline std::vector<Collider> livingEnemies(Engine::Registry &reg)
+    {
+        std::vector<Collider> enemies;
+
+        for (const Collider &target : collectTargets(reg)) {
+            if (target.team.id == TeamId::Monster
+                && isAlive(reg, target.entity)
+                && target.pos.x < config::MAP_WIDTH) {
+                enemies.push_back(target);
+            }
+        }
+        return enemies;
     }
 
     inline bool isFarOutOfBounds(const Collider &entity)

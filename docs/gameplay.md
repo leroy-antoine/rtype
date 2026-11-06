@@ -49,7 +49,8 @@ The level number is shown at the top centre of the screen.
 | Key | Action |
 |---|---|
 | Arrow keys | move the ship |
-| Space | fire (hold to keep firing) |
+| Space | tap: fire one shot; hold: charge a piercing shot, released when you let go of the key |
+| X | fire the secondary weapon bought in the shop (see [Weapons](#weapons)) |
 | Enter | come back after your ship is destroyed, if a teammate is still alive |
 | Backspace | host only: pause the match and show the pause menu; again to resume |
 | Enter (paused) | host only: leave the match and go back to the map menu |
@@ -155,6 +156,43 @@ the scenery takes its colour: a pulsing red glow for the Standard boss, fast
 cyan streaks for the Dasher, a violet tint for the Summoner, a heavy
 red vignette and a rumble for the Fortress. The Leviathan shakes for a quarter of a second every time it is hit. Nothing flashes.
 
+## Weapons
+
+### Charged shot
+
+The base weapon on **Space** fires one shot each time you tap the key (a tap
+is shorter than 0.3 s). The shot leaves when you release the key, at the pace
+of the weapon cooldown. If you keep the key pressed for more than 0.3 s, a
+gauge under your ship fills for up to 1.2 s. When you release it, a large
+bullet goes through every enemy on its way and hits each of them once: twice
+the damage at the start of the charge, six times the damage and four times
+the size when the gauge is full (it turns cyan). The charge is lost when your
+ship is destroyed, when the game is paused and when the shop opens.
+
+### Secondary weapons
+
+Three weapons are sold in the shop like augments. They go in a **secondary
+slot** and are fired with **X**. Only one is equipped at a time: buying
+another one replaces it, and the last one bought comes back when you respawn.
+
+| Weapon | How it works |
+|---|---|
+| **Rocket launcher** | hold X: a rocket every 1.2 s, slow (half the speed of a bullet), that explodes when it passes within 60 of an enemy, on a wall or at the right edge of the map. The explosion hurts every enemy within 120 and deals three times your damage; it never hurts the players |
+| **Laser ray** | hold X for 2 s while a gauge fills under your ship, release to fire a flash across the screen up to the first wall. It deals eight times your damage, once, to everything on its line (bosses too). Releasing too early cancels it for free. 6 s before the next one |
+| **Chain lightning** | hold X: a bolt every 0.8 s hits the first enemy on the screen in front of your ship (within 40 of the height of the nose, up to 600 away) for one and a half times your damage, then jumps to the enemies stuck to it (100 at most between two enemies, 4 jumps), 20 % weaker at each jump. You aim by moving the ship. Without a target nothing is fired |
+
+### Drone
+
+The drone is a small ship that flies ahead of your ship and above it and fires
+by itself at the closest enemy within 700 that is already on the screen, with half your damage. It cannot be
+hit. It disappears with your ship and comes back with it when you respawn.
+Three shop items, each one better and more expensive than the last, give it
+a level: **Drone** (level 1) gives you the drone, **Drone Boost** (level 2)
+makes it fire faster (0.45 s instead of 0.6 s) and **Drone Twin** (level 3)
+also makes it fire two bullets at a time. An item gives its level at once,
+whatever you bought before, and a cheaper one never lowers it. Like every
+augment, an item bought by one player is no longer sold to the team.
+
 ## Difficulty and settings
 
 Before the match, the host picks a difficulty and decides whether friendly
@@ -191,7 +229,7 @@ economy, the enemies and the number of lives; nothing else.
 ## Shop
 
 At the end of every level (the moment the next one begins) and after the last
-victory, the game **stops** and the shop opens: a few augments are on sale,
+victory, the game **stops** and the shop opens: a few augments (the buffs, the weapons and the drone) are on sale,
 more and more powerful as the levels go by, and better after a boss level.
 The shop offers more augments, and rarer ones, as the difficulty rises.
 Everybody can buy with the team coins (left/right to choose, Enter to buy).

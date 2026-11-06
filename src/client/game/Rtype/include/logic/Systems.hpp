@@ -54,7 +54,9 @@ namespace rtype {
         std::vector<Engine::Entity> spent;
 
         for (const Collider &bullet : collectProjectiles(reg)) {
-            if (hitFirstTarget(reg, bullet, targets, friendlyFire)) {
+            if (reg.has<Pierce>(bullet.entity)) {
+                pierceTargets(reg, bullet, targets, friendlyFire);
+            } else if (hitFirstTarget(reg, bullet, targets, friendlyFire)) {
                 spent.push_back(bullet.entity);
             }
         }
@@ -257,13 +259,13 @@ namespace rtype {
         }
     }
 
-    // Les joueurs tirent quand ils appuient sur la touche, les monstres des
-    // qu'ils sont entres sur la carte.
+    // Les monstres tirent des qu'ils sont entres sur la carte ; les joueurs
+    // tirent a la charge (voir Charge.hpp).
     inline bool wantsToShoot(const Engine::Registry &reg,
         const Engine::Entity e)
     {
         if (reg.has<PlayerInput>(e)) {
-            return reg.get<PlayerInput>(e).fire;
+            return false;
         }
         return reg.has<gameLogic::Vec2Pos>(e)
             && reg.get<gameLogic::Vec2Pos>(e).x < config::MAP_WIDTH;

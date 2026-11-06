@@ -104,6 +104,7 @@ namespace client {
             case Engine::Key::Right:
             case Engine::Key::D: _input.right = pressed; break;
             case Engine::Key::Space: _input.fire = pressed; break;
+            case Engine::Key::X: _input.alt = pressed; break;
             default: break;
         }
     }

@@ -1,6 +1,11 @@
 #pragma once
 
+#include <cstdint>
+
 namespace rtype {
+    // Les armes secondaires, tirees avec la touche X.
+    enum class WeaponKind : std::uint8_t { Rocket, Laser, Lightning, Count };
+
     enum class MonsterKind {
         Basic, Tank, Kamikaze, Elite, Rocket, Bomber, MiniTank, MiniElite,
         MiniBomber, Count

@@ -45,7 +45,7 @@ namespace rtype::protocol {
         std::uint8_t speedPercent = 100;
     };
 
-    constexpr std::uint8_t VERSION = 23;
+    constexpr std::uint8_t VERSION = 24;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
@@ -71,7 +71,8 @@ namespace rtype::protocol {
     constexpr std::uint8_t KEY_LEFT = 1 << 2;
     constexpr std::uint8_t KEY_RIGHT = 1 << 3;
     constexpr std::uint8_t KEY_FIRE = 1 << 4;
-    constexpr std::uint8_t KEYS_MASK = 0x1F;
+    constexpr std::uint8_t KEY_ALT = 1 << 5;
+    constexpr std::uint8_t KEYS_MASK = 0x3F;
 
     constexpr std::size_t INPUT_SIZE = 5;
     constexpr std::size_t OWN_STATE_SIZE = 14;
@@ -147,6 +148,8 @@ namespace rtype::protocol {
             keys |= KEY_RIGHT;
         if (input.fire)
             keys |= KEY_FIRE;
+        if (input.alt)
+            keys |= KEY_ALT;
         return keys;
     }
 
@@ -172,7 +175,8 @@ namespace rtype::protocol {
         }
         return InputMessage{*sequence, PlayerInput{hasKey(*keys, KEY_UP),
             hasKey(*keys, KEY_DOWN), hasKey(*keys, KEY_LEFT),
-            hasKey(*keys, KEY_RIGHT), hasKey(*keys, KEY_FIRE)}};
+            hasKey(*keys, KEY_RIGHT), hasKey(*keys, KEY_FIRE),
+            hasKey(*keys, KEY_ALT)}};
     }
 
     inline Payload encode(const OwnState &state)

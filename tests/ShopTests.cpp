@@ -401,6 +401,19 @@ TEST(a_new_match_closes_the_shop)
     CHECK(game.shopOffers().empty());
 }
 
+TEST(the_rockets_in_flight_are_cleared_when_a_level_shop_opens)
+{
+    Game game(1, twoLevels());
+
+    game.addPlayer();
+    runFor(game, 2.4f);
+    fireRocket(game.registry(), *findPlayerBySlot(game.registry(), 0));
+    CHECK(!collectWith<Missile>(game.registry()).empty());
+    runFor(game, 0.5f);
+    CHECK(game.phase() == Phase::Shop);
+    CHECK(collectWith<Missile>(game.registry()).empty());
+}
+
 TEST(the_brutal_shop_offers_one_more_augment)
 {
     Game game(1, twoLevels());

@@ -34,6 +34,7 @@ namespace rtype {
         reg.add(e, Health{config::PLAYER_HP});
         reg.add(e, MaxHealth{config::PLAYER_HP});
         reg.add(e, Weapon{config::PLAYER_FIRE_COOLDOWN});
+        reg.add(e, Charge{});
         reg.add(e, Damage{config::PLAYER_DAMAGE});
         reg.add(e, Team{TeamId::Player});
         reg.add(e, PlayerEffects{});

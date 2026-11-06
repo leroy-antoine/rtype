@@ -109,6 +109,10 @@ Headers only include the layers below them, which avoids circular includes.
 | `LevelBuilder.hpp` | `LevelDef` (one level, distances relative to its start), `wave()` and `shifted()`, the bricks used to write the levels of a map |
 | `MapList.hpp` | the number and the names of the maps (`MAP_COUNT`, `MAP_NAMES`), shared with the client |
 | `MapHelpers.hpp` | `addGates` and `addCave`, to write walls in a map |
+| `Charge.hpp` | the charged shot of the base weapon: `chargeSystem`, `createChargedBullet`, `resetCharges` |
+| `Secondary.hpp` | the secondary slot: `SecondaryWeapon`, `SECONDARY_DEFS`, `equipSecondary`, `secondarySystem` |
+| `Rocket.hpp`, `Laser.hpp`, `Lightning.hpp` | the three secondary weapons |
+| `Drone.hpp` | the drone: levels, following, shooting (`DroneLevel` tiers) |
 | `Leaderboard.hpp` | `Leaderboard`: the 3 best times of each map and each difficulty, and the whole history of victories (with difficulty and friendly fire), saved in a text file; `runsOf` sorts the runs of one map |
 | `Settings.hpp` | `Difficulty`, `Settings` (difficulty and friendly fire), the table `DIFFICULTY_SCALES` of multipliers and lives, `scaleOf`, `shiftedDifficulty` |
 | `Difficulty.hpp` | `ActiveSettings` (the settings held by one entity of the registry), `activeScale`, `scaledAmount`, `damageFactor`: what the systems read to apply the difficulty |
@@ -560,9 +564,9 @@ All in `Systems.hpp` (spawning is in `Monsters.hpp`, the boss in `Boss.hpp`).
 Shooting is split in small pieces so each rule can be read (and tested) alone:
 
 - `isReadyToShoot(e)`: the entity has a `Weapon` whose timer is at 0.
-- `wantsToShoot(e)`: players shoot when `PlayerInput::fire` is held;
-  anything without a `PlayerInput` (monsters and bosses) shoots whenever it is
-  ready, once it has entered the map. Their movement is in
+- `wantsToShoot(e)`: false for the players, who shoot through
+  `chargeSystem` (see below); anything without a `PlayerInput` (monsters and
+  bosses) shoots whenever it is ready, once it has entered the map. Their movement is in
   [Behaviours](#behaviours).
 - `shoot(e)`: creates the bullet with `createBullet` and sets
   `timer = cooldown`.
@@ -572,6 +576,43 @@ bullet, places it just in front of the shooter and gives it the velocity it
 receives (`shotVelocities` gives `BULLET_SPEED` to the right for the player
 team; for the others it uses the volley of their `ProjectileDef`, or a falling
 bomb).
+
+### Players: charge, secondary weapon, drone
+
+- `Charge.hpp`: `chargeSystem` counts how long `PlayerInput::fire` is held
+  (`Charge::time`). A hold shorter than `CHARGE_TAP_LIMIT` fires one normal
+  shot (`shoot`) when the key is released; a longer one fires, on release, a
+  `createChargedBullet`: the bullet grows by `chargeSize` (x2 to x4 over
+  `CHARGE_FULL_TIME`), multiplies its `Damage` by `chargeFactor` (x2 to x6) and
+  carries a `Pierce` component. `pierceTargets` (called by `collisionSystem`) damages
+  each overlapped target once and keeps the bullet alive. `resetCharges` is
+  called when the game is paused and when the shop opens. Rockets in flight
+  are destroyed with the other projectiles when a level ends.
+- `Secondary.hpp`: `SecondaryWeapon` is the weapon of the slot (kind,
+  cooldown, timer, charge). `SECONDARY_DEFS` gives for each `WeaponKind` its
+  cooldown, its charge time and its fire function; `secondarySystem` reads
+  `PlayerInput::alt`. A weapon with a charge time of 0 fires while X is held
+  (`updateInstant`); one with a charge time fires when X is released after the
+  full charge (`updateCharged`). A fire function returns `false` when there is
+  nothing to shoot, so no cooldown starts. `equipSecondary` replaces the
+  current weapon; the three weapons are augments (`Rocket`, `Laser`,
+  `Lightning`) whose effect is `equipSecondary`, so a respawn reapplies them
+  in the order bought.
+- `Rocket.hpp`: `fireRocket` creates a `Missile` (not a projectile, so the
+  normal collisions ignore it); `rocketSystem` detonates it when an enemy is
+  within `ROCKET_FUSE`, on a wall or at the edge of the map, damaging every
+  enemy within `radius`.
+- `Laser.hpp`: `fireLaser` creates a short-lived beam entity
+  (`SpriteId::PlayerLaser`, `Lifetime`) up to the first wall of its line and
+  hits once everything it overlaps.
+- `Lightning.hpp`: `laneTarget` picks the first enemy on the line of the nose,
+  `chain` jumps with `nextLink` (enemies stuck to the last one, never twice)
+  with a falling damage, and `createBolt` makes one segment entity per jump.
+- `Drone.hpp`: the three drone augments (`addDrone`, `boostDrone`,
+  `twinDrone`) give the player a `DroneLevel` of 1, 2 or 3 (`setDroneLevel`
+  keeps the highest); `droneSystem` creates one `DroneBody` entity per
+  equipped player, moves it to its perch with a delay, fires at the nearest
+  enemy (`nearestEnemy`) and destroys it when the owner is gone.
 
 ### Collisions
 

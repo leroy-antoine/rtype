@@ -17,8 +17,10 @@
 #include "Augments.hpp"
 #include "Boss.hpp"
 #include "BossHazards.hpp"
+#include "Charge.hpp"
 #include "Components.hpp"
 #include "Config.hpp"
+#include "Drone.hpp"
 #include "Difficulty.hpp"
 #include "Escort.hpp"
 #include "Events.hpp"
@@ -32,6 +34,8 @@
 #include "Monsters.hpp"
 #include "Queries.hpp"
 #include "Replication.hpp"
+#include "Rocket.hpp"
+#include "Secondary.hpp"
 #include "Scaling.hpp"
 #include "Settings.hpp"
 #include "Shop.hpp"
@@ -298,6 +302,7 @@ namespace rtype {
         void setPaused(const bool paused)
         {
             _paused = paused && _phase == Phase::Playing;
+            resetCharges(_reg);
         }
 
         [[nodiscard]] bool paused() const
@@ -403,10 +408,14 @@ namespace rtype {
             laserSystem(_reg, dt);
             strikeSystem(_reg, dt);
             bossSystem(_reg, dt);
+            chargeSystem(_reg, dt);
+            secondarySystem(_reg, dt);
             scaleNewEnemies(_reg);
             shootingSystem(_reg);
             movementSystem(_reg, dt);
+            droneSystem(_reg, dt);
             collisionSystem(_reg);
+            rocketSystem(_reg);
             contactSystem(_reg);
             obstacleSystem(_reg);
             coinPickupSystem(_reg);
@@ -639,6 +648,7 @@ namespace rtype {
             if (!last) {
                 clearField();
             }
+            resetCharges(_reg);
             reviveEveryone();
             restockShop(ShopTier{static_cast<int>(finished)
                 + activeScale(_reg).shopLevelBonus,
@@ -650,6 +660,7 @@ namespace rtype {
             _pending.clear();
             destroyAll(collectMonsters(_reg));
             destroyAll(collectProjectileEntities(_reg));
+            destroyAll(collectWith<Missile>(_reg));
             destroyAll(collectObstacles(_reg));
         }
 
@@ -931,6 +942,7 @@ namespace rtype {
             _pending.clear();
             destroyAll(collectMonsters(_reg));
             destroyAll(collectProjectileEntities(_reg));
+            destroyAll(collectWith<Missile>(_reg));
             destroyAll(collectObstacles(_reg));
         }
 
