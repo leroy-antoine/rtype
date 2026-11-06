@@ -1,6 +1,7 @@
 #include <algorithm>
 #include "client/AugmentStyle.hpp"
 #include "client/ShopPanel.hpp"
+#include "utils/Wrap.hpp"
 
 namespace client {
     namespace {
@@ -8,6 +9,7 @@ namespace client {
 
         constexpr Color WHITE{255, 255, 255, 255};
         constexpr Color GREY{110, 110, 120, 255};
+        constexpr Color GREY_TEXT{190, 190, 205, 255};
         constexpr Color GREEN{90, 220, 90, 255};
         constexpr Color RED{235, 70, 60, 255};
         constexpr Color YELLOW{255, 220, 40, 255};
@@ -70,7 +72,7 @@ namespace client {
     {
         _pending.reset();
         if (result.ok) {
-            showMessage("BOUGHT: " + augmentLabel(result.id), GREEN, elapsed);
+            showMessage("BOUGHT: " + augmentName(result.id), GREEN, elapsed);
         } else {
             showMessage("PURCHASE REFUSED", RED, elapsed);
         }
@@ -150,10 +152,40 @@ namespace client {
         _renderer.drawRect({position.x - BORDER, position.y - BORDER},
             {CARD_WIDTH + 2.f * BORDER, CARD_HEIGHT + 2.f * BORDER}, border);
         _renderer.drawRect(position, {CARD_WIDTH, CARD_HEIGHT}, canBuy ? CARD : CARD_LOCKED);
-        _font.drawCentered(augmentLabel(id), centerX, position.y + 30.f, 5.f, text);
-        _font.drawCentered(rarityName(def->rarity), centerX, position.y + 100.f, 2.f,
-            canBuy ? rarityColor(def->rarity) : GREY);
-        drawPrice(def->price, centerX, position.y + 150.f, canBuy ? YELLOW : RED, elapsed);
+        _font.drawCentered(augmentLabel(id), centerX, position.y + 10.f, 5.f,
+            text);
+        drawAugmentText(id, centerX, position.y + 52.f, text);
+        _font.drawCentered(rarityName(def->rarity), centerX, position.y + 158.f,
+            2.f, canBuy ? rarityColor(def->rarity) : GREY);
+        drawPrice(def->price, centerX, position.y + 184.f,
+            canBuy ? YELLOW : RED, elapsed);
+    }
+
+    // The full name, then what the augment does, cut to fit the card.
+    void ShopPanel::drawAugmentText(const rtype::AugmentId id,
+        const float centerX, const float top, const Color color)
+    {
+        const std::vector<std::string> lines = utils::wrap(augmentInfo(id),
+            infoColumns());
+
+        _font.drawCentered(augmentName(id), centerX, top, 2.f, color);
+        for (std::size_t i = 0; i < lines.size(); ++i) {
+            _font.drawCentered(lines[i], centerX,
+                top + 22.f + INFO_STEP * static_cast<float>(i), INFO_SCALE,
+                GREY_TEXT);
+        }
+    }
+
+    // How many letters of the small text fit in the width of a card.
+    std::size_t ShopPanel::infoColumns()
+    {
+        const float room = CARD_WIDTH - 2.f * CARD_PADDING;
+        std::size_t columns = 1;
+
+        while (Font::width(std::string(columns + 1, 'M'), INFO_SCALE) <= room) {
+            ++columns;
+        }
+        return columns;
     }
 
     void ShopPanel::drawPrice(const std::size_t price, const float centerX, const float top,

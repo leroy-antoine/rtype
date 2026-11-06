@@ -979,12 +979,16 @@ namespace rtype {
             _hazards = HazardClock{};
             _storm = 2.f;
             _deaths = 0;
+            _reg.get<CoinCounter>(_coinCounter).total = 0;
             _phase = restingPhase();
             _phaseTimer = 0.f;
             _elapsed = 0.f;
             _ready.clear();
             _countdown.reset();
             _shopOffers.clear();
+            _purchased.clear();
+            _augments.clear();
+            _shopLast = false;
             _lives.refill(activeScale(_reg).lives);
             for (int slot = 0; slot < SLOTS; ++slot) {
                 if (isUsedSlot(slot)) {

@@ -239,6 +239,9 @@ victory, the game **stops** and the shop opens: a few augments (the buffs, the w
 more and more powerful as the levels go by, and better after a boss level.
 The shop offers more augments, and rarer ones, as the difficulty rises.
 Everybody can buy with the team coins (left/right to choose, Enter to buy).
+Each card shows the three letters of the augment, its full name, a short text
+that says what it does (with the real numbers, for example `+5 DAMAGE ON EVERY
+SHOT`), its rarity and its price.
 Press **Space** to say you are ready: when every player is ready a five second
 countdown starts, then the next level begins (after the last victory the game
 goes back to the lobby). The clock does not run while the shop is open.
@@ -247,7 +250,12 @@ goes back to the lobby). The clock does not run while the shop is open.
 
 - Each monster that you destroy drops a coin. The coins are collected by
   touching them and go to a **purse shared by the team**, shown at the top
-  right.
+  right. It is kept from one level to the next.
+- **Every new game starts from scratch**: after a defeat, after a victory, and
+  when another map is chosen, the purse is back to **0**, the augments you
+  bought are gone (and can be sold again), and the lives, health, timer and
+  deaths start again. The settings (difficulty, friendly fire) stay the ones
+  the host chose.
 - The **timer** at the top left is the real time of the match. It stops when
   the match ends.
 - Every monster you destroy also **speeds the level up**: the waves and the
