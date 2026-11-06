@@ -192,7 +192,13 @@ These come from the engine (`engine/core`, not part of the game logic):
 - **Friendly fire**: bullets carry a `Shooter` component; with the option on,
   `collisionSystem` lets a player bullet hit another player, never its owner.
 - **Coins**: a monster that dies drops a coin; touching it adds to the purse
-  shared by the players (`CoinCounter`, reset with each match).
+  shared by the players (`CoinCounter`, reset with each game).
+- **New game**: `reset()` runs when a map starts, when the game goes back to
+  the lobby, after a defeat and after the last shop. It clears the world and
+  everything a player earned in the previous game: the purse, the augments
+  (`_augments`), the list of the augments already bought (`_purchased`), the
+  lives, the timer, the deaths and the level skip. Between two levels of the
+  same game, the purse and the augments are kept.
 
 ## Kinds of monsters and bosses
 

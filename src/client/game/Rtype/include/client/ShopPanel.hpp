@@ -35,6 +35,9 @@ namespace client {
         static constexpr float COIN_SIZE = 28.f;
         static constexpr float COIN_GAP = 8.f;
         static constexpr float MESSAGE_DURATION = 2.f;
+        static constexpr float CARD_PADDING = 8.f;
+        static constexpr float INFO_SCALE = 2.f;
+        static constexpr float INFO_STEP = 18.f;
 
         [[nodiscard]] static std::string hint(const Replica &replica);
         [[nodiscard]] static bool affordable(const Replica &replica, rtype::AugmentId id);
@@ -43,6 +46,9 @@ namespace client {
         void showMessage(const std::string &text, Engine::Color color, float elapsed);
         void drawCard(const Replica &replica, rtype::AugmentId id, Engine::Vector2f position,
             bool selected, float elapsed);
+        void drawAugmentText(rtype::AugmentId id, float centerX, float top,
+            Engine::Color color);
+        [[nodiscard]] static std::size_t infoColumns();
         void drawPrice(std::size_t price, float centerX, float top, Engine::Color color, float elapsed);
         void drawMessage(float elapsed);
 

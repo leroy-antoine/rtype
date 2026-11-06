@@ -212,16 +212,42 @@ TEST(only_offered_augments_can_be_bought)
     CHECK(game.coins() == 1000);
 }
 
-TEST(coins_are_kept_after_a_defeat)
+TEST(the_purse_starts_again_at_zero_after_a_defeat)
+{
+    Game game(1);
+
+    game.setSettings(Settings{Difficulty::Brutal, false});
+    game.addPlayer();
+    addToPurse(game.registry(), 100);
+    game.registry().get<Health>(*findPlayerBySlot(game.registry(), 0)).hp = 0;
+    runFor(game, 0.5f);
+    CHECK(game.phase() == Phase::Defeat);
+    CHECK(game.coins() == 100);
+    runFor(game, config::RESTART_DELAY + 1.f);
+    CHECK(game.phase() == Phase::Playing);
+    CHECK(game.coins() == 0);
+}
+
+TEST(the_purse_starts_again_at_zero_when_a_map_starts)
+{
+    Game game(1);
+
+    game.addPlayer();
+    game.openLobby();
+    addToPurse(game.registry(), 100);
+    CHECK(game.coins() == 100);
+    CHECK(game.startMap(Segments{firstLevel()}, 0));
+    CHECK(game.coins() == 0);
+}
+
+TEST(the_purse_is_emptied_when_the_game_goes_back_to_the_lobby)
 {
     Game game(1);
 
     game.addPlayer();
     addToPurse(game.registry(), 100);
-    game.registry().get<Health>(*findPlayerBySlot(game.registry(), 0)).hp = 0;
-    runFor(game, config::RESTART_DELAY + 1.f);
-    CHECK(game.phase() == Phase::Playing);
-    CHECK(game.coins() == 100);
+    game.openLobby();
+    CHECK(game.coins() == 0);
 }
 
 TEST(a_purchase_is_refused_outside_the_shop)
@@ -285,22 +311,6 @@ TEST(the_countdown_is_cancelled_when_a_player_is_not_ready)
     CHECK(game.phase() == Phase::Shop);
 }
 
-TEST(the_next_level_starts_when_the_countdown_ends)
-{
-    Game game = shopWithCoins(1000);
-    const AugmentId bought = game.shopOffers().front();
-
-    game.buyAugment(0, bought);
-    game.setReady(0, true);
-    runFor(game, config::SHOP_COUNTDOWN + 0.1f);
-    CHECK(game.phase() == Phase::Playing);
-    CHECK(game.isPlayerAlive(0));
-    CHECK(game.coins() == 1000 - priceOf(bought));
-    CHECK(game.ownedAugments(0) == std::vector<AugmentId>{bought});
-    CHECK(!game.status().players[0].ready);
-    CHECK(game.shopOffers().empty());
-}
-
 TEST(a_player_who_joins_the_shop_is_not_ready)
 {
     Game game = shopWithCoins(0);
@@ -345,6 +355,38 @@ namespace {
         runFor(game, 5.f);
         return game;
     }
+}
+
+TEST(the_next_level_starts_when_the_countdown_ends)
+{
+    Game game(1, twoLevels());
+
+    game.addPlayer();
+    runFor(game, 3.f);
+    addToPurse(game.registry(), 1000);
+    const AugmentId bought = game.shopOffers().front();
+
+    CHECK(game.phase() == Phase::Shop);
+    game.buyAugment(0, bought);
+    game.setReady(0, true);
+    runFor(game, config::SHOP_COUNTDOWN + 0.1f);
+    CHECK(game.phase() == Phase::Playing);
+    CHECK(game.isPlayerAlive(0));
+    CHECK(game.coins() == 1000 - priceOf(bought));
+    CHECK(game.ownedAugments(0) == std::vector<AugmentId>{bought});
+    CHECK(!game.status().players[0].ready);
+    CHECK(game.shopOffers().empty());
+}
+
+TEST(the_purse_is_emptied_after_the_last_shop)
+{
+    Game game = shopWithCoins(1000);
+
+    CHECK(game.coins() == 1000);
+    game.setReady(0, true);
+    runFor(game, config::SHOP_COUNTDOWN + 0.1f);
+    CHECK(game.phase() == Phase::Playing);
+    CHECK(game.coins() == 0);
 }
 
 TEST(the_shop_opens_at_the_end_of_each_level_and_freezes_the_game)
@@ -441,4 +483,75 @@ TEST(an_eliminated_player_comes_back_with_one_life_at_the_shop)
     CHECK(game.phase() == Phase::Shop);
     CHECK(game.isPlayerAlive(0));
     CHECK(game.livesOf(0) == 1);
+}
+
+TEST(the_augments_are_lost_when_the_game_goes_back_to_the_lobby)
+{
+    Game game = shopWithCoins(1000);
+    const AugmentId bought = game.shopOffers().front();
+
+    game.buyAugment(0, bought);
+    CHECK(game.ownedAugments(0) == std::vector<AugmentId>{bought});
+    game.openLobby();
+    CHECK(game.ownedAugments(0).empty());
+    CHECK(game.shopOffers().empty());
+}
+
+TEST(a_new_map_starts_without_the_augments_of_the_last_one)
+{
+    Game game(1);
+
+    game.addPlayer();
+    game.addAugment(0, AugmentId::MaxHpUp);
+    game.openLobby();
+    game.addAugment(0, AugmentId::DamageUp);
+    CHECK(game.startMap(Segments{firstLevel()}, 0));
+    CHECK(game.ownedAugments(0).empty());
+    CHECK(game.registry().get<MaxHealth>(
+        *findPlayerBySlot(game.registry(), 0)).hp == config::PLAYER_HP);
+    CHECK(game.registry().get<Damage>(
+        *findPlayerBySlot(game.registry(), 0)).value == config::PLAYER_DAMAGE);
+}
+
+TEST(the_augments_are_lost_after_a_defeat)
+{
+    Game game(1);
+
+    game.setSettings(Settings{Difficulty::Brutal, false});
+    game.addPlayer();
+    game.addAugment(0, AugmentId::DamageUp);
+    game.registry().get<Health>(*findPlayerBySlot(game.registry(), 0)).hp = 0;
+    runFor(game, 0.5f);
+    CHECK(game.phase() == Phase::Defeat);
+    runFor(game, config::RESTART_DELAY + 1.f);
+    CHECK(game.phase() == Phase::Playing);
+    CHECK(game.ownedAugments(0).empty());
+    CHECK(game.registry().get<Damage>(
+        *findPlayerBySlot(game.registry(), 0)).value == config::PLAYER_DAMAGE);
+}
+
+TEST(the_augments_are_lost_after_the_last_shop)
+{
+    Game game = shopWithCoins(1000);
+
+    game.buyAugment(0, game.shopOffers().front());
+    game.setReady(0, true);
+    runFor(game, config::SHOP_COUNTDOWN + 0.1f);
+    CHECK(game.phase() == Phase::Playing);
+    CHECK(game.ownedAugments(0).empty());
+}
+
+TEST(an_augment_bought_in_the_last_game_can_be_offered_again)
+{
+    Game game = shopWithCoins(1000);
+    const AugmentId bought = game.shopOffers().front();
+    bool offeredAgain = false;
+
+    game.buyAugment(0, bought);
+    game.openLobby();
+    for (int i = 0; i < 300 && !offeredAgain; ++i) {
+        game.restockShop(ShopTier{});
+        offeredAgain = isExcluded(bought, game.shopOffers());
+    }
+    CHECK(offeredAgain);
 }
