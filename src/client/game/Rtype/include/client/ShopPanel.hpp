@@ -36,6 +36,7 @@ namespace client {
         static constexpr float COIN_GAP = 8.f;
         static constexpr float MESSAGE_DURATION = 2.f;
 
+        [[nodiscard]] static std::string hint(const Replica &replica);
         [[nodiscard]] static bool affordable(const Replica &replica, rtype::AugmentId id);
         [[nodiscard]] std::size_t selection(std::size_t count) const;
         std::optional<rtype::AugmentId> confirm(const Replica &replica, float elapsed);

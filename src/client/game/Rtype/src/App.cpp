@@ -79,20 +79,74 @@ namespace client {
     void App::sendControls(const float dt, ShopPanel &shop)
     {
         sendReady();
-        if (ShopPanel::isOpen(_replica)) {
-            const rtype::PlayerInput idle{};
+        rtype::PlayerInput input = _controls.input();
 
-            if (const std::optional<rtype::AugmentId> id = shop.handle(_controls.pressedKeys(), _replica, elapsed())) {
-                _network.buy(*id);
-            }
-            _network.sendInput(_replica.predict(idle, dt), idle);
+        if (ShopPanel::isOpen(_replica)) {
+            useShop(shop);
+            input = {};
+        } else if (inLobby()) {
+            useMenu();
+        } else if (isPaused()) {
+            usePause();
+            input = {};
         } else {
-            if (_controls.respawnRequested()) {
-                _network.requestRespawn();
-            }
-            _network.sendInput(_replica.predict(_controls.input(), dt), _controls.input());
+            useMatch();
         }
+        _network.sendInput(_replica.predict(input, dt), input);
         _network.flush();
+    }
+
+    void App::useShop(ShopPanel &shop)
+    {
+        const std::vector<Engine::Key> &keys = _controls.pressedKeys();
+
+        if (const std::optional<rtype::AugmentId> id =
+            shop.handle(keys, _replica, elapsed())) {
+            _network.buy(*id);
+        }
+    }
+
+    bool App::isPaused() const
+    {
+        const auto &status = _replica.status();
+
+        return status && status->paused;
+    }
+
+    void App::useMatch()
+    {
+        if (_controls.pauseRequested() && _replica.isHost()) {
+            _network.setPause(true);
+        } else if (_controls.respawnRequested()) {
+            _network.requestRespawn();
+        }
+    }
+
+    void App::usePause()
+    {
+        if (!_replica.isHost()) {
+            return;
+        }
+        if (_controls.pauseRequested()) {
+            _network.setPause(false);
+        } else if (_controls.respawnRequested()) {
+            _network.leaveMatch();
+        }
+    }
+
+    bool App::inLobby() const
+    {
+        const auto &status = _replica.status();
+
+        return status && status->phase == rtype::Phase::Lobby;
+    }
+
+    void App::useMenu()
+    {
+        _replica.moveMapCursor(_controls.menuMove());
+        if (_controls.respawnRequested() && _replica.isHost()) {
+            _network.selectMap(_replica.mapCursor());
+        }
     }
 
     void App::sendReady()

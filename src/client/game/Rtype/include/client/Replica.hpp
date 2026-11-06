@@ -23,6 +23,8 @@ namespace client {
         void apply(const rtype::protocol::StatesSnapshot &snapshot);
         void apply(const rtype::protocol::OwnState &state);
         void apply(const rtype::GameStatus &status);
+        void apply(const rtype::AllRecords &records);
+        void moveMapCursor(int delta);
         void apply(const rtype::protocol::OwnedAugment &augments);
         void apply(const std::vector<rtype::AugmentId> &shopOffers);
         void apply(const rtype::protocol::BuyResult &result);
@@ -33,6 +35,11 @@ namespace client {
         Engine::Registry &registry();
         [[nodiscard]] const std::optional<rtype::GameStatus> &status() const;
         [[nodiscard]] std::optional<int> slot() const;
+        [[nodiscard]] const rtype::AllRecords &records() const;
+        [[nodiscard]] rtype::MapId mapCursor() const;
+        [[nodiscard]] bool isHost() const;
+        [[nodiscard]] std::optional<rtype::SpriteId> bossSprite();
+        [[nodiscard]] const Prediction &prediction() const;
         [[nodiscard]] const rtype::protocol::OwnedAugment &augments() const;
         [[nodiscard]] const std::vector<rtype::AugmentId> &shopOffers() const;
         std::vector<Cue> takeCues();
@@ -55,6 +62,7 @@ namespace client {
         void applyPrediction();
         std::optional<Engine::Entity> localPlayer();
         void recordSpawnCue(const rtype::EntitySpawned &spawn);
+        void refreshSolids();
 
         Engine::Registry _reg;
         std::unordered_map<std::uint32_t, Engine::Entity> _entities;
@@ -64,6 +72,8 @@ namespace client {
         Prediction _prediction;
         std::optional<rtype::GameStatus> _status;
         std::optional<int> _slot;
+        rtype::AllRecords _records{};
+        rtype::MapId _mapCursor = 0;
         rtype::protocol::OwnedAugment _augments{};
         std::vector<rtype::AugmentId> _shopOffers;
         std::optional<rtype::protocol::BuyResult> _buyResult;

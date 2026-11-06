@@ -13,6 +13,7 @@ namespace Engine {
         Space,
         Enter,
         Escape,
+        Backspace,
         Tab,
         A,
         Z,

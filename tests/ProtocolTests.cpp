@@ -15,6 +15,8 @@ namespace {
         status.bossHp = 640;
         status.bossMaxHp = 1000;
         status.coins = 42;
+        status.elapsedMs = 83456;
+        status.level = 7;
         status.players.push_back({0, 100, true});
         status.players.push_back({3, 0, false});
         return status;
@@ -32,6 +34,8 @@ TEST(a_status_survives_an_encode_decode_round_trip)
     CHECK(decoded->bossHp == 640);
     CHECK(decoded->bossMaxHp == 1000);
     CHECK(decoded->coins == 42);
+    CHECK(decoded->elapsedMs == 83456);
+    CHECK(decoded->level == 7);
     CHECK(decoded->players.size() == 2);
     CHECK(decoded->players[0].slot == 0);
     CHECK(decoded->players[0].hp == 100);
@@ -68,7 +72,10 @@ TEST(a_status_with_invalid_fields_is_rejected)
     payload[0] = 9;
     CHECK(!protocol::decodeStatus(payload).has_value());
     payload = protocol::encode(sampleStatus());
-    payload[9] = 5;
+    payload[14] = 5;
+    CHECK(!protocol::decodeStatus(payload).has_value());
+    payload = protocol::encode(sampleStatus());
+    payload[17] = 5;
     CHECK(!protocol::decodeStatus(payload).has_value());
     payload = protocol::encode(sampleStatus());
     payload[protocol::STATUS_HEADER_SIZE] = 7;
@@ -257,6 +264,130 @@ TEST(a_malformed_buy_result_is_rejected)
     CHECK(!protocol::decodeBuyResult({0, 1, 0}).has_value());
     CHECK(!protocol::decodeBuyResult({0, 2}).has_value());
     CHECK(!protocol::decodeBuyResult({bad, 1}).has_value());
+}
+
+TEST(the_lobby_phase_and_the_map_survive_a_status_round_trip)
+{
+    GameStatus status = sampleStatus();
+
+    status.phase = Phase::Lobby;
+    status.map = 2;
+    const std::optional<GameStatus> decoded =
+        protocol::decodeStatus(protocol::encode(status));
+
+    CHECK(decoded.has_value());
+    CHECK(decoded->phase == Phase::Lobby);
+    CHECK(decoded->map == 2);
+}
+
+TEST(a_status_with_an_unknown_map_is_rejected)
+{
+    GameStatus status = sampleStatus();
+
+    status.map = static_cast<std::uint8_t>(MAP_COUNT);
+    CHECK(!protocol::decodeStatus(protocol::encode(status)).has_value());
+}
+
+TEST(a_map_selection_is_validated)
+{
+    CHECK(protocol::decodeSelectMap(protocol::encodeSelectMap(1)) == 1);
+    CHECK(!protocol::decodeSelectMap({static_cast<std::uint8_t>(MAP_COUNT)})
+        .has_value());
+    CHECK(!protocol::decodeSelectMap({}).has_value());
+    CHECK(!protocol::decodeSelectMap({0, 0}).has_value());
+}
+
+TEST(the_leaderboard_survives_a_round_trip)
+{
+    Leaderboard board;
+
+    board.add(0, {61000, 2});
+    board.add(0, {59000, 1});
+    board.add(2, {12000, 4});
+    const std::optional<AllRecords> decoded =
+        protocol::decodeLeaderboard(protocol::encode(board.all()));
+
+    CHECK(decoded.has_value());
+    CHECK((*decoded)[0].size() == 2);
+    CHECK((*decoded)[0][0].timeMs == 59000);
+    CHECK((*decoded)[1].empty());
+    CHECK((*decoded)[2][0].players == 4);
+}
+
+TEST(a_bad_leaderboard_is_rejected)
+{
+    Leaderboard board;
+    protocol::Payload payload = protocol::encode(board.all());
+
+    payload.push_back(0);
+    CHECK(!protocol::decodeLeaderboard(payload).has_value());
+    CHECK(!protocol::decodeLeaderboard({}).has_value());
+    CHECK(!protocol::decodeLeaderboard({9, 0, 0}).has_value());
+    board.add(0, {1000, 1});
+    payload = protocol::encode(board.all());
+    payload[5] = 0;
+    CHECK(!protocol::decodeLeaderboard(payload).has_value());
+}
+
+TEST(the_effects_of_the_portals_survive_an_own_state_round_trip)
+{
+    protocol::OwnState state;
+
+    state.lastInput = 9;
+    state.pos = gameLogic::Vec2Pos{{10.f, 20.f}};
+    state.inverted = true;
+    state.speedPercent = 150;
+    const std::optional<protocol::OwnState> decoded =
+        protocol::decodeOwnState(protocol::encode(state));
+
+    CHECK(decoded.has_value());
+    CHECK(decoded->lastInput == 9);
+    CHECK(decoded->inverted);
+    CHECK(decoded->speedPercent == 150);
+}
+
+TEST(an_own_state_with_bad_effects_is_rejected)
+{
+    protocol::Payload payload = protocol::encode(protocol::OwnState{});
+
+    CHECK(payload.size() == protocol::OWN_STATE_SIZE);
+    payload[12] = 2;
+    CHECK(!protocol::decodeOwnState(payload).has_value());
+    payload[12] = 0;
+    payload[13] = 0;
+    CHECK(!protocol::decodeOwnState(payload).has_value());
+    payload.pop_back();
+    CHECK(!protocol::decodeOwnState(payload).has_value());
+}
+
+TEST(a_paused_status_survives_a_round_trip)
+{
+    GameStatus status;
+
+    status.phase = Phase::Playing;
+    status.paused = true;
+    const auto decoded = protocol::decodeStatus(protocol::encode(status));
+    CHECK(decoded.has_value());
+    CHECK(decoded->paused);
+    CHECK(decoded->phase == Phase::Playing);
+}
+
+TEST(a_pause_message_survives_a_round_trip)
+{
+    CHECK(protocol::decodePause(protocol::encodePause(true)) == true);
+    CHECK(protocol::decodePause(protocol::encodePause(false)) == false);
+    CHECK(!protocol::decodePause({2}).has_value());
+    CHECK(!protocol::decodePause({}).has_value());
+}
+
+TEST(the_deaths_survive_a_status_round_trip)
+{
+    GameStatus status;
+
+    status.deaths = 300;
+    const auto decoded = protocol::decodeStatus(protocol::encode(status));
+    CHECK(decoded.has_value());
+    CHECK(decoded->deaths == 300);
 }
 
 TEST(ready_flags_and_countdown_survive_a_status_round_trip)

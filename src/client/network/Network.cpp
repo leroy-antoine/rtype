@@ -55,6 +55,32 @@ namespace client {
         }
     }
 
+    void Network::selectMap(const rtype::MapId map)
+    {
+        if (_client.connected()) {
+            _client.send(rtype::protocol::SELECT_MAP,
+                rtype::protocol::encodeSelectMap(map),
+                Engine::Delivery::Reliable);
+        }
+    }
+
+    void Network::leaveMatch()
+    {
+        if (_client.connected()) {
+            _client.send(rtype::protocol::LEAVE_MATCH, {},
+                Engine::Delivery::Reliable);
+        }
+    }
+
+    void Network::setPause(const bool paused)
+    {
+        if (_client.connected()) {
+            _client.send(rtype::protocol::PAUSE,
+                rtype::protocol::encodePause(paused),
+                Engine::Delivery::Reliable);
+        }
+    }
+
     void Network::requestReady(const bool ready)
     {
         if (_client.connected()) {
@@ -105,6 +131,7 @@ namespace client {
             case rtype::protocol::STATES: applyDecoded(replica, rtype::protocol::decodeStates(event.payload)); break;
             case rtype::protocol::STATUS: applyDecoded(replica, rtype::protocol::decodeStatus(event.payload)); break;
             case rtype::protocol::OWN_STATE: applyDecoded(replica, rtype::protocol::decodeOwnState(event.payload)); break;
+            case rtype::protocol::LEADERBOARD: applyDecoded(replica, rtype::protocol::decodeLeaderboard(event.payload)); break;
             case rtype::protocol::AUGMENTS: applyDecoded(replica, rtype::protocol::decodeAugments(event.payload)); break;
             case rtype::protocol::SHOP: applyDecoded(replica, rtype::protocol::decodeShop(event.payload)); break;
             case rtype::protocol::BUY_RESULT: applyDecoded(replica, rtype::protocol::decodeBuyResult(event.payload)); break;

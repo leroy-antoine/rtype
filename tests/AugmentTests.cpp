@@ -140,7 +140,8 @@ TEST(multi_shot_stacks_extra_bullets)
 
 TEST(the_boss_fan_is_unchanged)
 {
-    const std::vector<gameLogic::Vec2> shots = bossFan();
+    const std::vector<gameLogic::Vec2> shots =
+        volley(bossDef(BossKind::Standard).projectile);
 
     CHECK(shots.size() == config::BOSS_FAN_BULLETS);
     CHECK(shots[config::BOSS_FAN_BULLETS / 2].x

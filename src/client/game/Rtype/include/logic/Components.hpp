@@ -1,6 +1,8 @@
 #pragma once
 #include <cstdint>
+#include "engine/core/Entity.hpp"
 #include "Config.hpp"
+#include "Kinds.hpp"
 
 namespace rtype {
     struct PlayerInput {
@@ -52,12 +54,85 @@ namespace rtype {
     };
 
     // Le boss : il entre, s'arrete, puis fait des va-et-vient.
+    struct ObstacleTag {
+        ObstacleKind kind = ObstacleKind::Rock;
+    };
+
+    // Un emetteur laser cree et detruit son faisceau au rythme de la musique.
+    struct LaserCycle {
+        float age = 0.f;
+        bool hasBeam = false;
+        Engine::Entity beam{};
+    };
+
+    // Une frappe annoncee : zone rouge inoffensive, puis rayon mortel.
+    struct StrikeSpec {
+        float x = 0.f;
+        float y = 0.f;
+        float width = 0.f;
+        float height = 0.f;
+        float warn = 1.f;
+        float active = 0.f;
+        float vy = 0.f;
+    };
+
+    struct Strike {
+        float time = 0.f;
+        StrikeSpec spec;
+        bool deadly = false;
+    };
+
+    enum class LeviathanMove { Rest, Columns, Sweep, Aim, Windup, Dash, Return };
+
+    struct LeviathanState {
+        LeviathanMove move = LeviathanMove::Rest;
+        float timer = 1.5f;
+        float swing = 0.f;
+        int step = 0;
+    };
+
+    // Une tourelle tire sur le joueur le plus proche toutes les interval s.
+    struct TurretFire {
+        float interval = 1.f;
+        float timer = 0.f;
+    };
+
+    // Va-et-vient vertical d'un obstacle autour de sa hauteur de depart.
+    struct ObstacleMotion {
+        float baseY = 0.f;
+        float amplitude = 0.f;
+        float omega = 0.f;
+        float age = 0.f;
+    };
+
+    // Ce que les portails ont change chez un joueur.
+    struct PlayerEffects {
+        bool inverted = false;
+        float speedFactor = 1.f;
+        Engine::Entity lastPortal{};
+    };
+
+    struct BossType {
+        BossKind kind = BossKind::Standard;
+    };
+
     struct BossTag {
         float age = 0.f;
+        float summonTimer = 0.f;
     };
 
     struct MonsterTag {
         int slot = 0;
+    };
+
+    struct MonsterType {
+        MonsterKind kind = MonsterKind::Basic;
+    };
+
+    struct MonsterState {
+        float age = 0.f;
+        bool locked = false;
+        bool summoned = false;
     };
 
     struct ProjectileTag {
@@ -72,8 +147,20 @@ namespace rtype {
     // Les valeurs sont envoyees sur le reseau : ajouter a la fin, avant Count.
 
     enum class SpriteId {
-        Player, Monster, PlayerBullet, MonsterBullet, Explosion, Boss, Coin, Count
+        Player, Monster, PlayerBullet, MonsterBullet, Explosion, Boss, Coin,
+        Tank, Kamikaze, Elite, Rocket, Bomber,
+        DasherBoss, SummonerBoss, FortressBoss,
+        RocketMissile, Bomb, AlienShard, RockWall, SpikeWall,
+        ReversePortal, FastPortal, NormalPortal, LaserPost, TurretBlock, MineBall, BeamOn, BeamWarn, Meteor,
+        LeviathanBolt,
+        Count
     };
+
+    constexpr bool isBossSprite(const SpriteId id)
+    {
+        return id == SpriteId::Boss || id == SpriteId::DasherBoss
+            || id == SpriteId::SummonerBoss || id == SpriteId::FortressBoss;
+    }
 
     struct Renderable {
         SpriteId id = SpriteId::Player;

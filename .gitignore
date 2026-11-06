@@ -19,3 +19,10 @@ a.out
 # graphify cache (rebuilt locally)
 /docs/graphify-out/cache/
 /graphify-out/
+.graphify_python
+.graphify_root
+/docs/graphify-out/graph.html
+/docs/graphify-out/20*/
+
+# Personal notes
+leaderboard.txt

@@ -6,6 +6,8 @@
 #include "Font.hpp"
 #include "Replica.hpp"
 #include "SpriteBank.hpp"
+#include "logic/Leaderboard.hpp"
+#include "logic/MapList.hpp"
 #include "logic/Augments.hpp"
 #include "logic/Status.hpp"
 
@@ -26,26 +28,47 @@ namespace client {
         static constexpr float BAR_HEIGHT = 14.f;
         static constexpr float ROW_STEP = 30.f;
         static constexpr float BOSS_BAR_WIDTH = 600.f;
-        static constexpr float COIN_MARGIN = 16.f;
-        static constexpr float COIN_ICON_SIZE = 32.f;
-        static constexpr float COIN_ICON_GAP = 10.f;
-        static constexpr float COIN_TEXT_SCALE = 4.f;
-        static constexpr float AUGMENT_GAP = 12.f;
-        static constexpr float AUGMENT_TEXT_SCALE = 1.5f;
-        static constexpr float AUGMENT_PADDING = 3.f;
-        static constexpr float SHOP_TEXT_MARGIN = 60.f;
+        static constexpr float PLAYERS_TOP = 60.f;
+        static constexpr float MARGIN = 16.f;
+        static constexpr float ICON_SIZE = 32.f;
+        static constexpr float ICON_GAP = 10.f;
+        static constexpr float TEXT_SCALE = 4.f;
+
+        static float textTop();
 
         void drawPlayers(const rtype::GameStatus &status,
             const rtype::protocol::OwnedAugment &augments);
         void drawAugments(const std::vector<rtype::AugmentId> &ids, float x,
             float top);
+        void drawTimer(const rtype::GameStatus &status, float elapsed);
+        void drawLevel(const rtype::GameStatus &status);
+        void drawEffects(const Replica &replica);
+        void drawIcon(const Engine::Sprite &sprite,
+            Engine::Vector2f position, float elapsed);
+        static constexpr float AUGMENT_GAP = 12.f;
+        static constexpr float AUGMENT_TEXT_SCALE = 1.5f;
+        static constexpr float AUGMENT_PADDING = 3.f;
+        static constexpr float SHOP_TEXT_MARGIN = 60.f;
         void drawCoins(const rtype::GameStatus &status, float elapsed);
         void drawBar(Engine::Vector2f position, Engine::Vector2f size,
             float ratio, Engine::Color fill);
         void drawBossBar(const rtype::GameStatus &status);
         void drawRespawnHint(const rtype::GameStatus &status,
             std::optional<int> self, float elapsed);
-        void drawEndScreen(const rtype::GameStatus &status, float elapsed);
+        void drawEndScreen(float elapsed);
+        void drawLobby(const Replica &replica);
+        void drawVictoryScreen(const rtype::GameStatus &status,
+            const Replica &replica, float elapsed);
+        void drawConfetti(float age);
+        void drawVictoryTitle(float age);
+        void drawVictoryStats(const rtype::GameStatus &status,
+            const Replica &replica, float age);
+        [[nodiscard]] Engine::Color timeColor(const rtype::GameStatus &status,
+            const Replica &replica) const;
+        void drawMenuHint(const Replica &replica);
+        void drawPauseMenu(const Replica &replica);
+        void drawMapList(rtype::MapId cursor);
+        void drawRecords(const rtype::MapRecords &records);
         float drawReady(const rtype::PlayerStatus &player, float x, float top);
         void drawShopScreen(const rtype::GameStatus &status,
             const Replica &replica, float elapsed);

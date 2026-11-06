@@ -14,6 +14,7 @@ namespace Engine {
                 case sf::Keyboard::Key::Space: return Key::Space;
                 case sf::Keyboard::Key::Enter: return Key::Enter;
                 case sf::Keyboard::Key::Escape: return Key::Escape;
+                case sf::Keyboard::Key::Backspace: return Key::Backspace;
                 case sf::Keyboard::Key::Tab: return Key::Tab;
                 case sf::Keyboard::Key::A: return Key::A;
                 case sf::Keyboard::Key::Z: return Key::Z;

@@ -22,7 +22,7 @@
 | Sounds have a visual counterpart | **done** for the important ones | health bars, a boss bar, and end-of-game messages on screen |
 | Colour-blind friendly palette | proposal | avoid red / green as the only difference between friend and enemy bullets |
 | High-contrast option | proposal | bullets and ships clearly separated from the star-field |
-| No fast flashing | proposal | avoid strobing explosions (they last 0.4 s) |
+| No fast flashing | **done** for the scenery | the backgrounds and the boss auras only drift and pulse slowly; explosions still last 0.4 s |
 | Independent volume sliders and a mute option | proposal | music and effects separate; the game also runs without any sound |
 | Scalable interface text | proposal | readable at a distance |
 
@@ -30,11 +30,11 @@
 
 | Solution | State | Notes |
 |---|---|---|
-| Few, simple rules | **done** | one enemy type, one boss, one goal per level |
-| Clear and consistent feedback | **done** | health bars, sounds for hits and explosions, a message on victory or defeat |
+| Few, simple rules | **done** | one goal (reach the end of the map), a handful of enemy types introduced one after the other, the same controls everywhere |
+| Clear and consistent feedback | **done** | health bars, sounds for hits and explosions, a message on victory or defeat; a rocket launcher stops before it fires, which gives a visual warning |
 | Slower game option | proposal | same mechanism as the difficulty settings above |
-| Short levels | **done** | the boss arrives after 20 s of play |
-| Plain language in menus | proposal | there is no menu yet |
+| Short levels | **done** | the first level lasts about 20 s, the *boss rush* map has short levels, and killing monsters shortens a level |
+| Plain language in menus | **done** for the lobby | `SELECT A MAP`, a highlighted cursor and a one-line instruction at the bottom of the screen; there is no other menu |
 
 ## Documentation
 

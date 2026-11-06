@@ -324,3 +324,79 @@ TEST(a_player_who_leaves_no_longer_blocks_the_countdown)
     game.update(config::FIXED_DT);
     CHECK(game.status().countdown > 0.f);
 }
+
+namespace {
+    Segments twoLevels()
+    {
+        Segments segments;
+
+        segments.levels.emplace_back(1, 0.f);
+        segments.levels.emplace_back(2, 300.f);
+        segments.levels.emplace_back(3, 600.f);
+        segments.bossSpawn.emplace_back(BossKind::Standard, 99999.f);
+        return segments;
+    }
+
+    Game gameAtTheEndOfALevel()
+    {
+        Game game(1, twoLevels());
+
+        game.addPlayer();
+        runFor(game, 5.f);
+        return game;
+    }
+}
+
+TEST(the_shop_opens_at_the_end_of_each_level_and_freezes_the_game)
+{
+    Game game(1, twoLevels());
+
+    game.addPlayer();
+    runFor(game, 1.f);
+    CHECK(game.phase() == Phase::Playing);
+    runFor(game, 4.f);
+    CHECK(game.phase() == Phase::Shop);
+    CHECK(game.shopOffers().size() == config::SHOP_OFFER_COUNT);
+
+    const float frozen = game.scroll();
+
+    runFor(game, 2.f);
+    CHECK(game.scroll() == frozen);
+}
+
+TEST(the_game_resumes_when_everybody_is_ready_and_the_next_level_has_its_shop)
+{
+    Game game = gameAtTheEndOfALevel();
+    const float frozen = game.scroll();
+
+    CHECK(game.phase() == Phase::Shop);
+    game.setReady(0, true);
+    runFor(game, config::SHOP_COUNTDOWN + 0.2f);
+    CHECK(game.phase() == Phase::Playing);
+    CHECK(game.shopOffers().empty());
+    runFor(game, 1.f);
+    CHECK(game.scroll() > frozen);
+    runFor(game, 5.f);
+    CHECK(game.phase() == Phase::Shop);
+}
+
+TEST(the_enemies_and_shots_are_cleared_when_a_level_shop_opens)
+{
+    Game game(1, twoLevels());
+
+    game.addPlayer();
+    runFor(game, 2.4f);
+    spawnMonster(game.registry(), 400.f);
+    runFor(game, 0.3f);
+    CHECK(game.phase() == Phase::Shop);
+    CHECK(collectMonsters(game.registry()).empty());
+}
+
+TEST(a_new_match_closes_the_shop)
+{
+    Game game = gameAtTheEndOfALevel();
+
+    game.openLobby();
+    CHECK(game.phase() == Phase::Lobby);
+    CHECK(game.shopOffers().empty());
+}

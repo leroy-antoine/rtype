@@ -12,6 +12,11 @@ namespace client {
             "shoot.wav", "hit.wav", "explosion.wav", "boss_alert.wav",
             "victory.wav", "defeat.wav", "coin_pickup.mp3"};
 
+        constexpr std::array<const char *, 10> MUSIC = {
+            "", "music_level.ogg", "music_boss.ogg", "dasher_theme.ogg",
+            "summoner_theme.ogg", "music_boss_fortress.ogg",
+            "music_deathrun.ogg", "music_nebula.ogg", "music_wreckage.ogg",
+            "music_core.ogg"};
         constexpr std::array<const char *, 2> SHOP_FILES = {
             "trade_accept.ogg", "trade_refuse.ogg"};
     }
@@ -75,10 +80,9 @@ namespace client {
         try {
             if (track == Track::None) {
                 _player.stopMusic();
-            } else if (track == Track::Level) {
-                _player.playMusic((_dir / "music_level.ogg").string());
             } else {
-                _player.playMusic((_dir / "music_boss.ogg").string());
+                _player.playMusic(
+                    (_dir / MUSIC[static_cast<std::size_t>(track)]).string());
             }
         } catch (const std::exception &e) {
             std::cerr << "R-Type: music disabled (" << e.what() << ")"
@@ -113,12 +117,11 @@ namespace client {
             case Cue::PurchaseRefused: playShopSound(ShopSound::Refuse, 0.8f); break;
             case Cue::BossAppears:
                 playSound(Sound::BossAlert, 0.9f);
-                playMusic(Track::Boss);
                 break;
         }
     }
 
-    void Audio::follow(const Replica &replica)
+    void Audio::follow(Replica &replica)
     {
         const std::optional<rtype::GameStatus> &status = replica.status();
 
@@ -131,11 +134,32 @@ namespace client {
         if (status->phase != rtype::Phase::Playing) {
             return;
         }
-        if (status->bossMaxHp > 0) {
-            playMusic(Track::Boss);
-        } else {
-            playMusic(Track::Level);
+        playMusic(trackFor(replica));
+    }
+
+    Audio::Track Audio::trackOfZone(const rtype::Zone zone)
+    {
+        switch (zone) {
+            case rtype::Zone::Warp: return Track::DeathRun;
+            case rtype::Zone::Nebula: return Track::Nebula;
+            case rtype::Zone::Wreckage: return Track::Wreckage;
+            case rtype::Zone::Core: return Track::Core;
+            default: return Track::Level;
         }
+    }
+
+    Audio::Track Audio::trackFor(Replica &replica)
+    {
+        switch (replica.bossSprite().value_or(rtype::SpriteId::Count)) {
+            case rtype::SpriteId::Boss: return Track::BossStandard;
+            case rtype::SpriteId::DasherBoss: return Track::BossDasher;
+            case rtype::SpriteId::SummonerBoss: return Track::BossSummoner;
+            case rtype::SpriteId::FortressBoss: return Track::BossFortress;
+            default: break;
+        }
+        const auto &status = replica.status();
+
+        return trackOfZone(rtype::zoneOf(status->map, status->level));
     }
 
     void Audio::onPhase(const rtype::Phase phase)
@@ -145,6 +169,9 @@ namespace client {
             return;
         }
         playMusic(Track::None);
+        if (phase == rtype::Phase::Lobby) {
+            return;
+        }
         if (phase == rtype::Phase::Victory) {
             playSound(Sound::Victory, 0.9f);
         } else {

@@ -7,6 +7,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <map>
 #include <optional>
 #include <random>
@@ -15,10 +16,16 @@
 #include <vector>
 #include "Augments.hpp"
 #include "Boss.hpp"
+#include "BossHazards.hpp"
 #include "Components.hpp"
 #include "Config.hpp"
 #include "Events.hpp"
+#include "Formations.hpp"
 #include "Factories.hpp"
+#include "LevelSkip.hpp"
+#include "Levels.hpp"
+#include "MapList.hpp"
+#include "MonsterBehavior.hpp"
 #include "Monsters.hpp"
 #include "Queries.hpp"
 #include "Replication.hpp"
@@ -26,17 +33,18 @@
 #include "Status.hpp"
 #include "Systems.hpp"
 #include "Waves.hpp"
+#include "Zones.hpp"
 #include "engine/core/Registry.hpp"
 
 namespace rtype {
     class Game {
     public:
-        Game() : _rng(std::random_device{}())
-        {
-            _coinCounter = createCoinCounter(_reg);
-        }
+        Game() : Game(std::random_device{}()) {}
 
-        explicit Game(const unsigned int seed) : _rng(seed)
+        explicit Game(const unsigned int seed) : Game(seed, firstLevel()) {}
+
+        Game(const unsigned int seed, Segments segments)
+            : _segments(std::move(segments)), _rng(seed)
         {
             _coinCounter = createCoinCounter(_reg);
         }
@@ -49,6 +57,7 @@ namespace rtype {
                 return std::nullopt;
             }
             spawnPlayer(*slot);
+            ++_alive;
             _usedSlots[static_cast<std::size_t>(*slot)] = true;
             return slot;
         }
@@ -60,6 +69,7 @@ namespace rtype {
 
             if (player) {
                 _reg.destroy(*player);
+                --_alive;
             }
             if (isUsedSlot(slot)) {
                 _usedSlots[static_cast<std::size_t>(slot)] = false;
@@ -76,6 +86,7 @@ namespace rtype {
                 return false;
             }
             spawnPlayer(slot);
+            ++_alive;
             return true;
         }
 
@@ -163,13 +174,52 @@ namespace rtype {
             }
         }
 
+        // Le jeu attend alors qu'un joueur choisisse une map (startMap).
+        void openLobby()
+        {
+            _lobby = true;
+            reset();
+        }
+
+        // Le premier joueur connecte est celui qui choisit la map.
+        [[nodiscard]] std::optional<int> host() const
+        {
+            for (int slot = 0; slot < SLOTS; ++slot) {
+                if (isUsedSlot(slot)) {
+                    return slot;
+                }
+            }
+            return std::nullopt;
+        }
+
+        bool startMap(Segments segments, const MapId map)
+        {
+            if (_phase != Phase::Lobby) {
+                return false;
+            }
+            _segments = std::move(segments);
+            _map = map;
+            reset();
+            _phase = Phase::Playing;
+            return true;
+        }
+
+        [[nodiscard]] MapId map() const
+        {
+            return _map;
+        }
+
         // Appele a chaque tick : mouvements, tirs, collisions, niveau...
         void update(const float dt)
         {
             if (!hasPlayers()) {
                 idle();
+            } else if (_paused) {
+                return;
             } else if (_phase == Phase::Playing) {
                 updatePlaying(dt);
+            } else if (_phase == Phase::Lobby) {
+                flyPlayers(dt);
             } else if (_phase == Phase::Shop) {
                 updateShop(dt);
             } else {
@@ -199,12 +249,11 @@ namespace rtype {
         {
             GameStatus status;
 
-            status.phase = _phase;
-            status.coins = static_cast<std::uint32_t>(
-                _reg.get<CoinCounter>(_coinCounter).total);
+            describeMatch(status);
             for (const Engine::Entity boss : collectWith<BossTag>(_reg)) {
                 status.bossHp = std::max(0, _reg.get<Health>(boss).hp);
-                status.bossMaxHp = config::BOSS_HP;
+                status.bossMaxHp =
+                    bossDef(_reg.get<BossType>(boss).kind).hp;
             }
             status.countdown = _countdown.value_or(0.f);
             for (int slot = 0; slot < SLOTS; ++slot) {
@@ -213,6 +262,16 @@ namespace rtype {
                 }
             }
             return status;
+        }
+
+        void setPaused(const bool paused)
+        {
+            _paused = paused && _phase == Phase::Playing;
+        }
+
+        [[nodiscard]] bool paused() const
+        {
+            return _paused;
         }
 
         [[nodiscard]] Phase phase() const
@@ -226,6 +285,11 @@ namespace rtype {
             return _scroll;
         }
 
+        [[nodiscard]] std::size_t level() const
+        {
+            return levelAt(_segments, _scroll);
+        }
+
         Engine::Registry &registry()
         {
             return _reg;
@@ -237,6 +301,7 @@ namespace rtype {
         struct PendingSpawn {
             float delay;
             float y;
+            MonsterKind kind;
         };
 
         [[nodiscard]] bool isUsedSlot(const int slot) const
@@ -251,6 +316,20 @@ namespace rtype {
             return std::ranges::any_of(_usedSlots, [](const bool used) {
                 return used;
             });
+        }
+
+        void describeMatch(GameStatus &status)
+        {
+            status.phase = _phase;
+            status.paused = _paused;
+            status.deaths = _deaths;
+            status.map = _map;
+            status.coins = static_cast<std::uint32_t>(
+                _reg.get<CoinCounter>(_coinCounter).total);
+            status.elapsedMs = static_cast<std::uint32_t>(
+                _elapsed * config::MS_PER_SECOND);
+            status.level = static_cast<std::uint8_t>(std::min<std::size_t>(
+                level(), std::numeric_limits<std::uint8_t>::max()));
         }
 
         PlayerStatus statusOf(const int slot)
@@ -269,7 +348,7 @@ namespace rtype {
         // Personne n'est connecte : le niveau n'avance pas, et repart de zero.
         void idle()
         {
-            if (_scroll > 0.f || _bossSpawned || _phase != Phase::Playing
+            if (_scroll > 0.f || _nextBoss > 0 || _phase != restingPhase()
                 || !_pending.empty()) {
                 reset();
             }
@@ -277,47 +356,278 @@ namespace rtype {
 
         void updatePlaying(const float dt)
         {
+            _elapsed += dt;
             updateWeaponTimers(_reg, dt);
             updateShieldTimers(_reg, dt);
             regenerationSystem(_reg, dt);
             lifetimeSystem(_reg, dt);
             playerControlSystem(_reg);
             advanceLevel(dt);
+            bossHazards(dt);
+            monsterSystem(_reg, dt);
+            obstacleMotionSystem(_reg, dt);
+            turretSystem(_reg, dt);
+            laserSystem(_reg, dt);
+            strikeSystem(_reg, dt);
             bossSystem(_reg, dt);
             shootingSystem(_reg);
             movementSystem(_reg, dt);
             collisionSystem(_reg);
             contactSystem(_reg);
+            obstacleSystem(_reg);
             coinPickupSystem(_reg);
             deleteUnitsOutOfBounds(_reg);
-            deathSystem(_reg, _rng);
+            protectPlayers();
+            skipLevel(deathSystem(_reg, _rng));
+            failRun(countDeaths());
             updatePhase();
         }
 
-        // Partie finie : les joueurs volent encore, puis le shop apres une
-        // victoire, ou une nouvelle partie apres une defaite.
-        void updateEnded(const float dt)
+        void bossHazards(const float dt)
+        {
+            if (collectWith<BossTag>(_reg).empty()) {
+                clearBossHazards();
+                storm(dt);
+                return;
+            }
+            bossHazardSystem(_reg, _hazards, _rng, bossIntensity(), dt);
+        }
+
+        // La meteo de la zone : une meteorite de temps en temps.
+        void storm(const float dt)
+        {
+            const float every = stormInterval(zoneOf(_map, level()));
+
+            if (every <= 0.f) {
+                return;
+            }
+            _storm -= dt;
+            if (_storm <= 0.f) {
+                spawnMeteor(_reg, _rng);
+                _storm = every;
+            }
+        }
+
+        void clearBossHazards()
+        {
+            if (_hazards.time > 0.f) {
+                destroyAll(collectObstacles(_reg));
+            }
+            _hazards = HazardClock{};
+        }
+
+        // Plus on avance dans les boss de la map, plus le combat est dense.
+        [[nodiscard]] float bossIntensity() const
+        {
+            const std::size_t total = _segments.bossSpawn.size();
+
+            if (total == 0) {
+                return 1.f;
+            }
+            return static_cast<float>(_nextBoss) / static_cast<float>(total);
+        }
+
+        // Partie finie : les joueurs volent encore, puis tout recommence.
+        void flyPlayers(const float dt)
         {
             lifetimeSystem(_reg, dt);
             playerControlSystem(_reg);
             movementSystem(_reg, dt);
+        }
+
+        [[nodiscard]] Phase restingPhase() const
+        {
+            if (_lobby) {
+                return Phase::Lobby;
+            }
+            return Phase::Playing;
+        }
+
+        void leaveEndScreen()
+        {
+            const bool retry = _phase == Phase::Defeat;
+
+            reset();
+            if (retry) {
+                _phase = Phase::Playing;
+            }
+        }
+
+        int aliveCount()
+        {
+            int count = 0;
+
+            for (int slot = 0; slot < SLOTS; ++slot) {
+                if (isUsedSlot(slot) && isPlayerAlive(slot)) {
+                    ++count;
+                }
+            }
+            return count;
+        }
+
+        int countDeaths()
+        {
+            const int now = aliveCount();
+            const int lost = std::max(0, _alive - now);
+
+            _deaths = static_cast<std::uint16_t>(_deaths + lost);
+            _alive = now;
+            return lost;
+        }
+
+        [[nodiscard]] bool inDeathRun()
+        {
+            return isDeathRun(_segments, _scroll)
+                && collectWith<BossTag>(_reg).empty();
+        }
+
+        // Une mort en death run : toute l equipe repart du debut du niveau.
+        void restartDeathRun()
+        {
+            const float start = levelStart(_segments, _scroll);
+
+            destroyAll(collectMonsters(_reg));
+            destroyAll(collectProjectileEntities(_reg));
+            destroyAll(collectObstacles(_reg));
+            _pending.clear();
+            _nextWave = countBefore(_segments.waves, start);
+            _nextObstacle = countBefore(_segments.obstacles, start);
+            _scroll = restartScroll(start);
+            _effectLevel = level();
+            respawnEveryone();
+        }
+
+        // Le premier obstacle repart deja pres du joueur : pas d attente.
+        [[nodiscard]] float restartScroll(const float start) const
+        {
+            if (_nextObstacle >= _segments.obstacles.size()) {
+                return start;
+            }
+            const ObstacleStep &first = _segments.obstacles[_nextObstacle];
+            const float travel = (config::MAP_WIDTH - config::RESTART_LEAD)
+                / first.speed;
+
+            return std::clamp(first.at + travel, start,
+                levelEnd(_segments, start));
+        }
+
+        template <typename Step>
+        static std::size_t countBefore(const std::vector<Step> &steps,
+            const float start)
+        {
+            return static_cast<std::size_t>(std::ranges::count_if(steps,
+                [start](const Step &step) { return step.at < start; }));
+        }
+
+        void respawnEveryone()
+        {
+            for (int slot = 0; slot < SLOTS; ++slot) {
+                if (!isUsedSlot(slot)) {
+                    continue;
+                }
+                if (const auto player = findPlayerBySlot(_reg, slot)) {
+                    _reg.destroy(*player);
+                }
+                spawnPlayer(slot);
+            }
+            _alive = aliveCount();
+        }
+
+        void failRun(const int lost)
+        {
+            if (lost > 0 && inDeathRun()) {
+                restartDeathRun();
+            }
+        }
+
+        void updateEnded(const float dt)
+        {
+            flyPlayers(dt);
             _phaseTimer -= dt;
             if (_phaseTimer > 0.f) {
                 return;
             }
             if (_phase == Phase::Victory) {
-                enterShop();
+                enterShop(level(), true);
             } else {
-                reset();
+                leaveEndScreen();
             }
         }
 
-        void enterShop()
+        void endPortalEffects()
+        {
+            const std::size_t now = level();
+
+            if (now == _effectLevel) {
+                return;
+            }
+            const std::size_t finished = _effectLevel;
+
+            _effectLevel = now;
+            _reg.each<PlayerEffects>(
+                [](const Engine::Entity, PlayerEffects &effects) {
+                    effects = PlayerEffects{};
+                });
+            if (finished >= 1 && now > finished) {
+                enterShop(finished, false);
+            }
+        }
+
+        [[nodiscard]] bool levelHadBoss(const std::size_t number) const
+        {
+            const float start = levelStartOf(_segments, number);
+            const float end = levelEnd(_segments, start);
+
+            return std::ranges::any_of(_segments.bossSpawn,
+                [start, end](const BossSpawn &boss) {
+                    return boss.second >= start && boss.second < end;
+                });
+        }
+
+
+        void skipLevel(const int kills)
+        {
+            if (kills > 0 && collectWith<BossTag>(_reg).empty()
+                && !inDeathRun()) {
+                _scroll += grantSkip(_segments, _skip, _scroll, kills);
+            }
+        }
+
+        // Le shop s'ouvre a la fin de chaque niveau et apres la victoire :
+        // le jeu attend que tous les joueurs soient prets.
+        void enterShop(const std::size_t finished, const bool last)
         {
             _phase = Phase::Shop;
+            _shopLast = last;
             _ready.clear();
             _countdown.reset();
-            restockShop(ShopTier{_level, true});
+            if (!last) {
+                clearField();
+            }
+            restockShop(ShopTier{static_cast<int>(finished),
+                last || levelHadBoss(finished)});
+        }
+
+        void clearField()
+        {
+            _pending.clear();
+            destroyAll(collectMonsters(_reg));
+            destroyAll(collectProjectileEntities(_reg));
+            destroyAll(collectObstacles(_reg));
+        }
+
+        // Apres le dernier shop on retourne au lobby, sinon le niveau suivant
+        // continue la partie.
+        void leaveShop()
+        {
+            _ready.clear();
+            _countdown.reset();
+            _shopOffers.clear();
+            if (_shopLast) {
+                reset();
+                return;
+            }
+            _phase = Phase::Playing;
         }
 
         void updateShop(const float dt)
@@ -339,8 +649,7 @@ namespace rtype {
             }
             *_countdown -= dt;
             if (*_countdown <= 0.f) {
-                ++_level;
-                reset();
+                leaveShop();
             }
         }
 
@@ -356,60 +665,171 @@ namespace rtype {
 
         void advanceLevel(const float dt)
         {
-            if (!_bossSpawned) {
+            if (collectWith<BossTag>(_reg).empty()) {
                 _scroll += config::SCROLL_SPEED * dt;
+                endPortalEffects();
                 queueDueWaves();
-                if (_scroll >= config::BOSS_SPAWN_SCROLL) {
-                    spawnBoss(_reg);
-                    _bossSpawned = true;
-                }
+                spawnDueBosses();
+                spawnDueObstacles();
             }
             spawnPending(dt);
         }
 
+        void spawnDueBosses()
+        {
+            const auto &bosses = _segments.bossSpawn;
+
+            while (_nextBoss < bosses.size()
+                && bosses[_nextBoss].second <= _scroll) {
+                spawnBoss(_reg, bosses[_nextBoss].first);
+                ++_nextBoss;
+            }
+        }
+
+        void spawnDueObstacles()
+        {
+            const auto &obstacles = _segments.obstacles;
+
+            while (_nextObstacle < obstacles.size()
+                && obstacles[_nextObstacle].at <= _scroll) {
+                createObstacle(_reg, obstacles[_nextObstacle],
+                    _scroll - obstacles[_nextObstacle].at);
+                ++_nextObstacle;
+            }
+        }
+
+        [[nodiscard]] bool allBossesSpawned() const
+        {
+            return _nextBoss >= _segments.bossSpawn.size();
+        }
+
         void queueDueWaves()
         {
-            while (_nextWave < WAVES.size() && WAVES[_nextWave].at <= _scroll) {
-                queueWave(WAVES[_nextWave]);
+            const auto &waves = _segments.waves;
+
+            while (_nextWave < waves.size() && waves[_nextWave].at <= _scroll) {
+                queueWave(waves[_nextWave]);
                 ++_nextWave;
+            }
+        }
+
+        float spawnHeight(const WaveStep &wave, const float index)
+        {
+            std::uniform_real_distribution<float> randomY(
+                config::WAVE_MIN_Y, config::WAVE_MAX_Y);
+
+            if (wave.y < 0.f) {
+                return randomY(_rng);
+            }
+            return wave.y + index * wave.dy;
+        }
+
+        void queueFormation(const WaveStep &wave)
+        {
+            std::uniform_real_distribution<float> randomY(
+                config::WAVE_MIN_Y + 300.f, config::WAVE_MAX_Y - 300.f);
+            float base = wave.y;
+
+            if (base < 0.f) {
+                base = randomY(_rng);
+            }
+            for (int i = 0; i < wave.count; ++i) {
+                const Slot slot = formationSlot(wave, i, base);
+
+                _pending.push_back({slot.delay, slot.y, wave.kind});
             }
         }
 
         void queueWave(const WaveStep &wave)
         {
-            std::uniform_real_distribution<float> randomY(
-                config::WAVE_MIN_Y, config::WAVE_MAX_Y);
-            float y = wave.y;
-
-            if (y < 0.f) {
-                y = randomY(_rng);
+            if (wave.shape != Shape::Line) {
+                queueFormation(wave);
+                return;
             }
             for (int i = 0; i < wave.count; ++i) {
                 const auto n = static_cast<float>(i);
 
-                _pending.push_back({n * wave.interval, y + n * wave.dy});
+                _pending.push_back({n * wave.interval,
+                    spawnHeight(wave, n), wave.kind});
             }
+        }
+
+        // Hauteur testee au rang `step` autour de y : haut, bas, haut...
+        static float probeTop(const float y, const int step,
+            const float maxY)
+        {
+            float side = 1.f;
+
+            if (step % 2 == 0) {
+                side = -1.f;
+            }
+            return std::clamp(y + side * config::SPAWN_STEP * ((step + 1) / 2),
+                config::MAP_ORIGIN, maxY);
+        }
+
+        // Cherche une hauteur libre pres de y : on ne nait pas dans un mur.
+        static std::optional<float> clearSpawnY(const float y,
+            const MonsterDef &def, const std::vector<Collider> &walls)
+        {
+            const float x = config::MAP_WIDTH + config::SPAWN_MARGIN;
+            const float maxY = config::MAP_HEIGHT - def.height;
+
+            for (int step = 0; step <= 2 * config::SPAWN_SEARCH; ++step) {
+                const float top = probeTop(y, step, maxY);
+                const Collider body{Engine::Entity{}, {{x, top}},
+                    {{def.width, def.height}}, Team{}};
+
+                if (!touchesAny(body, walls)) {
+                    return top;
+                }
+            }
+            return std::nullopt;
+        }
+
+        bool spawnClear(const PendingSpawn &spawn,
+            const std::vector<Collider> &walls)
+        {
+            const std::optional<float> y = clearSpawnY(spawn.y,
+                monsterDef(spawn.kind), walls);
+
+            if (y) {
+                spawnMonster(_reg, *y, spawn.kind);
+            }
+            return y.has_value();
         }
 
         // Les monstres d'une vague arrivent les uns apres les autres.
         void spawnPending(const float dt)
         {
             std::vector<PendingSpawn> waiting;
+            std::vector<Collider> walls;
 
+            if (!_pending.empty()) {
+                walls = obstacleColliders(_reg, isWall);
+            }
             for (PendingSpawn &spawn : _pending) {
                 spawn.delay -= dt;
                 if (spawn.delay <= 0.f) {
-                    spawnMonster(_reg, spawn.y);
-                } else {
-                    waiting.push_back(spawn);
+                    if (spawnClear(spawn, walls)) {
+                        continue;
+                    }
+                    spawn.delay = config::SPAWN_RETRY;
                 }
+                waiting.push_back(spawn);
             }
             _pending = std::move(waiting);
         }
 
+        void protectPlayers()
+        {
+            if (config::PLAYERS_INVINCIBLE) {
+                healPlayers(_reg);
+            }
+        }
+
         void updatePhase()
         {
-            if (_bossSpawned && collectWith<BossTag>(_reg).empty()) {
+            if (allBossesSpawned() && collectWith<BossTag>(_reg).empty()) {
                 endGame(Phase::Victory);
             } else if (allPlayersDead()) {
                 endGame(Phase::Defeat);
@@ -434,6 +854,7 @@ namespace rtype {
             _pending.clear();
             destroyAll(collectMonsters(_reg));
             destroyAll(collectProjectileEntities(_reg));
+            destroyAll(collectObstacles(_reg));
         }
 
         void destroyAll(const std::vector<Engine::Entity> &entities)
@@ -450,9 +871,17 @@ namespace rtype {
             _pending.clear();
             _scroll = 0.f;
             _nextWave = 0;
-            _bossSpawned = false;
-            _phase = Phase::Playing;
+            _nextBoss = 0;
+            _nextObstacle = 0;
+            _skip = SkipBank{};
+            _effectLevel = 0;
+            _paused = false;
+            _hazards = HazardClock{};
+            _storm = 2.f;
+            _deaths = 0;
+            _phase = restingPhase();
             _phaseTimer = 0.f;
+            _elapsed = 0.f;
             _ready.clear();
             _countdown.reset();
             _shopOffers.clear();
@@ -461,6 +890,7 @@ namespace rtype {
                     spawnPlayer(slot);
                 }
             }
+            _alive = aliveCount();
         }
 
         void spawnPlayer(const int slot)
@@ -504,12 +934,24 @@ namespace rtype {
         std::vector<AugmentId> _purchased;
         std::set<int> _ready;
         std::optional<float> _countdown;
-        int _level = 1;
+        bool _shopLast = false;
         Phase _phase = Phase::Playing;
+        bool _lobby = false;
+        bool _paused = false;
+        std::uint16_t _deaths = 0;
+        HazardClock _hazards;
+        float _storm = 2.f;
+        int _alive = 0;
+        MapId _map = 0;
         float _phaseTimer = 0.f;
+        float _elapsed = 0.f;
         float _scroll = 0.f;
         std::size_t _nextWave = 0;
-        bool _bossSpawned = false;
+        std::size_t _nextBoss = 0;
+        std::size_t _nextObstacle = 0;
+        SkipBank _skip;
+        std::size_t _effectLevel = 0;
+        Segments _segments;
         std::vector<PendingSpawn> _pending;
         TrackedTable _tracked;
         std::vector<GameEvent> _events;

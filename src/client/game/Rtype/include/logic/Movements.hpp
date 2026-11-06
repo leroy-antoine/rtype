@@ -7,7 +7,8 @@
 #include "Components.hpp"
 
 namespace rtype {
-    inline gameLogic::Vec2 inputDirection(const PlayerInput &input)
+    inline gameLogic::Vec2 inputDirection(const PlayerInput &input,
+        const bool inverted = false)
     {
         gameLogic::Vec2 direction{};
 
@@ -19,6 +20,9 @@ namespace rtype {
             direction.y += 1.f;
         if (input.up)
             direction.y -= 1.f;
+        if (inverted) {
+            direction = direction * -1.f;
+        }
         return gameLogic::normalize(direction);
     }
 

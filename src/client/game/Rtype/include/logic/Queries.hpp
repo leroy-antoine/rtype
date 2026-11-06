@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <optional>
 #include <vector>
@@ -27,6 +28,33 @@ namespace rtype {
     inline std::vector<Engine::Entity> collectPlayers(Engine::Registry &reg)
     {
         return collectWith<PlayerTag>(reg);
+    }
+
+    inline std::optional<gameLogic::Vec2> nearestPlayerCenter(
+        Engine::Registry &reg, const gameLogic::Vec2 &from)
+    {
+        std::optional<gameLogic::Vec2> best;
+        float bestDistance = 0.f;
+
+        for (const Engine::Entity e : collectPlayers(reg)) {
+            const gameLogic::Vec2Pos pos = reg.get<gameLogic::Vec2Pos>(e);
+            const gameLogic::Vec2Hitbox box = reg.get<gameLogic::Vec2Hitbox>(e);
+            const gameLogic::Vec2 center{pos.x + box.x / 2.f,
+                pos.y + box.y / 2.f};
+            const float distance = std::hypot(center.x - from.x,
+                center.y - from.y);
+
+            if (!best || distance < bestDistance) {
+                best = center;
+                bestDistance = distance;
+            }
+        }
+        return best;
+    }
+
+    inline std::vector<Engine::Entity> collectObstacles(Engine::Registry &reg)
+    {
+        return collectWith<ObstacleTag>(reg);
     }
 
     inline std::vector<Engine::Entity> collectMonsters(Engine::Registry &reg)

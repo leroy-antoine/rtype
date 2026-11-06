@@ -2,17 +2,24 @@
 
 #include <array>
 #include "Config.hpp"
+#include "Kinds.hpp"
 
 namespace rtype {
-    // Une vague : `count` monstres lances quand le niveau a defile de `at`.
-    // Le i-eme monstre apparait `i * interval` secondes apres le premier, a la
-    // hauteur `y + i * dy`. Si y < 0, la hauteur de depart est tiree au hasard.
+    enum class Shape { Line, Wedge, Column, Sine };
+
+    // Une vague : count monstres lances quand le niveau a defile de at.
+    // Le i-eme monstre apparait i * interval secondes apres le premier, a la
+    // hauteur y + i * dy. Si y < 0, chaque monstre a sa propre hauteur tiree
+    // au hasard (dy est alors ignore).
+    // Tous les monstres de la vague sont du type `kind`.
     struct WaveStep {
         float at;
         int count;
         float y;
         float dy;
         float interval;
+        MonsterKind kind = MonsterKind::Basic;
+        Shape shape = Shape::Line;
     };
 
     // Instant (en secondes de jeu) converti en distance defilee.
@@ -20,6 +27,17 @@ namespace rtype {
     {
         return seconds * config::SCROLL_SPEED;
     }
+
+    struct ObstacleStep {
+        float at;
+        float y;
+        float width;
+        float height;
+        ObstacleKind kind = ObstacleKind::Rock;
+        float amplitude = 0.f;
+        float period = 0.f;
+        float speed = 1.f;
+    };
 
     constexpr float RANDOM_Y = -1.f;
 
