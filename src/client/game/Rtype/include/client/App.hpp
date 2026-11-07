@@ -12,6 +12,7 @@
 #include "Controls.hpp"
 #include "CustomMapList.hpp"
 #include "GameView.hpp"
+#include "LobbyScreen.hpp"
 #include "Replica.hpp"
 #include "ShopPanel.hpp"
 
@@ -34,7 +35,10 @@ namespace client {
         // Les sons du monde recu a la connexion ne sont pas rejoues.
         static constexpr float LISTEN_DELAY = 0.5f;
 
-        bool loop(Engine::Window &window, GameView &view, Audio &audio, ShopPanel &shop);
+        bool loop(Engine::Window &window, GameView &view, Audio &audio, ShopPanel &shop, LobbyScreen &lobby);
+        void playRoom(float dt, GameView &view, Audio &audio, ShopPanel &shop);
+        void browseRooms(LobbyScreen &lobby);
+        void leaveRoom(Audio &audio);
         void playSounds(Audio &audio);
         bool listening();
         void sendControls(float dt, ShopPanel &shop);
@@ -51,7 +55,7 @@ namespace client {
         void startCustomMap();
         void requestShownRecords();
         [[nodiscard]] bool pressed(Engine::Key key) const;
-        void handleBack(Engine::Window &window);
+        void handleBack(Engine::Window &window, Audio &audio);
         void useMatch();
         void usePause();
         void sendReady();
