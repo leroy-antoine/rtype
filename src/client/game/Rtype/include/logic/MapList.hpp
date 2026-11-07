@@ -11,4 +11,8 @@ namespace rtype {
         "CAMPAIGN", "BOSS RUSH", "DEATH RUNS"};
 
     inline constexpr std::size_t MAP_COUNT = MAP_NAMES.size();
+
+    // Identifiant des maps ecrites par les joueurs : il vient
+    // apres les maps du jeu et n'a pas de nom dans MAP_NAMES.
+    inline constexpr MapId CUSTOM_MAP = static_cast<MapId>(MAP_COUNT);
 }

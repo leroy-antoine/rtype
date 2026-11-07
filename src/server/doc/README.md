@@ -63,6 +63,8 @@ game logic knows nothing of the network.
 | `BUY` | decodes the augment id, calls `game.buyAugment(slot, id)` and answers the buyer with `BUY_RESULT`; an invalid payload is ignored |
 | `READY` | decodes the flag and calls `game.setReady(slot, ready)`; an invalid payload is ignored |
 | a client disconnects or times out | `game.removePlayer(slot)`; the ship is destroyed and every client is told by a `DESTROY` |
+| `MAP_UPLOAD_BEGIN`, `MAP_UPLOAD_CHUNK`, `MAP_UPLOAD_END` | from the host only: `CustomMaps` rebuilds the JSON of a map written by a player, checks it again and calls `game.startMap(buildRun(levels), CUSTOM_MAP, zones)`; the host gets a `MAP_UPLOAD_RESULT` and everybody a `CUSTOM_INFO`. A pending upload is dropped when its owner leaves |
+| `CUSTOM_RECORDS_GET` | answers with the best times of that map (`CUSTOM_RECORDS`) |
 | any message from an unknown client | ignored |
 
 The message formats are in [the protocol](../../../docs/protocol.md). The game
@@ -117,6 +119,10 @@ the speed of the CPU.
 | `STATUS` | every 6 ticks | unreliable |
 | `OWN_STATE` | every tick, to one client | unreliable (position and the effects of the portals) |
 | `LEADERBOARD` | a client connects, a match is won | reliable |
+| `HISTORY` | a client sends `HISTORY_REQUEST` (pages), to this client only | reliable |
+| `CUSTOM_INFO` | a map written by a player starts, or a client connects during one | reliable |
+| `MAP_UPLOAD_RESULT` | the end of an upload, to the host | reliable |
+| `CUSTOM_RECORDS` | a client asks for them, a custom map is won | reliable |
 
 Monster movement and shots reach the clients as positions (`STATES`) and
 spawns of bullets (`SPAWN`). The kill of a player or of a monster is a
@@ -135,18 +141,27 @@ spawns of bullets (`SPAWN`). The kill of a player or of a monster is a
 - **Lobby**: the server starts in the `Lobby` phase, and comes back to it
   when every player has left and after the end screen of a match. The *host*
   is the connected player with the lowest slot. Only the host can leave the
-  lobby, with `SELECT_MAP`; the server builds the map with `buildMap(id)` and
+  lobby, with `SELECT_MAP`. Before that the host sends `SETTINGS` (difficulty
+  and friendly fire), accepted only from the host and only in the lobby; the
+  settings are stored by the game, copied in every `STATUS`, and used by the
+  next match. The server builds the map with `buildMap(id)` and
   calls `Game::startMap`. A message from another player, an unknown map, or a
   message outside the lobby is ignored.
 - **End of a match**: the end screen is shown for a few seconds
   (`RESTART_DELAY`). A defeat then restarts the same map; a victory returns to
   the lobby. A dead
-  player can ask to come back with `RESPAWN` while the match is running.
+  player comes back by themselves after a delay if they still have lives;
+  `RESPAWN` makes it faster.
 - **Leaderboard**: after each victory the server adds the time and the number
-  of players to the best times of the map (5 per map, `rtype::Leaderboard`),
-  writes them in `leaderboard.txt` (working directory of the server, one
-  `map time_ms players` line per record, read again at startup) and sends
-  `LEADERBOARD` to every client. A new client receives it when it connects.
+  of players and the settings (difficulty, friendly fire) to the leaderboard.
+  `rtype::Leaderboard` keeps the 3 best times of each map and each difficulty, and the whole
+  history of victories. The server writes the history in `leaderboard.txt`
+  (working directory of the server, one `map time_ms players difficulty
+  friendly_fire` line per victory, read again at startup; an old line with
+  three fields is read as Normal without friendly fire) and sends
+  `LEADERBOARD` (the top 3 of every difficulty) to every client. A new client receives it when it
+  connects. A client that opens the leaderboard tab sends `HISTORY_REQUEST`
+  and gets the whole history as `HISTORY` pages.
 
 ## Robustness
 
@@ -154,6 +169,11 @@ spawns of bullets (`SPAWN`). The kill of a player or of a monster is a
   ignored by the decoders (exact size, fields in range, finite floats). Nothing
   malformed reaches the game.
 - A client sends *keys*, never a position or a hit.
+- A map written by a player is data from a client: only the host may send it,
+  the upload is capped at 256 KiB and dropped at the first mistake, and the
+  JSON is parsed again with limits (see
+  [custom maps](../../../docs/custom-maps-internals.md#security)). The server
+  reads no file for it.
 - Memory is bounded: 1200 bytes per datagram, 4096 datagrams queued, and a
   client that does not acknowledge more than 256 reliable messages is kicked.
 - A message from an address without a session, or with a wrong token, is

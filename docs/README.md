@@ -17,6 +17,8 @@ own documentation next to its code.
 |---|---|
 | [Gameplay](gameplay.md) | the rules as a player sees them: maps, monsters, bosses, walls, scoring, controls |
 | [Architecture](architecture.md) | the layers, who depends on whom, how the pieces are glued |
+| [Create your own map](custom-maps.md) | for players: write a map in JSON, step by step, with examples, every field and the common errors |
+| [Custom maps, for developers](custom-maps-internals.md) | how the maps written by the players are read, checked, sent and played; how to extend them |
 | [Build and run](build.md) | requirements, building on Linux and Windows, IDE setup, troubleshooting |
 | [Protocol](protocol.md) | client/server network protocol: messages, lifecycle, reliability, security |
 | [Comparative study](comparative-study.md) | why each technology was chosen, and the alternatives |

@@ -9,6 +9,7 @@ namespace server {
         : _server(server)
     {
         _records.board.load(Records::FILE);
+        _records.custom.load(Records::CUSTOM_FILE);
     }
 
     void Lobby::handle(const Engine::ServerEvents::Connected &event)

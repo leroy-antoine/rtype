@@ -109,7 +109,17 @@ Headers only include the layers below them, which avoids circular includes.
 | `LevelBuilder.hpp` | `LevelDef` (one level, distances relative to its start), `wave()` and `shifted()`, the bricks used to write the levels of a map |
 | `MapList.hpp` | the number and the names of the maps (`MAP_COUNT`, `MAP_NAMES`), shared with the client |
 | `MapHelpers.hpp` | `addGates` and `addCave`, to write walls in a map |
-| `Leaderboard.hpp` | `Leaderboard`: best times of each map, sorted, 5 per map, saved in a text file |
+| `Charge.hpp` | the charged shot of the base weapon: `chargeSystem`, `createChargedBullet`, `resetCharges` |
+| `Secondary.hpp` | the secondary slot: `SecondaryWeapon`, `SECONDARY_DEFS`, `equipSecondary`, `secondarySystem` |
+| `Rocket.hpp`, `Laser.hpp`, `Lightning.hpp` | the three secondary weapons |
+| `Drone.hpp` | the drone: levels, following, shooting (`DroneLevel` tiers) |
+| `Leaderboard.hpp` | `Leaderboard`: the 3 best times of each map and each difficulty, and the whole history of victories (with difficulty and friendly fire), saved in a text file; `runsOf` sorts the runs of one map; `addRecord` is shared with `CustomLeaderboard` |
+| `Settings.hpp` | `Difficulty`, `Settings` (difficulty and friendly fire), the table `DIFFICULTY_SCALES` of multipliers and lives, `scaleOf`, `shiftedDifficulty` |
+| `Difficulty.hpp` | `ActiveSettings` (the settings held by one entity of the registry), `activeScale`, `scaledAmount`, `damageFactor`: what the systems read to apply the difficulty |
+| `Scaling.hpp` | `scaleNewEnemies` (health and fire rate of each new monster, once) and `densified` (size of a wave) |
+| `Lives.hpp` | `LifeBook`: lives of each player and the delay before they come back |
+| `Escort.hpp` | `escortFor`: the mini-bosses that come with a boss in Brutal |
+| `CustomLeaderboard.hpp` | the best times of the maps written by the players, per difficulty, indexed by the hash of the map, at most 500 maps |
 | `builder.hpp` | `buildRun` (puts the levels of a map one after another), `MAPS` (one function per map id) and `buildMap(id)`; the maps themselves are in `src/maps/` of this folder (library `rtype_maps`) |
 | `Levels.hpp` | `Segments`: the waves, the boss and the level numbers of the whole run, each with its distance |
 | `Events.hpp` | `EntitySpawned`, `EntityDestroyed`, `EntityState`: what is told to the clients |
@@ -164,8 +174,31 @@ These come from the engine (`engine/core`, not part of the game logic):
   `RESTART_DELAY` seconds, then the game goes back to the lobby (see
   [Maps and lobby](#maps-and-lobby)). If the last player leaves, the world is
   reset.
+- **Difficulty**: `Game::setSettings` stores a `Settings` (difficulty and
+  friendly fire) in an `ActiveSettings` component, so that the free-function
+  systems can read it without a parameter. The table `DIFFICULTY_SCALES`
+  gives the multipliers: `scaleNewEnemies` adjusts the health (and
+  `MaxHealth` of the bosses) and the fire rate of each monster once, when it
+  appears; `applyDamages` multiplies the damage by `damageFactor` according to
+  the teams; `coinPickupSystem` scales the coins; `queueWave` scales the size
+  of the waves with `densified`; `spawnDueBosses` queues the Brutal escort
+  (`escortFor`); the shop is given a level bonus and extra offers.
+- **Lives**: `LifeBook` holds the lives of each slot. A death outside a death
+  run costs one life (`trackLives`); the player comes back after
+  `RESPAWN_DELAY` unless the lives are gone. The defeat needs every player to
+  be dead *and* without lives (`nobodyCanFight`). Opening the shop revives
+  the eliminated players with one life. Settings apply to the next match:
+  `setSettings` and `reset` refill the lives.
+- **Friendly fire**: bullets carry a `Shooter` component; with the option on,
+  `collisionSystem` lets a player bullet hit another player, never its owner.
 - **Coins**: a monster that dies drops a coin; touching it adds to the purse
-  shared by the players (`CoinCounter`, reset with each match).
+  shared by the players (`CoinCounter`, reset with each game).
+- **New game**: `reset()` runs when a map starts, when the game goes back to
+  the lobby, after a defeat and after the last shop. It clears the world and
+  everything a player earned in the previous game: the purse, the augments
+  (`_augments`), the list of the augments already bought (`_purchased`), the
+  lives, the timer, the deaths and the level skip. Between two levels of the
+  same game, the purse and the augments are kept.
 
 ## Kinds of monsters and bosses
 
@@ -335,6 +368,13 @@ There are three maps (`MAPS` in `Builder.hpp`, names in `MapList.hpp`):
 | 1 | BOSS RUSH | 5 short levels, one to three bosses each, ending with the Fortress, the Summoner and the Dasher |
 | 2 | DEATH RUNS | 4 courses of about a minute, then a level with the Fortress and the Dasher: *Rhythm* (speed 1.3), *Minefield* (1.5), *Pinch* (1.7, gates that close and open) and *Gauntlet* (2.0, swinging gates). Each one mixes gates, lasers, mines and turrets, with a fast portal at the start and two reversed stretches |
 
+A fourth id, `CUSTOM_MAP` (3, `MapList.hpp`), stands for a **map written by a
+player**. It has no entry in `MAP_NAMES`: its name and its zones come from the
+JSON, which the game logic does not know. Another library reads the JSON and
+hands the game a plain `Segments`, so the game logic needs nothing more than
+this id and a list of zones. See
+[custom maps](../../../../../docs/custom-maps-internals.md).
+
 `Game` has a `Lobby` phase, entered with `openLobby()` (the server does it at
 startup). In the lobby nothing is simulated except the movement of the ships.
 `startMap(segments, id)` is accepted only in the lobby; it resets the world
@@ -440,11 +480,13 @@ game.removePlayer(*slot);                     // a client disconnects
 |---|---|
 | `std::optional<int> addPlayer()` | creates a player in the first free slot and returns the slot. Returns `std::nullopt` when the game is full, so the caller can refuse the connection. |
 | `void removePlayer(int slot)` | destroys the player of this slot and frees the slot. Does nothing if the slot is empty. |
-| `bool respawnPlayer(int slot)` | brings a dead player back. Returns `false` if the match is over, the slot is not used or the player is alive. |
+| `bool respawnPlayer(int slot)` | brings a dead player back before the end of the delay. Returns `false` if the match is over, the slot is not used, the player is alive or has no life left. |
+| `void setSettings(const Settings &)`, `Settings settings()` | the difficulty and friendly fire of the next match; the lives are given again. The server accepts them from the host in the lobby only. |
+| `int livesOf(int slot) const` | lives left of a player. |
 | `bool isPlayerAlive(int slot)` | is there a player entity in this slot? |
 | `void setInput(int slot, const PlayerInput &input)` | stores the **current state of the keys** of a player. It stays in effect until the next call. Does nothing if the slot is empty. |
 | `void openLobby()` | the game waits in the `Lobby` phase until `startMap`. The server calls it at startup. |
-| `bool startMap(Segments segments, MapId map)` | starts a match on this map. Accepted only in the lobby, returns `false` otherwise. |
+| `bool startMap(Segments segments, MapId map, std::vector<Zone> zones = {})` | starts a match on this map. Accepted only in the lobby, returns `false` otherwise. `zones` (one per level) is only used for `CUSTOM_MAP`; `zoneOf(map, level)` gives the zone of the maps of the game, `customZone(zones, level)` the one of a custom map. |
 | `std::optional<int> host() const`, `MapId map() const` | the slot allowed to choose the map (lowest slot connected), the map being played. |
 | `void update(float dt)` | advances the game by `dt` seconds. |
 | `std::vector<GameEvent> takeEvents()` | the `EntitySpawned` and `EntityDestroyed` since the last call (and empties the list). |
@@ -536,9 +578,9 @@ All in `Systems.hpp` (spawning is in `Monsters.hpp`, the boss in `Boss.hpp`).
 Shooting is split in small pieces so each rule can be read (and tested) alone:
 
 - `isReadyToShoot(e)`: the entity has a `Weapon` whose timer is at 0.
-- `wantsToShoot(e)`: players shoot when `PlayerInput::fire` is held;
-  anything without a `PlayerInput` (monsters and bosses) shoots whenever it is
-  ready, once it has entered the map. Their movement is in
+- `wantsToShoot(e)`: false for the players, who shoot through
+  `chargeSystem` (see below); anything without a `PlayerInput` (monsters and
+  bosses) shoots whenever it is ready, once it has entered the map. Their movement is in
   [Behaviours](#behaviours).
 - `shoot(e)`: creates the bullet with `createBullet` and sets
   `timer = cooldown`.
@@ -548,6 +590,43 @@ bullet, places it just in front of the shooter and gives it the velocity it
 receives (`shotVelocities` gives `BULLET_SPEED` to the right for the player
 team; for the others it uses the volley of their `ProjectileDef`, or a falling
 bomb).
+
+### Players: charge, secondary weapon, drone
+
+- `Charge.hpp`: `chargeSystem` counts how long `PlayerInput::fire` is held
+  (`Charge::time`). A hold shorter than `CHARGE_TAP_LIMIT` fires one normal
+  shot (`shoot`) when the key is released; a longer one fires, on release, a
+  `createChargedBullet`: the bullet grows by `chargeSize` (x2 to x4 over
+  `CHARGE_FULL_TIME`), multiplies its `Damage` by `chargeFactor` (x2 to x6) and
+  carries a `Pierce` component. `pierceTargets` (called by `collisionSystem`) damages
+  each overlapped target once and keeps the bullet alive. `resetCharges` is
+  called when the game is paused and when the shop opens. Rockets in flight
+  are destroyed with the other projectiles when a level ends.
+- `Secondary.hpp`: `SecondaryWeapon` is the weapon of the slot (kind,
+  cooldown, timer, charge). `SECONDARY_DEFS` gives for each `WeaponKind` its
+  cooldown, its charge time and its fire function; `secondarySystem` reads
+  `PlayerInput::alt`. A weapon with a charge time of 0 fires while X is held
+  (`updateInstant`); one with a charge time fires when X is released after the
+  full charge (`updateCharged`). A fire function returns `false` when there is
+  nothing to shoot, so no cooldown starts. `equipSecondary` replaces the
+  current weapon; the three weapons are augments (`Rocket`, `Laser`,
+  `Lightning`) whose effect is `equipSecondary`, so a respawn reapplies them
+  in the order bought.
+- `Rocket.hpp`: `fireRocket` creates a `Missile` (not a projectile, so the
+  normal collisions ignore it); `rocketSystem` detonates it when an enemy is
+  within `ROCKET_FUSE`, on a wall or at the edge of the map, damaging every
+  enemy within `radius`.
+- `Laser.hpp`: `fireLaser` creates a short-lived beam entity
+  (`SpriteId::PlayerLaser`, `Lifetime`) up to the first wall of its line and
+  hits once everything it overlaps.
+- `Lightning.hpp`: `laneTarget` picks the first enemy on the line of the nose,
+  `chain` jumps with `nextLink` (enemies stuck to the last one, never twice)
+  with a falling damage, and `createBolt` makes one segment entity per jump.
+- `Drone.hpp`: the three drone augments (`addDrone`, `boostDrone`,
+  `twinDrone`) give the player a `DroneLevel` of 1, 2 or 3 (`setDroneLevel`
+  keeps the highest); `droneSystem` creates one `DroneBody` entity per
+  equipped player, moves it to its perch with a delay, fires at the nearest
+  enemy (`nearestEnemy`) and destroys it when the owner is gone.
 
 ### Collisions
 
@@ -564,6 +643,12 @@ Every number lives in `Config.hpp`, namespace `rtype::config`, as a
 `constexpr`. Distances are in map units (1 unit = 1 pixel of a 1920x1080 map),
 speeds in units per second, durations in seconds. Changing the difficulty or
 the feel of the game never requires touching a system.
+
+The difficulty multipliers are the exception: they are a table
+(`DIFFICULTY_SCALES` in `Settings.hpp`), because they come as a set of seven
+values per level. The delay before a player comes back (`RESPAWN_DELAY`) and
+the size of the Brutal escort (`ESCORT_MAX`, `ESCORT_DELAY`) are in
+`Config.hpp`.
 
 Examples: `PLAYER_SPEED`, `PLAYER_FIRE_COOLDOWN`, `MONSTER_HP`,
 `MONSTER_SPAWN_INTERVAL`, `SPAWN_MARGIN`, `DESPAWN_MARGIN`,
@@ -603,6 +688,8 @@ Examples: `PLAYER_SPEED`, `PLAYER_FIRE_COOLDOWN`, `MONSTER_HP`,
 - A level: one more `LevelDef` in the list returned by `mapN()`. Distances are
   relative to the start of the level; everything must happen before
   `length`, and no wall may still be on screen when a boss appears.
+- A map written by a player does not need any code: it is a JSON file, see
+  [Create your own map](../../../../../docs/custom-maps.md).
 - A map: a new file `src/maps/mapN.cpp` returning the list of levels, added to
   `rtype_maps` in `CMakeLists.txt`, declared and added to `MAPS` in
   `Builder.hpp`, with its name in `MAP_NAMES` (`MapList.hpp`). The tests in

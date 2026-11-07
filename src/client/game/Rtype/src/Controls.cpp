@@ -8,6 +8,8 @@ namespace client {
         _respawn = false;
         _pause = false;
         _menuMove = 0;
+        _menuSide = 0;
+        _back = false;
         _pressed.clear();
         while (const std::optional event = window.pollEvent()) {
             std::visit([this, &window](const auto &e) { handle(window, e); }, *event);
@@ -34,6 +36,16 @@ namespace client {
         return _menuMove;
     }
 
+    int Controls::menuSide() const
+    {
+        return _menuSide;
+    }
+
+    bool Controls::backRequested() const
+    {
+        return _back;
+    }
+
     const std::vector<Engine::Key> &Controls::pressedKeys() const
     {
         return _pressed;
@@ -44,10 +56,10 @@ namespace client {
         window.close();
     }
 
-    void Controls::handle(Engine::Window &window, const Engine::Events::KeyPressed &event)
+    void Controls::handle(Engine::Window &, const Engine::Events::KeyPressed &event)
     {
         if (event.key == Engine::Key::Escape) {
-            window.close();
+            _back = true;
         }
         if (event.key == Engine::Key::Enter) {
             _respawn = true;
@@ -60,6 +72,12 @@ namespace client {
         }
         if (event.key == Engine::Key::Down) {
             ++_menuMove;
+        }
+        if (event.key == Engine::Key::Left) {
+            --_menuSide;
+        }
+        if (event.key == Engine::Key::Right) {
+            ++_menuSide;
         }
         if (!_held.contains(event.key)) {
             _pressed.push_back(event.key);
@@ -86,6 +104,7 @@ namespace client {
             case Engine::Key::Right:
             case Engine::Key::D: _input.right = pressed; break;
             case Engine::Key::Space: _input.fire = pressed; break;
+            case Engine::Key::X: _input.alt = pressed; break;
             default: break;
         }
     }

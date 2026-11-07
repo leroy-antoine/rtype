@@ -8,8 +8,10 @@
 #include "client/SpriteBank.hpp"
 
 namespace client {
-    App::App(std::filesystem::path assets, const std::string &host, const std::uint16_t port)
-        : _assets(std::move(assets)), _network(host, port)
+    App::App(std::filesystem::path assets, std::filesystem::path customMaps,
+        const std::string &host, const std::uint16_t port)
+        : _assets(std::move(assets)), _network(host, port),
+        _custom(std::move(customMaps))
     {
     }
 
@@ -39,6 +41,7 @@ namespace client {
                 return false;
             }
             _controls.poll(window);
+            handleBack(window);
             const float dt = advance();
             if (const std::optional<rtype::protocol::BuyResult> result = _replica.takeBuyResult()) {
                 shop.showResult(*result, elapsed());
@@ -47,7 +50,7 @@ namespace client {
             _replica.update(dt);
             playSounds(audio);
             window.clear(4, 4, 18);
-            view.draw(_replica, elapsed());
+            view.draw(_replica, _custom, elapsed());
             shop.draw(_replica, elapsed());
             window.display();
         }
@@ -80,6 +83,10 @@ namespace client {
     {
         sendReady();
         rtype::PlayerInput input = _controls.input();
+
+        if (!inLobby()) {
+            _replica.menu().reset();
+        }
 
         if (ShopPanel::isOpen(_replica)) {
             useShop(shop);
@@ -141,12 +148,181 @@ namespace client {
         return status && status->phase == rtype::Phase::Lobby;
     }
 
+    // Echap revient au choix de la map, ou quitte depuis ailleurs.
+    void App::handleBack(Engine::Window &window)
+    {
+        if (!_controls.backRequested()) {
+            return;
+        }
+        if (inLobby() && _replica.menu().step() != LobbyStep::Map) {
+            _replica.menu().back();
+            return;
+        }
+        window.close();
+    }
+
     void App::useMenu()
     {
+        const LobbyStep step = _replica.menu().step();
+
+        if (const auto result = _replica.takeUploadResult()) {
+            _custom.setMessage(result->error);
+        }
+        if (!_replica.isHost() && step == LobbyStep::Settings) {
+            _replica.menu().back();
+        } else if (step == LobbyStep::Settings) {
+            useSettingsStep();
+        } else if (step == LobbyStep::Scores) {
+            useScoresStep();
+        } else if (step == LobbyStep::Custom) {
+            useCustomStep();
+        } else {
+            useMapStep();
+        }
+    }
+
+    bool App::pressed(const Engine::Key key) const
+    {
+        const std::vector<Engine::Key> &keys = _controls.pressedKeys();
+
+        return std::ranges::find(keys, key) != keys.end();
+    }
+
+    rtype::Settings App::currentSettings() const
+    {
+        if (_replica.status()) {
+            return _replica.status()->settings;
+        }
+        return rtype::Settings{};
+    }
+
+    void App::useMapStep()
+    {
+        if (pressed(Engine::Key::Tab)) {
+            _custom.rescan();
+            _replica.menu().openCustom();
+            return;
+        }
         _replica.moveMapCursor(_controls.menuMove());
-        if (_controls.respawnRequested() && _replica.isHost()) {
+        _replica.menu().moveShown(_controls.menuSide());
+        if (!_controls.respawnRequested()) {
+            return;
+        }
+        if (_replica.onLeaderboard()) {
+            _replica.menu().openScores();
+            _network.requestHistory();
+            requestShownRecords();
+        } else if (_replica.isHost()) {
+            _replica.menu().openSettings(currentSettings());
+        }
+    }
+
+    // Left and Right go from page to page: one for each map of the game, then
+    // the custom maps.
+    void App::useScoresStep()
+    {
+        LobbyMenu &menu = _replica.menu();
+        const bool wasCustom = menu.onCustomScores();
+
+        menu.moveScoresMap(_controls.menuSide());
+        if (menu.onCustomScores()) {
+            useCustomScoresPage(wasCustom);
+        } else {
+            menu.scrollBy(_controls.menuMove(),
+                _replica.runs(menu.scoresMap()).size());
+        }
+        if (_controls.respawnRequested()) {
+            menu.back();
+        }
+    }
+
+    // The best times of the custom map under the cursor: Up and Down choose
+    // another map.
+    void App::useCustomScoresPage(const bool wasCustom)
+    {
+        if (!wasCustom) {
+            _custom.rescan();
+            requestShownRecords();
+        }
+        _custom.moveCursor(_controls.menuMove());
+        if (_controls.menuMove() != 0) {
+            requestShownRecords();
+        }
+    }
+
+    // The server only knows the maps without a mistake.
+    void App::requestShownRecords()
+    {
+        const rtype::mapjson::MapEntry *entry = _custom.selected();
+
+        if (_replica.menu().onCustomScores() && entry != nullptr) {
+            _network.requestCustomRecords(entry->hash);
+        }
+    }
+
+    void App::useSettingsStep()
+    {
+        LobbyMenu &menu = _replica.menu();
+
+        menu.moveRow(_controls.menuMove());
+        if (_controls.menuSide() != 0) {
+            _network.changeSettings(menu.change(_controls.menuSide()));
+        }
+        if (!_controls.respawnRequested()) {
+            return;
+        }
+        if (menu.settingsForCustom()) {
+            startCustomMap();
+        } else {
             _network.selectMap(_replica.mapCursor());
         }
+        menu.back();
+    }
+
+    // The maps written by the players: the host picks one, chooses the
+    // settings, and the map is sent to the server, which checks it again and
+    // starts it.
+    void App::useCustomStep()
+    {
+        LobbyMenu &menu = _replica.menu();
+
+        _custom.moveCursor(_controls.menuMove());
+        if (pressed(Engine::Key::R)) {
+            _custom.rescan();
+        }
+        if (pressed(Engine::Key::Tab)) {
+            menu.reset();
+            return;
+        }
+        if (_controls.menuSide() > 0) {
+            menu.openScores(true);
+            requestShownRecords();
+            return;
+        }
+        if (!_controls.respawnRequested() || !_replica.isHost()) {
+            return;
+        }
+        if (_custom.selected() == nullptr) {
+            _custom.setMessage("CHOOSE A MAP WITHOUT A MISTAKE");
+            return;
+        }
+        menu.openSettings(currentSettings(), true);
+    }
+
+    void App::startCustomMap()
+    {
+        std::string text;
+        const std::string error = _custom.readSelected(text);
+
+        if (_network.uploading()) {
+            return;
+        }
+        if (!error.empty()) {
+            _custom.setMessage(error);
+            return;
+        }
+        _network.uploadMap(std::move(text));
+        _custom.setMessage("SENDING THE MAP...");
     }
 
     void App::sendReady()

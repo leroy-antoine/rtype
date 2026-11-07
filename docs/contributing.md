@@ -50,6 +50,11 @@ request: the tick table or status list for the game logic, the open questions
 for the server and the client, the [protocol page](protocol.md) for anything
 that changes what goes on the network.
 
+When you add a monster, a boss, a zone or an obstacle, also add its name for
+the maps written by the players (`Names.hpp` and `ObstacleParser.cpp` of
+`rtype::mapjson`) and in [the guide](custom-maps.md); see
+[custom maps for developers](custom-maps-internals.md#how-to).
+
 ## Knowledge graph
 
 A graphify graph of the code is kept in `docs/graphify-out/`. Install the git

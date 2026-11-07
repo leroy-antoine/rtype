@@ -10,6 +10,7 @@
 #include "Audio.hpp"
 #include "logic/Config.hpp"
 #include "Controls.hpp"
+#include "CustomMapList.hpp"
 #include "GameView.hpp"
 #include "Replica.hpp"
 #include "ShopPanel.hpp"
@@ -17,7 +18,8 @@
 namespace client {
     class App {
     public:
-        App(std::filesystem::path assets, const std::string &host, std::uint16_t port);
+        App(std::filesystem::path assets, std::filesystem::path customMaps,
+            const std::string &host, std::uint16_t port);
 
         int run();
 
@@ -40,6 +42,16 @@ namespace client {
         [[nodiscard]] bool inLobby() const;
         [[nodiscard]] bool isPaused() const;
         void useMenu();
+        void useMapStep();
+        [[nodiscard]] rtype::Settings currentSettings() const;
+        void useSettingsStep();
+        void useScoresStep();
+        void useCustomStep();
+        void useCustomScoresPage(bool wasCustom);
+        void startCustomMap();
+        void requestShownRecords();
+        [[nodiscard]] bool pressed(Engine::Key key) const;
+        void handleBack(Engine::Window &window);
         void useMatch();
         void usePause();
         void sendReady();
@@ -50,6 +62,7 @@ namespace client {
         std::filesystem::path _assets;
         Network _network;
         Replica _replica;
+        CustomMapList _custom;
         Controls _controls;
         Clock::time_point _start;
         Clock::time_point _last;

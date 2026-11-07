@@ -1,0 +1,15 @@
+{
+  "name": "My first map",
+  "author": "Your name",
+  "levels": [
+    {
+      "length": 2000,
+      "waves": [
+        {"at": 200, "kind": "Basic", "count": 5}
+      ],
+      "bosses": [
+        {"kind": "Standard", "at": 1800}
+      ]
+    }
+  ]
+}

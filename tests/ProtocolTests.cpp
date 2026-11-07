@@ -17,8 +17,9 @@ namespace {
         status.coins = 42;
         status.elapsedMs = 83456;
         status.level = 7;
-        status.players.push_back({0, 100, true});
-        status.players.push_back({3, 0, false});
+        status.settings = Settings{Difficulty::Hard, true};
+        status.players.push_back({0, 100, true, false, 2});
+        status.players.push_back({3, 0, false, false, 0});
         return status;
     }
 }
@@ -42,6 +43,10 @@ TEST(a_status_survives_an_encode_decode_round_trip)
     CHECK(decoded->players[0].alive);
     CHECK(decoded->players[1].slot == 3);
     CHECK(!decoded->players[1].alive);
+    CHECK(decoded->players[0].lives == 2);
+    CHECK(decoded->players[1].lives == 0);
+    CHECK(decoded->settings.difficulty == Difficulty::Hard);
+    CHECK(decoded->settings.friendlyFire);
 }
 
 TEST(an_empty_status_is_valid)
@@ -75,7 +80,13 @@ TEST(a_status_with_invalid_fields_is_rejected)
     payload[14] = 5;
     CHECK(!protocol::decodeStatus(payload).has_value());
     payload = protocol::encode(sampleStatus());
-    payload[17] = 5;
+    payload[19] = 5;
+    CHECK(!protocol::decodeStatus(payload).has_value());
+    payload = protocol::encode(sampleStatus());
+    payload[17] = 4;
+    CHECK(!protocol::decodeStatus(payload).has_value());
+    payload = protocol::encode(sampleStatus());
+    payload[18] = 2;
     CHECK(!protocol::decodeStatus(payload).has_value());
     payload = protocol::encode(sampleStatus());
     payload[protocol::STATUS_HEADER_SIZE] = 7;
@@ -284,8 +295,16 @@ TEST(a_status_with_an_unknown_map_is_rejected)
 {
     GameStatus status = sampleStatus();
 
-    status.map = static_cast<std::uint8_t>(MAP_COUNT);
+    status.map = static_cast<std::uint8_t>(CUSTOM_MAP + 1);
     CHECK(!protocol::decodeStatus(protocol::encode(status)).has_value());
+}
+
+TEST(a_status_of_a_custom_map_is_accepted)
+{
+    GameStatus status = sampleStatus();
+
+    status.map = CUSTOM_MAP;
+    CHECK(protocol::decodeStatus(protocol::encode(status))->map == CUSTOM_MAP);
 }
 
 TEST(a_map_selection_is_validated)
@@ -308,10 +327,10 @@ TEST(the_leaderboard_survives_a_round_trip)
         protocol::decodeLeaderboard(protocol::encode(board.all()));
 
     CHECK(decoded.has_value());
-    CHECK((*decoded)[0].size() == 2);
-    CHECK((*decoded)[0][0].timeMs == 59000);
-    CHECK((*decoded)[1].empty());
-    CHECK((*decoded)[2][0].players == 4);
+    CHECK((*decoded)[0][1].size() == 2);
+    CHECK((*decoded)[0][1][0].timeMs == 59000);
+    CHECK((*decoded)[1][1].empty());
+    CHECK((*decoded)[2][1][0].players == 4);
 }
 
 TEST(a_bad_leaderboard_is_rejected)
@@ -325,8 +344,82 @@ TEST(a_bad_leaderboard_is_rejected)
     CHECK(!protocol::decodeLeaderboard({9, 0, 0}).has_value());
     board.add(0, {1000, 1});
     payload = protocol::encode(board.all());
-    payload[5] = 0;
+    payload[6] = 0;
     CHECK(!protocol::decodeLeaderboard(payload).has_value());
+    payload = protocol::encode(board.all());
+    payload[7] = 0xF1;
+    CHECK(!protocol::decodeLeaderboard(payload).has_value());
+    payload = protocol::encode(board.all());
+    payload[7] = static_cast<std::uint8_t>(Difficulty::Easy);
+    CHECK(!protocol::decodeLeaderboard(payload).has_value());
+}
+
+TEST(the_leaderboard_keeps_the_settings_of_each_run)
+{
+    Leaderboard board;
+
+    board.add(1, {61000, 2, Settings{Difficulty::Brutal, true}});
+    board.add(1, {70000, 1, Settings{Difficulty::Easy, false}});
+    const std::optional<AllRecords> decoded =
+        protocol::decodeLeaderboard(protocol::encode(board.all()));
+
+    CHECK(decoded.has_value());
+    CHECK((*decoded)[1][3][0].settings.difficulty == Difficulty::Brutal);
+    CHECK((*decoded)[1][3][0].settings.friendlyFire);
+    CHECK((*decoded)[1][0][0].settings.difficulty == Difficulty::Easy);
+    CHECK(!(*decoded)[1][0][0].settings.friendlyFire);
+    CHECK((*decoded)[1][1].empty());
+}
+
+TEST(the_history_is_sent_in_pages_and_rebuilt_in_order)
+{
+    Leaderboard board;
+
+    for (std::uint32_t i = 0; i < 400; ++i) {
+        board.add(static_cast<MapId>(i % MAP_COUNT), {1000 + i, 1});
+    }
+    const std::vector<protocol::Payload> pages =
+        protocol::historyPages(board.history());
+    std::vector<RunEntry> rebuilt;
+
+    CHECK(pages.size() == 3);
+    for (const protocol::Payload &payload : pages) {
+        const auto page = protocol::decodeHistory(payload);
+
+        CHECK(page.has_value());
+        CHECK(page->start == rebuilt.size());
+        CHECK(page->total == 400);
+        rebuilt.insert(rebuilt.end(), page->entries.begin(),
+            page->entries.end());
+    }
+    CHECK(rebuilt.size() == 400);
+    CHECK(rebuilt.back().record.timeMs == 1399);
+}
+
+TEST(an_empty_history_is_still_one_valid_page)
+{
+    const std::vector<protocol::Payload> pages = protocol::historyPages({});
+    const auto page = protocol::decodeHistory(pages.front());
+
+    CHECK(pages.size() == 1);
+    CHECK(page.has_value());
+    CHECK(page->total == 0);
+    CHECK(page->entries.empty());
+}
+
+TEST(a_bad_history_page_is_rejected)
+{
+    Leaderboard board;
+
+    board.add(0, {1000, 1});
+    protocol::Payload payload = protocol::historyPages(board.history())[0];
+
+    payload.push_back(0);
+    CHECK(!protocol::decodeHistory(payload).has_value());
+    payload.pop_back();
+    payload[5] = static_cast<std::uint8_t>(MAP_COUNT);
+    CHECK(!protocol::decodeHistory(payload).has_value());
+    CHECK(!protocol::decodeHistory({}).has_value());
 }
 
 TEST(the_effects_of_the_portals_survive_an_own_state_round_trip)
@@ -422,4 +515,36 @@ TEST(a_ready_message_round_trips_and_is_validated)
     CHECK(!protocol::decodeReady({}).has_value());
     CHECK(!protocol::decodeReady({2}).has_value());
     CHECK(!protocol::decodeReady({1, 1}).has_value());
+}
+
+TEST(a_settings_message_round_trips_and_is_validated)
+{
+    const Settings settings{Difficulty::Brutal, true};
+    const std::optional<Settings> decoded =
+        protocol::decodeSettings(protocol::encodeSettings(settings));
+
+    CHECK(decoded.has_value());
+    CHECK(decoded->difficulty == Difficulty::Brutal);
+    CHECK(decoded->friendlyFire);
+    CHECK(!protocol::decodeSettings({4, 0}).has_value());
+    CHECK(!protocol::decodeSettings({0, 2}).has_value());
+    CHECK(!protocol::decodeSettings({0}).has_value());
+    CHECK(!protocol::decodeSettings({0, 0, 0}).has_value());
+}
+
+TEST(each_difficulty_has_its_own_top_three)
+{
+    Leaderboard board;
+
+    for (std::uint32_t i = 0; i < 5; ++i) {
+        board.add(0, {1000 + i, 1, Settings{Difficulty::Brutal, false}});
+        board.add(0, {500 + i, 1, Settings{Difficulty::Easy, false}});
+    }
+    CHECK(board.all()[0][3].size() == MAX_RECORDS);
+    CHECK(board.all()[0][3].front().timeMs == 1000);
+    CHECK(board.all()[0][0].size() == MAX_RECORDS);
+    CHECK(board.all()[0][0].front().timeMs == 500);
+    CHECK(board.all()[0][2].empty());
+    CHECK(DIFFICULTY_BY_RANK.front() == Difficulty::Brutal);
+    CHECK(DIFFICULTY_BY_RANK.back() == Difficulty::Easy);
 }

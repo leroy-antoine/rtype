@@ -145,7 +145,78 @@ namespace client {
     std::uint32_t Replica::predict(const rtype::PlayerInput &input, const float dt)
     {
         refreshSolids();
+        trackCharge(input, dt);
         return _prediction.record(input, dt);
+    }
+
+    namespace {
+        float grown(const bool held, const float time, const float dt,
+            const float limit)
+        {
+            if (!held) {
+                return 0.f;
+            }
+            return std::min(time + dt, limit);
+        }
+    }
+
+    // Les jauges se remplissent pendant que les touches de tir sont
+    // maintenues, sauf en pause, au shop et pendant la recharge du laser.
+    void Replica::trackCharge(const rtype::PlayerInput &input, const float dt)
+    {
+        if (!isPlaying()) {
+            _chargeTime = 0.f;
+            _altTime = 0.f;
+            return;
+        }
+        _laserCooldown = std::max(0.f, _laserCooldown - dt);
+        _chargeTime = grown(input.fire, _chargeTime, dt,
+            rtype::config::CHARGE_FULL_TIME);
+        if (!input.alt && _altTime >= rtype::config::LASER_CHARGE_TIME
+            && laserEquipped()) {
+            _laserCooldown = rtype::config::LASER_COOLDOWN;
+        }
+        _altTime = grown(input.alt && _laserCooldown <= 0.f, _altTime, dt,
+            rtype::config::LASER_CHARGE_TIME);
+    }
+
+    bool Replica::isPlaying() const
+    {
+        return _status && _status->phase == rtype::Phase::Playing
+            && !_status->paused;
+    }
+
+    float Replica::chargeTime() const
+    {
+        return _chargeTime;
+    }
+
+    bool Replica::laserEquipped() const
+    {
+        if (!_slot) {
+            return false;
+        }
+        const std::optional<rtype::WeaponKind> weapon = rtype::equippedWeapon(
+            _augments[static_cast<std::size_t>(*_slot)]);
+
+        return weapon && *weapon == rtype::WeaponKind::Laser;
+    }
+
+    float Replica::altTime() const
+    {
+        return _altTime;
+    }
+
+    std::optional<std::pair<gameLogic::Vec2Pos, gameLogic::Vec2Hitbox>>
+        Replica::localShip()
+    {
+        const std::optional<Engine::Entity> player = localPlayer();
+
+        if (!player) {
+            return std::nullopt;
+        }
+        return std::make_pair(_reg.get<gameLogic::Vec2Pos>(*player),
+            _reg.get<gameLogic::Vec2Hitbox>(*player));
     }
 
     void Replica::applyPrediction()
@@ -188,12 +259,48 @@ namespace client {
         _records = records;
     }
 
+    void Replica::apply(const rtype::protocol::HistoryPage &page)
+    {
+        if (page.start == 0) {
+            _history.clear();
+        }
+        if (page.start != _history.size()) {
+            return;
+        }
+        _history.insert(_history.end(), page.entries.begin(),
+            page.entries.end());
+        for (std::size_t map = 0; map < rtype::MAP_COUNT; ++map) {
+            _runs[map] = rtype::runsOf(_history,
+                static_cast<rtype::MapId>(map));
+        }
+    }
+
+    const rtype::MapRecords &Replica::runs(const rtype::MapId map) const
+    {
+        return _runs[map];
+    }
+
     void Replica::moveMapCursor(const int delta)
     {
-        const int count = static_cast<int>(rtype::MAP_COUNT);
+        const int count = static_cast<int>(ENTRY_COUNT);
         const int next = (static_cast<int>(_mapCursor) + delta + count) % count;
 
         _mapCursor = static_cast<rtype::MapId>(next);
+    }
+
+    bool Replica::onLeaderboard() const
+    {
+        return _mapCursor == LEADERBOARD_ENTRY;
+    }
+
+    LobbyMenu &Replica::menu()
+    {
+        return _menu;
+    }
+
+    const LobbyMenu &Replica::menu() const
+    {
+        return _menu;
     }
 
     const rtype::AllRecords &Replica::records() const
@@ -310,6 +417,7 @@ namespace client {
     {
         switch (spawn.sprite) {
             case rtype::SpriteId::PlayerBullet:
+            case rtype::SpriteId::PlayerRocket:
                 _cues.push_back(Cue::PlayerShot);
                 break;
             case rtype::SpriteId::Boss:
@@ -324,5 +432,56 @@ namespace client {
             default:
                 break;
         }
+    }
+
+    void Replica::apply(const rtype::protocol::CustomInfo &info)
+    {
+        _customInfo = info;
+    }
+
+    void Replica::apply(const rtype::protocol::UploadResult &result)
+    {
+        _uploadResult = result;
+    }
+
+    void Replica::apply(const rtype::protocol::CustomRecords &records)
+    {
+        _customRecords[records.hash] = records.records;
+    }
+
+    std::optional<rtype::protocol::UploadResult> Replica::takeUploadResult()
+    {
+        std::optional<rtype::protocol::UploadResult> result;
+
+        result.swap(_uploadResult);
+        return result;
+    }
+
+    const rtype::protocol::CustomInfo &Replica::customInfo() const
+    {
+        return _customInfo;
+    }
+
+    const rtype::DifficultyRecords &Replica::customRecords(
+        const std::uint64_t hash) const
+    {
+        static const rtype::DifficultyRecords NONE{};
+        const auto found = _customRecords.find(hash);
+
+        if (found == _customRecords.end()) {
+            return NONE;
+        }
+        return found->second;
+    }
+
+    rtype::Zone Replica::zone() const
+    {
+        if (!_status) {
+            return rtype::Zone::DeepSpace;
+        }
+        if (_status->map == rtype::CUSTOM_MAP) {
+            return rtype::customZone(_customInfo.zones, _status->level);
+        }
+        return rtype::zoneOf(_status->map, _status->level);
     }
 }

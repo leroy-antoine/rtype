@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <vector>
 #include "engine/core/Entity.hpp"
 #include "Config.hpp"
 #include "Kinds.hpp"
@@ -11,6 +12,7 @@ namespace rtype {
         bool left = false;
         bool right = false;
         bool fire = false;
+        bool alt = false;
     };
 
     struct Speed {
@@ -42,6 +44,40 @@ namespace rtype {
         int hp = config::REGENERATION_HP;
         float interval = config::REGENERATION_INTERVAL;
         float timer = config::REGENERATION_INTERVAL;
+    };
+
+    // Temps pendant lequel un joueur maintient la touche de tir.
+    struct Charge {
+        float time = 0.f;
+    };
+
+    // Une balle qui traverse ses cibles, chacune n'etant touchee qu'une fois.
+    struct Pierce {
+        std::vector<Engine::Entity> hit;
+    };
+
+    // L'arme secondaire d'un joueur, tiree avec la touche X.
+    struct SecondaryWeapon {
+        WeaponKind kind = WeaponKind::Rocket;
+        float cooldown = 0.f;
+        float timer = 0.f;
+        float charge = 0.f;
+    };
+
+    // Une roquette : elle explose au contact dans un rayon `radius`.
+    struct Missile {
+        float radius = 0.f;
+    };
+
+    // Le niveau du drone d'un joueur (0 : pas de drone).
+    struct DroneLevel {
+        int level = 0;
+    };
+
+    // Le drone lui-meme : son proprietaire et le temps avant son prochain tir.
+    struct DroneBody {
+        Engine::Entity owner{};
+        float timer = 0.f;
     };
 
     struct Weapon {
@@ -138,6 +174,11 @@ namespace rtype {
     struct ProjectileTag {
     };
 
+    // Qui a tire la balle : le tir allie ne touche pas son propre tireur.
+    struct Shooter {
+        Engine::Entity owner;
+    };
+
     enum class TeamId { Player, Monster };
 
     struct Team {
@@ -152,7 +193,8 @@ namespace rtype {
         DasherBoss, SummonerBoss, FortressBoss,
         RocketMissile, Bomb, AlienShard, RockWall, SpikeWall,
         ReversePortal, FastPortal, NormalPortal, LaserPost, TurretBlock, MineBall, BeamOn, BeamWarn, Meteor,
-        LeviathanBolt,
+        LeviathanBolt, PlayerRocket, PlayerLaser, PlayerBoltDown, PlayerBoltUp,
+        PlayerDrone,
         Count
     };
 

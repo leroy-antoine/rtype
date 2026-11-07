@@ -27,7 +27,7 @@ A new client can be written from these two pages alone.
 | Direction | the client sends keys, the server sends the world |
 | Datagram | at most **1200 bytes**, carries one or several messages |
 | Byte order | **big-endian** for every integer and float |
-| Protocol version | `20` (`rtype::protocol::VERSION`), checked at connection |
+| Protocol version | `25` (`rtype::protocol::VERSION`), checked at connection |
 | Tick | the server simulates at 60 Hz and sends the states every tick |
 
 The server is the authority. A client never sends a position, a hit or a
@@ -62,11 +62,14 @@ Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
 
 ```
  client                                   server
-   │ ── Connect(version=20) ─────────────►  │  every 500 ms, 10 tries at most
+   │ ── Connect(version=25) ─────────────►  │  every 500 ms, 10 tries at most
    │ ◄───────────── Accept(token) ──────── │  or Refuse(0 version, 1 full)
    │ ◄───────────────────── YOU(slot) ──── │  reliable
    │ ◄────────────────── SPAWN × n ─────── │  reliable, the whole world
    │ ◄──────────────────── LEADERBOARD ─── │  reliable, the best times
+   │ ── HISTORY_REQUEST ────────────────►  │  reliable, to open the leaderboard tab
+   │ ◄───────────────────── HISTORY × n ── │  reliable, every win, in pages
+   │ ── SETTINGS(difficulty, fire) ─────►  │  reliable, the host, in the lobby
    │ ── SELECT_MAP(map) ────────────────►  │  reliable, the host, in the lobby
    │ ◄───────────────── AUGMENTS, SHOP ─── │  reliable, augments owned and on sale
    │ ── INPUT(sequence, keys) ──────────►  │  every frame of the client
@@ -103,16 +106,26 @@ Sender: **C** is the client, **S** is the server. Delivery: **R** is reliable
 | `0x14` | `PAUSE` | C | R | 1 |
 | `0x15` | `BUY` | C | R | 1 |
 | `0x16` | `READY` | C | R | 1 |
+| `0x17` | `SETTINGS` | C | R | 2 |
+| `0x18` | `HISTORY_REQUEST` | C | R | 0 |
+| `0x19` | `MAP_UPLOAD_BEGIN` | C | R | 4 |
+| `0x1A` | `MAP_UPLOAD_CHUNK` | C | R | 1 to 1100 |
+| `0x1B` | `MAP_UPLOAD_END` | C | R | 0 |
+| `0x1C` | `CUSTOM_RECORDS_GET` | C | R | 8 |
 | `0x20` | `SPAWN` | S | R | 22 |
 | `0x21` | `DESTROY` | S | R | 4 |
 | `0x22` | `STATES` | S | U | 5 + 12 × n |
-| `0x23` | `STATUS` | S | U | 20 + 5 × n |
+| `0x23` | `STATUS` | S | U | 22 + 6 × n |
 | `0x24` | `YOU` | S | R | 1 |
 | `0x25` | `OWN_STATE` | S | U | 14 |
 | `0x26` | `AUGMENTS` | S | R | 1 + Σ (2 + n) |
 | `0x27` | `SHOP` | S | R | 1 + n |
 | `0x28` | `BUY_RESULT` | S | R | 2 |
-| `0x29` | `LEADERBOARD` | S | R | 3 to 28 |
+| `0x29` | `LEADERBOARD` | S | R | 12 to 228 |
+| `0x2A` | `HISTORY` | S | R | 5 + 7 × n |
+| `0x2B` | `CUSTOM_INFO` | S | R | 10 + name + n |
+| `0x2C` | `MAP_UPLOAD_RESULT` | S | R | 2 + text |
+| `0x2D` | `CUSTOM_RECORDS` | S | R | 12 + 6 × n |
 
 ### `INPUT` (0x10)
 
@@ -122,9 +135,9 @@ server keeps it until the next one. The client sends it every frame.
 | Offset | Field | Type | Meaning |
 |---|---|---|---|
 | 0 | sequence | `u32` | number of this input, grows by one at each frame |
-| 4 | keys | `u8` | bit 0 up, bit 1 down, bit 2 left, bit 3 right, bit 4 fire |
+| 4 | keys | `u8` | bit 0 up, bit 1 down, bit 2 left, bit 3 right, bit 4 fire (Space), bit 5 secondary weapon (X) |
 
-Bits 5 to 7 of `keys` must be `0`, otherwise the message is ignored. The
+Bits 6 and 7 of `keys` must be `0`, otherwise the message is ignored. The
 server remembers the last `sequence` it applied and sends it back in
 `OWN_STATE`, so the client can predict its own ship.
 
@@ -158,6 +171,119 @@ Sent by the host to leave the lobby and start the match on this map. The
 **host** is the player with the lowest slot among those connected. The server
 ignores the message when the sender is not the host, when the game is not in
 the lobby phase, or when the map is unknown.
+
+### `SETTINGS` (0x17)
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | difficulty | `u8` | `0` easy, `1` normal, `2` hard, `3` brutal |
+| 1 | friendly fire | `u8` | `0` off, `1` on |
+
+Sent by the host while it chooses the settings, before `SELECT_MAP`. The
+server ignores it when the sender is not the host, when the game is not in
+the lobby phase, or when a value is out of range. Otherwise it stores the
+settings, which apply to the next match (the lives are given again when the
+match starts), and every client sees them in `STATUS`.
+
+### `HISTORY_REQUEST` (0x18)
+
+Empty payload. Asks for the list of every victory since the start of the
+game (the leaderboard tab). The server answers with one or more
+[`HISTORY`](#history-0x2a) pages, to this client only.
+
+### Maps written by the players
+
+A player writes a map as a JSON file (see [custom maps](custom-maps.md)). The
+files stay on the client: the host sends the one it chooses, the server checks
+it and plays it. The server never reads a file of its own for this.
+
+```
+ host client                                   server
+ │ ── MAP_UPLOAD_BEGIN (size) ───────────────► │  size 1 to 262144, else refused
+ │ ── MAP_UPLOAD_CHUNK (≤ 1100 bytes) × n ───► │  appended in order
+ │ ── MAP_UPLOAD_END ────────────────────────► │  size must match, JSON is parsed
+ │ ◄── MAP_UPLOAD_RESULT (ok, text) ───────── │  and checked again
+ │ ◄── CUSTOM_INFO (to every client) ──────── │  if ok: the match starts
+```
+
+The messages are reliable and applied in order, so the pieces arrive in the
+order they were sent. The client sends at most 8 pieces per frame. A full upload is 239 pieces at
+most, so even with no Ack at all it stays under the 256 waiting messages that
+get a client kicked.
+
+The map has the id `3` (`CUSTOM_MAP`) in the `map` field of `STATUS`, which
+accepts the values 0 to 3. `SELECT_MAP` still only accepts 0 to 2. The host
+chooses the [`SETTINGS`](#settings-0x17) (difficulty, friendly fire) before
+sending the map, as for any other map; they are in `STATUS` and in the records.
+
+### `MAP_UPLOAD_BEGIN` (0x19)
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | size | `u32` | size in bytes of the JSON, 1 to 262144 |
+
+Starts an upload and drops the previous one. Ignored when the sender is not
+the host or when the game is not in the lobby. A wrong size is answered with a `MAP_UPLOAD_RESULT` that is not ok.
+
+### `MAP_UPLOAD_CHUNK` (0x1A)
+
+The payload is a piece of the JSON, 1 to 1100 bytes, with no other field. The
+upload is **dropped** when the sender is not the one that began it, when no
+upload is running, or when the pieces together would be bigger than the size
+announced. The server therefore never keeps more than 256 KiB for an upload.
+
+### `MAP_UPLOAD_END` (0x1B)
+
+No payload. The server checks that every byte arrived, parses the JSON, checks
+the map (types, ranges, totals, at least one boss) and starts it. It answers
+with `MAP_UPLOAD_RESULT`. Ignored when the sender is not the host.
+
+### `MAP_UPLOAD_RESULT` (0x2C)
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | ok | `u8` | 1 when the map starts, 0 otherwise |
+| 1 | size `n` | `u8` | length of the text, at most 200 |
+| 2 | text | `n` bytes | why the map was refused (empty when ok) |
+
+The text starts with the path of the faulty field, e.g.
+`map.levels[0].waves[2].kind: unknown "Tonk"`. A map is refused as a whole.
+It is also refused when a game is already running.
+
+### `CUSTOM_INFO` (0x2B)
+
+Sent to every client when a custom map starts, and to a client that connects
+while a custom map is played.
+
+| Field | Type | Meaning |
+|---|---|---|
+| name size `n` | `u8` | at most 40 |
+| name | `n` bytes | printable characters only |
+| hash | `u64` | FNV-1a of the JSON: identifies the map and its records |
+| levels `m` | `u8` | at most 100 |
+| zone (× m) | `u8` | scenery of each level, `0` to `6` (`Zone`) |
+
+### `CUSTOM_RECORDS_GET` (0x1C)
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | hash | `u64` | hash of the map, as in `CUSTOM_INFO` |
+
+Asks for the best times of a map. The server answers with `CUSTOM_RECORDS`
+(empty when the map was never won).
+
+### `CUSTOM_RECORDS` (0x2D)
+
+| Field | Type | Meaning |
+|---|---|---|
+| hash | `u64` | hash of the map |
+| records | 4 blocks | one block per difficulty, in the order of the enum, as in `LEADERBOARD`: count `n` (`u8`, at most 3), then per record the time (`u32`, milliseconds, fastest first), the players (`u8`, 1 to 4) and the settings (`u8`) |
+
+The best times of one map for each difficulty. A block only holds records of
+its own difficulty. Sent to a client that asks for them, and to everybody after
+the victory on a custom map. The server keeps the records of at most 500 maps,
+in `custom_leaderboard.txt`. Changing one byte of a map changes its hash, so a
+modified map starts with an empty leaderboard.
 
 ### `BUY` (0x15)
 
@@ -230,8 +356,13 @@ to a client that has just connected, then one for each new entity.
 | 27 | laser warning |
 | 28 | meteor |
 | 29 | Leviathan bolt |
+| 30 | player rocket |
+| 31 | player laser (flash) |
+| 32 | lightning segment going down |
+| 33 | lightning segment going up |
+| 34 | drone |
 
-A value of 30 or more is invalid, and so is a player slot of 4 or more.
+A value of 35 or more is invalid, and so is a player slot of 4 or more.
 
 ### `DESTROY` (0x21)
 
@@ -268,12 +399,15 @@ What the HUD shows, sent about 10 times per second.
 | 13 | level | `u8` | number of the level being played, starting at 1 |
 | 14 | map | `u8` | index of the map being played (or last played), 0 to 2 |
 | 15 | deaths | `u16` | number of times a player was destroyed in this match |
-| 17 | count `n` | `u8` | number of players, at most 4 |
-| 18 + 5 × i | slot | `u8` | 0 to 3 |
-| 19 + 5 × i | hp | `u16` | |
-| 21 + 5 × i | alive | `u8` | `0` or `1` |
-| 22 + 5 × i | ready | `u8` | `0` or `1`, only meaningful in the shop phase |
-| 18 + 5 × n | countdown | `u16` | milliseconds before the next level, `0` when the countdown is not running |
+| 17 | difficulty | `u8` | `0` to `3`, see [`SETTINGS`](#settings-0x17) |
+| 18 | friendly fire | `u8` | `0` or `1` |
+| 19 | count `n` | `u8` | number of players, at most 4 |
+| 20 + 6 × i | slot | `u8` | 0 to 3 |
+| 21 + 6 × i | hp | `u16` | |
+| 23 + 6 × i | alive | `u8` | `0` or `1` |
+| 24 + 6 × i | ready | `u8` | `0` or `1`, only meaningful in the shop phase |
+| 25 + 6 × i | lives | `u8` | lives left, `0` when the player is eliminated |
+| 20 + 6 × n | countdown | `u16` | milliseconds before the next level, `0` when the countdown is not running |
 
 The server is in the **lobby** phase when it starts, and again after the end
 screen of a victory (or when every player has left). After a defeat, the same map restarts from its first level. The players are listed in
@@ -309,17 +443,43 @@ client.
 
 ### `LEADERBOARD` (0x29)
 
-The best victory times of every map, sent to a client when it connects and to
-everybody after each victory. Three maps, so three blocks one after the other:
+The three best victory times of every map **and every difficulty**, sent to
+a client when it connects and to everybody after each victory. Three maps,
+each with four blocks (easy, normal, hard, brutal, in the order of the
+difficulty byte), so twelve blocks one after the other:
 
 | Field | Type | Meaning |
 |---|---|---|
-| count `n` | `u8` | records of this map, at most 5 |
+| count `n` | `u8` | records of this block, at most 3 |
 | time (× n) | `u32` | milliseconds, fastest first |
 | players (× n) | `u8` | number of players of that run, 1 to 4 |
+| settings (× n) | `u8` | bits 0-1: difficulty, bit 2: friendly fire, other bits `0` |
 
-Each record takes 5 bytes (time then players). A payload with trailing bytes,
-a count above 5, or `0` players is rejected.
+Each record takes 6 bytes (time, players, settings). A payload with trailing
+bytes, a count above 3, `0` players, unknown bits in the settings, or a
+record whose difficulty is not the one of its block is rejected.
+
+### `HISTORY` (0x2A)
+
+A page of every victory since the start of the game, sent after a
+`HISTORY_REQUEST`. The history can hold hundreds of runs, so it is cut in
+pages that fit in one datagram (168 runs at most). An empty history is still
+one page.
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | start | `u16` | index of the first run of this page |
+| 2 | total | `u16` | number of runs in the whole history |
+| 4 | count `n` | `u8` | runs in this page |
+| 5 + 7 × i | map | `u8` | 0 to 2 |
+| 6 + 7 × i | time | `u32` | milliseconds |
+| 10 + 7 × i | players | `u8` | 1 to 4 |
+| 11 + 7 × i | settings | `u8` | same bits as in `LEADERBOARD` |
+
+Pages are reliable, so they arrive in order. The client starts again from an
+empty list on the page that starts at `0` and ignores a page that does not
+follow the previous one. The runs are in the order they were won; the client
+sorts them by time.
 
 ### `AUGMENTS` (0x26)
 
@@ -352,6 +512,18 @@ The message replaces the whole previous list on the client.
 | 4 | Regeneration |
 | 5 | Shield |
 | 6 | MultiShot |
+| 7 | Rocket (secondary weapon) |
+| 8 | Laser (secondary weapon) |
+| 9 | Lightning (secondary weapon) |
+| 10 | Drone (gives the drone, level 1) |
+| 11 | DroneBoost (drone level 2) |
+| 12 | DroneTwin (drone level 3) |
+
+The three weapons replace each other: the equipped one is the last weapon id
+of the list, and the three drone ids give the drone the level 1, 2 or 3 (never lowering it). The
+server fires the weapons from the `KEY_ALT` bit of `INPUT`; nothing about the
+weapons travels on the network except the entities they create (rockets,
+flashes, lightning segments, the drone and its bullets) and the augment ids.
 
 Prices and rarities are not sent: the client reads them from the shared
 augment table (`logic/Augments.hpp`).
@@ -389,8 +561,9 @@ messages tell every client what changed.
 UDP can lose, duplicate and reorder datagrams. The protocol picks the delivery
 per message:
 
-- **Reliable** (`SPAWN`, `DESTROY`, `YOU`, `RESPAWN`, `SELECT_MAP`, `LEAVE_MATCH`, `PAUSE`, `LEADERBOARD`, `AUGMENTS`, `SHOP`,
-  `BUY`, `READY`, `BUY_RESULT`): a spawn, a death or a purchase must
+- **Reliable** (`SPAWN`, `DESTROY`, `YOU`, `RESPAWN`, `SELECT_MAP`, `LEAVE_MATCH`, `PAUSE`, `LEADERBOARD`, `HISTORY`,
+  `HISTORY_REQUEST`, `SETTINGS`, `AUGMENTS`, `SHOP`, `BUY`, `READY`,
+  `BUY_RESULT`, and the messages of the custom maps): a spawn, a death or a purchase must
   not be missed, or the client would draw a wrong world. The sender resends
   until an Ack comes back, the receiver applies the messages in order.
 - **Unreliable** (`INPUT`, `STATES`, `STATUS`, `OWN_STATE`): they are repeated every tick
@@ -406,12 +579,17 @@ per message:
   from the address of the session.
 - Every game payload is decoded with a bounds-checked reader. The size must
   match exactly, a field out of range (`sprite`, `slot`, `alive`, keys bits,
-  a boss hp above its maximum, a map that does not exist) or a non-finite float makes the message be
+  a boss hp above its maximum, a map that does not exist, an unknown zone) or a non-finite float makes the message be
   ignored. A malformed message never reaches the game.
 - Bounds against memory abuse: 1200 bytes per datagram, 4096 datagrams queued
   by the socket, 64 early reliable messages kept, and a client with more than
   256 messages waiting for an Ack is kicked.
 - The server ignores any game message from an address that has no session.
+- A custom map comes from a client, so it is never trusted: only the host may
+  send one, the upload is capped at 256 KiB, one upload at a time, and the JSON
+  is parsed again with limits on its size, its nesting and its contents (see
+  [custom maps](custom-maps.md#limits)). A bad file is refused, it never
+  crashes the server.
 - A client can only choose the state of its five keys. It cannot move, hit or
   spawn anything by itself.
 

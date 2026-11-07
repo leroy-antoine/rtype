@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include <vector>
 #include "MapList.hpp"
 
 namespace rtype {
@@ -45,5 +46,15 @@ namespace rtype {
             return CAMPAIGN_ZONES[level - 1];
         }
         return Zone::Core;
+    }
+
+    // Une map de joueur donne la zone de chaque niveau, dans l'ordre.
+    inline Zone customZone(const std::vector<Zone> &zones,
+        const std::size_t level)
+    {
+        if (level >= 1 && level <= zones.size()) {
+            return zones[level - 1];
+        }
+        return Zone::DeepSpace;
     }
 }
