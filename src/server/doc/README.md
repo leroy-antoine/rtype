@@ -181,8 +181,9 @@ spawns of bullets (`SPAWN`). The kill of a player or of a monster is a
 
 ## Limits and open questions
 
-- There is **one game per server**: every client joins the same lobby and the
-  same match, up to 4 players. Several rooms are not implemented.
+- A server runs at most **8 rooms of 4 players** (32 clients). Each room has
+  its own game and its own thread; the leaderboards are shared. See
+  [the rooms](../../../docs/protocol.md#rooms).
 - There is no per-client rate limit on `INPUT` messages beyond the bounded
   queue. Each `INPUT` only overwrites the previous one, so flooding does not
   grow the game state, but a limit could be added.
