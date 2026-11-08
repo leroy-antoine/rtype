@@ -24,7 +24,7 @@ the server.
 ```
 
 The `assets` folder (sprites and sounds) and the `CustomMaps` folder (maps
-written by the players, see [Create your own map](../../../docs/custom-maps.md))
+written by the players, see [Create your own map](custom-maps.md))
 are copied next to the executable by CMake and are looked up there. Without sound files or without an audio device,
 the game runs without sound.
 
@@ -109,7 +109,7 @@ animations use this time, never the speed of the CPU.
 
 The client sends the **state** of the keys every frame, with a sequence number
 (see `INPUT` in
-[the protocol](../../../docs/protocol.md#input-0x10)).
+[the protocol](protocol.md#input-0x10)).
 
 ## Rendering module
 

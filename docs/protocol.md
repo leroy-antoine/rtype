@@ -4,7 +4,7 @@ The protocol is **binary** and runs over **UDP** only. It has two layers:
 
 1. the **transport layer** (`engine/network`): datagrams, sessions, ping,
    reliability. It does not know R-Type. Its full description, with the
-   validation rules, is in [the network module](../engine/docs/network.md);
+   validation rules, is in [the network module](network.md);
 2. the **game layer** (`src/include/rtype/Protocol.hpp`): the messages of
    R-Type, described on this page.
 
@@ -56,7 +56,7 @@ Each message has a type (7 bits), a reliable flag, a payload size and the
 payload. Types `0x00`-`0x06` belong to the transport (Connect, Accept,
 Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
 `0x10`-`0x7F` are the game messages below. See
-[the network module](../engine/docs/network.md#wire-format).
+[the network module](network.md#wire-format).
 
 ## Connection lifecycle
 

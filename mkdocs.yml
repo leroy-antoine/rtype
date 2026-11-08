@@ -1,0 +1,71 @@
+site_name: R-Type
+site_description: Documentation of the R-Type project, a networked shoot'em up and its game engine, in C++.
+site_url: https://leroy-antoine.github.io/rtype-doc/
+copyright: R-Type team (Thiago Semedo-Rocha, Antoine Leroy, Maxime Kournikov), MIT License
+
+docs_dir: docs
+site_dir: site
+
+# The code graph and the planning notes are not part of the website.
+exclude_docs: |
+  graphify-out/
+  roadmap.md
+
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - Home: README.md
+  - Play:
+      - Gameplay: gameplay.md
+      - Create your own map: custom-maps.md
+      - Accessibility: accessibility.md
+  - Develop:
+      - Build and run: build.md
+      - Architecture: architecture.md
+      - Game logic: game-logic.md
+      - Server: server.md
+      - Client: client.md
+      - Network module: network.md
+      - Custom maps, for developers: custom-maps-internals.md
+      - Contributing: contributing.md
+      - Knowledge graph: graphify.md
+  - Reference:
+      - Network protocol: protocol.md
+      - Technical and comparative study: comparative-study.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+
+# Any broken link or anchor makes the build fail (see `mkdocs build --strict`).
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn

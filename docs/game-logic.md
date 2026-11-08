@@ -373,7 +373,7 @@ player**. It has no entry in `MAP_NAMES`: its name and its zones come from the
 JSON, which the game logic does not know. Another library reads the JSON and
 hands the game a plain `Segments`, so the game logic needs nothing more than
 this id and a list of zones. See
-[custom maps](../../../../../docs/custom-maps-internals.md).
+[custom maps](custom-maps-internals.md).
 
 `Game` has a `Lobby` phase, entered with `openLobby()` (the server does it at
 startup). In the lobby nothing is simulated except the movement of the ships.
@@ -517,7 +517,7 @@ The server never looks inside the `Registry`. After each `update` it reads:
 - `status()`: what the HUD needs.
 
 These types are in `Events.hpp` and `Status.hpp`, and the byte format is in
-[the protocol](../../../../../docs/protocol.md).
+[the protocol](protocol.md).
 
 ## Components
 
@@ -677,7 +677,7 @@ Examples: `PLAYER_SPEED`, `PLAYER_FIRE_COOLDOWN`, `MONSTER_HP`,
 2. Add its `MonsterDef` (hp, speed, damage, cooldown, size, sprite,
    projectile) in `MonsterDefs.hpp` and its line in `MONSTERS`.
 3. Add a `SpriteId` in `Components.hpp` and its sprite in `SpriteBank.cpp`
-   (the protocol version changes, see [the protocol](../../../../../docs/protocol.md)).
+   (the protocol version changes, see [the protocol](protocol.md)).
 4. Write its movement in `MonsterBehavior.hpp` and add it to
    `MONSTER_BEHAVIORS`, at the position of its kind (`flyStraight` if it only
    flies to the left).
@@ -689,7 +689,7 @@ Examples: `PLAYER_SPEED`, `PLAYER_FIRE_COOLDOWN`, `MONSTER_HP`,
   relative to the start of the level; everything must happen before
   `length`, and no wall may still be on screen when a boss appears.
 - A map written by a player does not need any code: it is a JSON file, see
-  [Create your own map](../../../../../docs/custom-maps.md).
+  [Create your own map](custom-maps.md).
 - A map: a new file `src/maps/mapN.cpp` returning the list of levels, added to
   `rtype_maps` in `CMakeLists.txt`, declared and added to `MAPS` in
   `Builder.hpp`, with its name in `MAP_NAMES` (`MapList.hpp`). The tests in
@@ -748,7 +748,7 @@ Done and working:
 - the events, states and status read by the server
 - the `Game` facade
 - automated tests (`tests/`), see
-  [Build and run](../../../../../docs/build.md#tests)
+  [Build and run](build.md#tests)
 
 Ideas for later:
 

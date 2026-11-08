@@ -29,6 +29,8 @@ three decoupled layers: **rendering**, **networking** and **game logic**.
 
 See [Gameplay](docs/gameplay.md) for the rules as a player sees them.
 
+The documentation is also online: <https://leroy-antoine.github.io/rtype-doc/>.
+
 ## Requirements
 
 - C++20 compiler (GCC, Clang or MSVC)
@@ -96,9 +98,9 @@ Each part keeps its documentation next to its code:
 
 | Part | Documentation |
 |---|---|
-| Game logic | [src/client/game/Rtype/doc](src/client/game/Rtype/doc/README.md): rules, architecture, systems, the `Game` API, how-to guides |
-| Server | [src/server/doc](src/server/doc/README.md): role, loop, how it plugs the game in |
-| Client | [src/client/doc](src/client/doc/README.md): rendering, input, interpolation and prediction, lobby screen |
+| Game logic | [game logic](docs/game-logic.md): rules, architecture, systems, the `Game` API, how-to guides |
+| Server | [server](docs/server.md): role, loop, how it plugs the game in |
+| Client | [client](docs/client.md): rendering, input, interpolation and prediction, lobby screen |
 
 Documentation that concerns the whole project is in [docs](docs/README.md):
 

@@ -30,3 +30,7 @@ leaderboard.txt
 # Working roadmap
 roadmap.md
 custom_leaderboard.txt
+
+# Documentation website (built by MkDocs)
+/site/
+/.venv-docs/

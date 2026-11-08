@@ -624,9 +624,9 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Game.hpp": {
-    "mtime": 1794006021.3031344,
-    "seen": 1794006558.7032619,
-    "ast_hash": "a425a2ffe6703d9d52e09a84011cd54b",
+    "mtime": 1794007546.3940268,
+    "seen": 1794007675.8527973,
+    "ast_hash": "7f74a268c0382b40cce8003c74ed2aaf",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Monsters.hpp": {
@@ -696,9 +696,9 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/src/Font.cpp": {
-    "mtime": 1794006021.306771,
-    "seen": 1794006558.7033381,
-    "ast_hash": "6dbeb528c76ef4c42cb127857e81c94c",
+    "mtime": 1794006831.3982384,
+    "seen": 1794007675.8528714,
+    "ast_hash": "e5d59229e7bbfe91b6f241d8e0c7f8c9",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/src/GameView.cpp": {
@@ -780,9 +780,9 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/doc/README.md": {
-    "mtime": 1794006021.3001344,
-    "seen": 1794006558.7035,
-    "ast_hash": "d6fd368eab5e558aa6f49609f08de6c2",
+    "mtime": 1794007592.5495682,
+    "seen": 1794007675.85304,
+    "ast_hash": "51bb5bc9a1edf2c74b8744503acffaf9",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/assets/coin_spin_sheet.png": {
@@ -1014,9 +1014,9 @@
     "semantic_hash": ""
   },
   "docs/gameplay.md": {
-    "mtime": 1794006315.6067927,
-    "seen": 1794006558.7034678,
-    "ast_hash": "2ca9921d00577b845de4cbe5f0688fa9",
+    "mtime": 1794007592.5491416,
+    "seen": 1794007675.8530107,
+    "ast_hash": "d1b82c3ea308594bed3eae6c2080693c",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/assets/obstacle_rock.png": {
@@ -1236,15 +1236,15 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/client/AugmentStyle.hpp": {
-    "mtime": 1794006021.3001344,
-    "seen": 1794006558.7031925,
-    "ast_hash": "759c55ae0acc959d4e1a0ff3546a77e2",
+    "mtime": 1794006887.500025,
+    "seen": 1794007675.8527303,
+    "ast_hash": "7773b52c9a528c1cb514695b060b63bf",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/client/ShopPanel.hpp": {
-    "mtime": 1794006021.3011346,
-    "seen": 1794006558.7032156,
-    "ast_hash": "ffac50a6a3d2680bedd9a0ac4d2d46d0",
+    "mtime": 1794006831.398409,
+    "seen": 1794007675.852753,
+    "ast_hash": "ffd8649a500c7b2722a7288c108d3cce",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/include/logic/Shop.hpp": {
@@ -1254,15 +1254,15 @@
     "semantic_hash": ""
   },
   "src/client/game/Rtype/src/ShopPanel.cpp": {
-    "mtime": 1794006021.3071344,
-    "seen": 1794006558.7033515,
-    "ast_hash": "a8ee85c7419f3c6ec59efaca03549d4d",
+    "mtime": 1794006887.5003278,
+    "seen": 1794007675.852885,
+    "ast_hash": "d221884a2c36240ceb8247230a75ed25",
     "semantic_hash": ""
   },
   "tests/ShopTests.cpp": {
-    "mtime": 1794006021.3111346,
-    "seen": 1794006558.7034347,
-    "ast_hash": "fda7379dcef3b4963330638af78b7cf8",
+    "mtime": 1794007514.1759484,
+    "seen": 1794007675.8529794,
+    "ast_hash": "b2cf919add8bfa84f7e0ab0642850278",
     "semantic_hash": ""
   },
   "src/client/game/Rtype/CustomMaps/example.json": {

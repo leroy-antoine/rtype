@@ -101,13 +101,13 @@ the leaderboard of the map.
 - The **client draws from positions and sprite kinds only**.
 - The server has two threads: the network thread (receives and sends
   datagrams) and the game thread (simulation). See
-  [the server](../src/server/doc/README.md#threads).
+  [the server](server.md#threads).
 - The messages are described in [the protocol](protocol.md).
 
 ## Where to read more
 
-- Game logic: [src/client/game/Rtype/doc](../src/client/game/Rtype/doc/README.md)
-- Server: [src/server/doc](../src/server/doc/README.md)
-- Network module: [engine/docs/network.md](../engine/docs/network.md)
-- Client: [src/client/doc](../src/client/doc/README.md)
+- Game logic: [src/client/game/Rtype/doc](game-logic.md)
+- Server: [src/server/doc](server.md)
+- Network module: [engine/docs/network.md](network.md)
+- Client: [src/client/doc](client.md)
 - Custom maps: [for players](custom-maps.md), [for developers](custom-maps-internals.md)

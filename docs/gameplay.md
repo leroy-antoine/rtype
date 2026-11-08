@@ -1,7 +1,7 @@
 # Gameplay
 
 This page describes the game as a player sees it. The technical details are
-in [the game logic documentation](../src/client/game/Rtype/doc/README.md).
+in [the game logic documentation](game-logic.md).
 
 - [Goal](#goal)
 - [Lobby and maps](#lobby-and-maps)

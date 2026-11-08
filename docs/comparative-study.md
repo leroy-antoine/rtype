@@ -73,7 +73,7 @@ client): see [custom maps for developers](custom-maps-internals.md#security).
 | Threads | a network thread for the socket, a game thread for everything else | one thread, a thread per client | the game never waits for a client, and the game state needs no lock |
 
 The packet layout, the sequence numbers and the reliability rules are in
-[the protocol page](protocol.md) and [the network module](../engine/docs/network.md).
+[the protocol page](protocol.md) and [the network module](network.md).
 
 ## Storage
 

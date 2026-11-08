@@ -1,7 +1,7 @@
 # Network module (`engine::network`)
 
 The engine moves **messages** (a type and some bytes) over UDP. What a message
-means is defined by the game, in [the game protocol](../../docs/protocol.md).
+means is defined by the game, in [the game protocol](protocol.md).
 
 ## Wire format
 

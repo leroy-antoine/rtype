@@ -24,7 +24,7 @@ From the subject, the server MUST:
 - not block on the clients: the game runs frame after frame whatever they do;
 - survive a crashing client and tell the other clients of that game;
 - use a **binary protocol over UDP** for all in-game communication (see
-  [the protocol](../../../docs/protocol.md)).
+  [the protocol](protocol.md)).
 
 ## Usage
 
@@ -67,9 +67,9 @@ game logic knows nothing of the network.
 | `CUSTOM_RECORDS_GET` | answers with the best times of that map (`CUSTOM_RECORDS`) |
 | any message from an unknown client | ignored |
 
-The message formats are in [the protocol](../../../docs/protocol.md). The game
+The message formats are in [the protocol](protocol.md). The game
 API is in
-[the game logic README](../../client/game/Rtype/doc/README.md#public-api-the-game-class).
+[the game logic README](game-logic.md#public-api-the-game-class).
 
 ## Threads
 
@@ -172,7 +172,7 @@ spawns of bullets (`SPAWN`). The kill of a player or of a monster is a
 - A map written by a player is data from a client: only the host may send it,
   the upload is capped at 256 KiB and dropped at the first mistake, and the
   JSON is parsed again with limits (see
-  [custom maps](../../../docs/custom-maps-internals.md#security)). The server
+  [custom maps](custom-maps-internals.md#security)). The server
   reads no file for it.
 - Memory is bounded: 1200 bytes per datagram, 4096 datagrams queued, and a
   client that does not acknowledge more than 256 reliable messages is kicked.
@@ -189,5 +189,5 @@ spawns of bullets (`SPAWN`). The kill of a player or of a monster is a
 - The server sends the same `STATES` to everybody: there is no interest
   management, which is fine for 4 players and a few dozen entities.
 - The tests cover the game logic and the message encoding (see
-  [Build and run](../../../docs/build.md#tests)). The server loop itself is not
+  [Build and run](build.md#tests)). The server loop itself is not
   tested automatically.
