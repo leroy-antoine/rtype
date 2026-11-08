@@ -108,20 +108,15 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
-      OFFICIAL: git@github.com:EpitechPGE3-2026/G-ING-500-PAR-5-1-rtype-6.git
+      OFFICIAL: github.com/EpitechPGE3-2026/G-ING-500-PAR-5-1-rtype-6.git
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up the deploy key
-        run: |
-          install -m 700 -d ~/.ssh
-          echo "${{ secrets.OFFICIAL_DEPLOY_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-
       - name: Push the branch
+        env:
+          TOKEN: ${{ secrets.OFFICIAL_TOKEN }}
         run: |
-          git remote add official "$OFFICIAL"
+          git remote add official "https://x-access-token:${TOKEN}@${OFFICIAL}"
           git push official "HEAD:refs/heads/${GITHUB_REF_NAME}"

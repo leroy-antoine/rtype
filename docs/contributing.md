@@ -40,7 +40,7 @@ request:
 The same workflow runs on the mirror repository
 (`leroy-antoine/rtype`). There, once the three jobs pass on a push, a fourth
 job pushes the same branch to the official repository. It needs the secret
-`OFFICIAL_DEPLOY_KEY` (private key of a deploy key with write access on the
+`OFFICIAL_TOKEN` (a personal access token that can write the contents of the
 official repository). The push is never forced: a branch that diverged on the
 official side is not overwritten.
 
