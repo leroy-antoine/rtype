@@ -28,8 +28,8 @@ A new client can be written from these two pages alone.
 | Direction | the client sends keys, the server sends the world |
 | Datagram | at most **1200 bytes**, carries one or several messages |
 | Byte order | **big-endian** for every integer and float |
-| Protocol version | `26` (`rtype::protocol::VERSION`), checked at connection |
-| Tick | the server simulates at 60 Hz and sends the states every tick |
+| Protocol version | `27` (`rtype::protocol::VERSION`), checked at connection |
+| Tick | the server simulates at 60 Hz and sends the world every 2 ticks (30 Hz) |
 
 The server is the authority. A client never sends a position, a hit or a
 damage: only the state of its keys.
@@ -43,6 +43,7 @@ damage: only the state of its keys.
 | `varint` | 1 or 2 | size of a payload, see the network module |
 | `bool` | 1 | `0` or `1`, any other value is rejected |
 | `Vec2` | 8 | `x float`, `y float` |
+| `QVec2` | 4 | `x`, `y` as `i16` in quarter units: the value is `round(v × 4)`, clamped to −32768..32767, read back as `v / 4` (±8191.75 map units, 0.125 max error) |
 
 Coordinates are in **map units**: the map is 1920 x 1080, the origin is the
 top-left corner, `x` grows to the right and `y` grows downwards.
@@ -63,7 +64,7 @@ Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
 
 ```
  client                                   server
-   │ ── Connect(version=26) ─────────────►  │  every 500 ms, 10 tries at most
+   │ ── Connect(version=27) ─────────────►  │  every 500 ms, 10 tries at most
    │ ◄───────────── Accept(token) ──────── │  or Refuse(0 version, 1 full)
    │ ◄──────────────────── ROOM_LIST ───── │  reliable, the client is in the lobby
    │ ── ROOM_CREATE / ROOM_JOIN(room) ──►  │  reliable
@@ -77,8 +78,8 @@ Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
    │ ── SELECT_MAP(map) ────────────────►  │  reliable, the host, in the lobby
    │ ◄───────────────── AUGMENTS, SHOP ─── │  reliable, augments owned and on sale
    │ ── INPUT(sequence, keys) ──────────►  │  every frame of the client
-   │ ◄─────────────── STATES, STATUS ───── │  every tick / every 6 ticks
-   │ ◄──────────────────── OWN_STATE ───── │  every tick, to this client only
+   │ ◄─────────────── STATES, STATUS ───── │  every 2 ticks / every 6 ticks
+   │ ◄──────────────────── OWN_STATE ───── │  every 2 ticks, to this client only
    │ ◄─────────────── SPAWN, DESTROY ───── │  reliable, when something happens
    │ ◄─────────────── AUGMENTS, SHOP ───── │  reliable, when they change
    │ ── BUY(id) ────────────────────────►  │  reliable, when the player buys
@@ -168,7 +169,7 @@ Sender: **C** is the client, **S** is the server. Delivery: **R** is reliable
 | `0x1C` | `CUSTOM_RECORDS_GET` | C | R | 8 |
 | `0x20` | `SPAWN` | S | R | 22 |
 | `0x21` | `DESTROY` | S | R | 4 |
-| `0x22` | `STATES` | S | U | 5 + 12 × n |
+| `0x22` | `STATES` | S | U | 5 + 6 × n |
 | `0x23` | `STATUS` | S | U | 22 + 6 × n |
 | `0x24` | `YOU` | S | R | 1 |
 | `0x25` | `OWN_STATE` | S | U | 14 |
@@ -426,18 +427,26 @@ A value of 35 or more is invalid, and so is a player slot of 4 or more.
 
 ### `STATES` (0x22)
 
-The positions of the moving entities, sent every tick.
+The positions of the moving entities, sent every 2 ticks (30 times per second).
 
 | Offset | Field | Type | Meaning |
 |---|---|---|---|
 | 0 | tick | `u32` | server tick of this snapshot, used by the client to interpolate |
 | 4 | count `n` | `u8` | |
-| 5 + 12 × i | id | `u32` | |
-| 9 + 12 × i | position | `Vec2` | |
+| 5 + 6 × i | id | `u16` | the low 16 bits of the entity id given by `SPAWN` |
+| 7 + 6 × i | position | `QVec2` | |
 
-The payload size must be exactly `5 + 12 × n`. At most 98 entities fit in one
+The payload size must be exactly `5 + 6 × n`. At most 197 entities fit in one
 message, so the server splits a large world into several `STATES` messages.
-A state for an unknown id is ignored by the client.
+The client finds the entity whose `SPAWN` id has the same low 16 bits; a state
+for an unknown id is ignored. Two living entities would only collide if their
+ids were 65536 spawns apart.
+
+The `SPAWN`, `DESTROY` and `OWN_STATE` messages of a tick are sent on the same
+tick as `STATES`, so they share one datagram. Compared with 4-byte ids, float
+positions and 60 sends per second, this cuts the download of a client from
+about 12.8 KB/s to 4.4 KB/s on average (peak 21 KB/s to 6.7 KB/s with about
+30 entities).
 
 ### `STATUS` (0x23)
 
@@ -477,8 +486,8 @@ The client uses it to know which ship is its own (HUD, respawn hint).
 
 ### `OWN_STATE` (0x25)
 
-The authoritative position of the ship of one client, sent every tick to that
-client only.
+The authoritative position of the ship of one client, sent every 2 ticks to
+that client only.
 
 | Offset | Field | Type | Meaning |
 |---|---|---|---|
@@ -620,7 +629,7 @@ per message:
   `BUY_RESULT`, and the messages of the custom maps): a spawn, a death or a purchase must
   not be missed, or the client would draw a wrong world. The sender resends
   until an Ack comes back, the receiver applies the messages in order.
-- **Unreliable** (`INPUT`, `STATES`, `STATUS`, `OWN_STATE`): they are repeated every tick
+- **Unreliable** (`INPUT`, `STATES`, `STATUS`, `OWN_STATE`): they are repeated every few ticks
   or every frame, so a lost one is replaced by the next. Resending an old
   position would be useless. A datagram that is not newer than the last one
   received is dropped, so a late `STATES` never moves a ship backwards.
