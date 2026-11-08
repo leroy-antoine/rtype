@@ -28,6 +28,19 @@ The template (`.github/pull_request_template.md`) asks for:
 Do not edit the code of another part without telling its owner: `engine/core`,
 the server, the client and the game logic each have an owner.
 
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push to `main` and on every pull
+request:
+
+- **Build and test (Linux)**: `linux-debug` preset, then `ctest`.
+- **Build and test (Windows)**: `windows-debug` preset, then `ctest`.
+- **Documentation**: `mkdocs build --strict`, so a broken link fails the check.
+
+The vcpkg binary cache is kept between runs, so only the first run builds the
+dependencies from source. Run the same commands locally (see
+[Build and run](build.md)) before opening a pull request.
+
 ## Coding conventions
 
 Written for the game logic and recommended for new code elsewhere:
