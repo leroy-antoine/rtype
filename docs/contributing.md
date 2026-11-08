@@ -37,6 +37,13 @@ request:
 - **Build and test (Windows)**: `windows-debug` preset, then `ctest`.
 - **Documentation**: `mkdocs build --strict`, so a broken link fails the check.
 
+The same workflow runs on the mirror repository
+(`leroy-antoine/rtype`). There, once the three jobs pass on a push, a fourth
+job pushes the same branch to the official repository. It needs the secret
+`OFFICIAL_DEPLOY_KEY` (private key of a deploy key with write access on the
+official repository). The push is never forced: a branch that diverged on the
+official side is not overwritten.
+
 The vcpkg binary cache is kept between runs, so only the first run builds the
 dependencies from source. Run the same commands locally (see
 [Build and run](build.md)) before opening a pull request.
