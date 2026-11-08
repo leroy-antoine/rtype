@@ -342,7 +342,7 @@ namespace client {
                 replica.menu().shownDifficulty());
         }
         _font.drawCentered(footer, _width / 2.f, _height - 50.f, 3.f, WHITE);
-        _font.drawCentered("TAB: CUSTOM MAPS", _width / 2.f, _height - 90.f,
+        _font.drawCentered("TAB: CUSTOM MAPS   ESC: LEAVE ROOM", _width / 2.f, _height - 90.f,
             2.f, WHITE);
     }
 

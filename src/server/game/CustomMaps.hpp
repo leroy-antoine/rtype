@@ -21,7 +21,7 @@ namespace server {
     // (a client is never trusted) and keeps the records of each map.
     class CustomMaps {
     public:
-        explicit CustomMaps(std::filesystem::path recordsFile);
+        CustomMaps(rtype::CustomLeaderboard &board, std::filesystem::path recordsFile);
 
         bool begin(int slot, const rtype::protocol::Payload &payload);
         bool add(int slot, const rtype::protocol::Payload &chunk);
@@ -43,7 +43,7 @@ namespace server {
     private:
         std::filesystem::path _recordsFile;
         rtype::MapUpload _upload;
-        rtype::CustomLeaderboard _board;
+        rtype::CustomLeaderboard &_board;
         std::optional<LoadedMap> _current;
     };
 }

@@ -13,6 +13,7 @@ add_executable(rtype_tests
         SettingsTests.cpp
         DifficultyTests.cpp
         ProtocolTests.cpp
+        RoomTests.cpp
         MapJsonTests.cpp
         CustomMapTests.cpp
         CustomMapListTests.cpp

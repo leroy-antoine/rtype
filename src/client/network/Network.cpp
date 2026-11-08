@@ -170,6 +170,46 @@ namespace client {
         }
     }
 
+    void Network::createRoom()
+    {
+        if (_client.connected()) {
+            _client.send(rtype::protocol::ROOM_CREATE, {}, Engine::Delivery::Reliable);
+        }
+    }
+
+    void Network::joinRoom(const rtype::protocol::RoomId room)
+    {
+        if (_client.connected()) {
+            _client.send(rtype::protocol::ROOM_JOIN, rtype::protocol::encodeRoomId(room),
+                Engine::Delivery::Reliable);
+        }
+    }
+
+    void Network::leaveRoom()
+    {
+        if (_client.connected()) {
+            _client.send(rtype::protocol::ROOM_LEAVE, {}, Engine::Delivery::Reliable);
+        }
+        _room.reset();
+        _upload.reset();
+        _refusal.reset();
+    }
+
+    const std::optional<rtype::protocol::RoomId> &Network::room() const
+    {
+        return _room;
+    }
+
+    const std::vector<rtype::protocol::RoomInfo> &Network::rooms() const
+    {
+        return _rooms;
+    }
+
+    std::optional<rtype::protocol::RoomRefusal> Network::takeRefusal()
+    {
+        return std::exchange(_refusal, std::nullopt);
+    }
+
     void Network::flush()
     {
         _client.flush();
@@ -198,8 +238,34 @@ namespace client {
         _open = false;
     }
 
+    bool Network::handleRoom(Replica &replica, const Engine::ClientEvents::Message &event)
+    {
+        if (event.type == rtype::protocol::ROOM_LIST) {
+            if (std::optional<std::vector<rtype::protocol::RoomInfo>> rooms =
+                rtype::protocol::decodeRoomList(event.payload)) {
+                _rooms = std::move(*rooms);
+            }
+            return true;
+        }
+        if (event.type == rtype::protocol::ROOM_JOINED) {
+            if (const std::optional<rtype::protocol::RoomId> room = rtype::protocol::decodeRoomId(event.payload)) {
+                _room = *room;
+                replica = Replica{};
+            }
+            return true;
+        }
+        if (event.type == rtype::protocol::ROOM_REFUSED) {
+            _refusal = rtype::protocol::decodeRoomRefusal(event.payload);
+            return true;
+        }
+        return !_room;
+    }
+
     void Network::handle(Replica &replica, const Engine::ClientEvents::Message &event)
     {
+        if (handleRoom(replica, event)) {
+            return;
+        }
         switch (event.type) {
             case rtype::protocol::SPAWN: applyDecoded(replica, rtype::protocol::decodeSpawn(event.payload)); break;
             case rtype::protocol::DESTROY: applyDecoded(replica, rtype::protocol::decodeDestroy(event.payload)); break;

@@ -137,6 +137,12 @@ namespace client {
         playMusic(trackFor(replica));
     }
 
+    void Audio::stop()
+    {
+        _phase = rtype::Phase::Lobby;
+        playMusic(Track::None);
+    }
+
     Audio::Track Audio::trackOfZone(const rtype::Zone zone)
     {
         switch (zone) {

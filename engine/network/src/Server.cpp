@@ -27,11 +27,13 @@ namespace Engine {
 
     std::size_t Server::clientCount() const
     {
+        const std::lock_guard lock(_mutex);
         return _sessions.size();
     }
 
     std::optional<std::chrono::milliseconds> Server::latency(ClientId client)
     {
+        const std::lock_guard lock(_mutex);
         Session *session = find(client);
 
         if (session == nullptr || !session->connection.latency()) {
@@ -42,6 +44,7 @@ namespace Engine {
 
     void Server::update()
     {
+        const std::lock_guard lock(_mutex);
         Clock::time_point now = Clock::now();
 
         for (const Datagram &datagram : _socket.receive()) {
@@ -52,6 +55,7 @@ namespace Engine {
 
     std::optional<ServerEvent> Server::pollEvent()
     {
+        const std::lock_guard lock(_mutex);
         std::optional<ServerEvent> event;
 
         if (_events.empty()) {
@@ -64,6 +68,7 @@ namespace Engine {
 
     void Server::send(ClientId client, MessageType type, std::vector<std::uint8_t> payload, Delivery delivery)
     {
+        const std::lock_guard lock(_mutex);
         Session *session = find(client);
 
         if (session != nullptr) {
@@ -73,6 +78,7 @@ namespace Engine {
 
     void Server::broadcast(MessageType type, const std::vector<std::uint8_t> &payload, Delivery delivery)
     {
+        const std::lock_guard lock(_mutex);
         Clock::time_point now = Clock::now();
 
         for (Session &session : _sessions) {
@@ -82,11 +88,13 @@ namespace Engine {
 
     void Server::disconnect(ClientId client)
     {
+        const std::lock_guard lock(_mutex);
         kick(client);
     }
 
     void Server::flush()
     {
+        const std::lock_guard lock(_mutex);
         for (Session &session : _sessions) {
             flush(session);
         }
