@@ -41,6 +41,10 @@ namespace client {
             if (!_network.update(_replica)) {
                 return false;
             }
+            if (_network.takeClosed()) {
+                resetRoom(audio);
+                lobby.showClosed(elapsed());
+            }
             _controls.poll(window);
             handleBack(window, audio);
             const float dt = advance();
@@ -87,6 +91,11 @@ namespace client {
     {
         _network.leaveRoom();
         _network.flush();
+        resetRoom(audio);
+    }
+
+    void App::resetRoom(Audio &audio)
+    {
         _replica = Replica{};
         _connectedSince.reset();
         audio.stop();
