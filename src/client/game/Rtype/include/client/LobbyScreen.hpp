@@ -24,6 +24,7 @@ namespace client {
         std::optional<LobbyAction> handle(const std::vector<Engine::Key> &keys,
             const std::vector<rtype::protocol::RoomInfo> &rooms);
         void showRefusal(rtype::protocol::RoomRefusal reason, float elapsed);
+        void showClosed(float elapsed);
         void draw(const std::vector<rtype::protocol::RoomInfo> &rooms, float elapsed);
 
     private:

@@ -28,7 +28,7 @@ A new client can be written from these two pages alone.
 | Direction | the client sends keys, the server sends the world |
 | Datagram | at most **1200 bytes**, carries one or several messages |
 | Byte order | **big-endian** for every integer and float |
-| Protocol version | `27` (`rtype::protocol::VERSION`), checked at connection |
+| Protocol version | `28` (`rtype::protocol::VERSION`), checked at connection |
 | Tick | the server simulates at 60 Hz and sends the world every 2 ticks (30 Hz) |
 
 The server is the authority. A client never sends a position, a hit or a
@@ -64,7 +64,7 @@ Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
 
 ```
  client                                   server
-   │ ── Connect(version=27) ─────────────►  │  every 500 ms, 10 tries at most
+   │ ── Connect(version=28) ─────────────►  │  every 500 ms, 10 tries at most
    │ ◄───────────── Accept(token) ──────── │  or Refuse(0 version, 1 full)
    │ ◄──────────────────── ROOM_LIST ───── │  reliable, the client is in the lobby
    │ ── ROOM_CREATE / ROOM_JOIN(room) ──►  │  reliable
@@ -113,6 +113,7 @@ only.
 | `0x38` | `ROOM_LIST` | S | R | 1 + 4 × n |
 | `0x39` | `ROOM_JOINED` | S | R | 2 |
 | `0x3A` | `ROOM_REFUSED` | S | R | 1 |
+| `0x3B` | `ROOM_CLOSED` | S | R | 0 |
 
 - `ROOM_CREATE` opens a new room and puts the client in it, as its host.
 - `ROOM_JOIN` (`room u16`) joins a room, even when its match has started: the
@@ -124,6 +125,9 @@ only.
 - `ROOM_JOINED` (`room u16`) is followed by `YOU`, the world, `AUGMENTS`,
   `SHOP` and `LEADERBOARD`. The waiting room is the `Lobby` phase of the game:
   the host picks the map with `SELECT_MAP`.
+- `ROOM_CLOSED` tells a client that an admin closed its room (`/close` in the
+  server console). It is followed by `ROOM_LIST`: the client is back in the
+  lobby, as after a `ROOM_LEAVE`. A client that is not in a room ignores it.
 
 The leaderboards are shared by every room of the server.
 

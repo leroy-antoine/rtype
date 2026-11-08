@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <unordered_map>
 #include <vector>
@@ -12,6 +13,11 @@
 #include "Room.hpp"
 
 namespace server {
+    struct PlayerInfo {
+        Engine::ClientId client = 0;
+        std::optional<rtype::protocol::RoomId> room;
+    };
+
     class Lobby {
         public:
 
@@ -21,6 +27,9 @@ namespace server {
         void handle(const Engine::ServerEvents::Disconnected &event);
         void handle(const Engine::ServerEvents::Message &event);
         void sync();
+        bool close(rtype::protocol::RoomId room);
+        [[nodiscard]] std::vector<rtype::protocol::RoomInfo> list() const;
+        [[nodiscard]] std::vector<PlayerInfo> players() const;
 
         private:
 
@@ -35,7 +44,6 @@ namespace server {
         void leave(Engine::ClientId client, Engine::DisconnectReason reason);
         void browse(Engine::ClientId client);
         void refuse(Engine::ClientId client, rtype::protocol::RoomRefusal reason);
-        [[nodiscard]] std::vector<rtype::protocol::RoomInfo> list() const;
 
         Engine::Server &_server;
         Records _records;

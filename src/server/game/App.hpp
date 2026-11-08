@@ -7,6 +7,8 @@
 #include "engine/network/Server.hpp"
 #include "logic/Config.hpp"
 #include "rtype/Protocol.hpp"
+#include "admin/Admin.hpp"
+#include "admin/Console.hpp"
 #include "room/Lobby.hpp"
 
 namespace server {
@@ -21,8 +23,11 @@ namespace server {
         static constexpr std::chrono::milliseconds POLL_DELAY{1};
 
         void receive();
+        void runCommands();
 
         Engine::Server _server;
         Lobby _lobby;
+        Admin _admin;
+        Console _console;
     };
 }

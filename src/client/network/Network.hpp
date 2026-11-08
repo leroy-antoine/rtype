@@ -42,6 +42,7 @@ namespace client {
         [[nodiscard]] const std::optional<rtype::protocol::RoomId> &room() const;
         [[nodiscard]] const std::vector<rtype::protocol::RoomInfo> &rooms() const;
         std::optional<rtype::protocol::RoomRefusal> takeRefusal();
+        bool takeClosed();
 
     private:
         // Pieces sent at each update: enough to be quick, few enough not to
@@ -70,5 +71,6 @@ namespace client {
         std::optional<rtype::protocol::RoomId> _room;
         std::vector<rtype::protocol::RoomInfo> _rooms;
         std::optional<rtype::protocol::RoomRefusal> _refusal;
+        bool _closed = false;
     };
 }

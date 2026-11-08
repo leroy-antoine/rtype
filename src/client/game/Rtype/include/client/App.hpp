@@ -39,6 +39,7 @@ namespace client {
         void playRoom(float dt, GameView &view, Audio &audio, ShopPanel &shop);
         void browseRooms(LobbyScreen &lobby);
         void leaveRoom(Audio &audio);
+        void resetRoom(Audio &audio);
         void playSounds(Audio &audio);
         bool listening();
         void sendControls(float dt, ShopPanel &shop);
