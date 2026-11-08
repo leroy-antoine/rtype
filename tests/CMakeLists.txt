@@ -16,6 +16,7 @@ add_executable(rtype_tests
         RoomTests.cpp
         AdminTests.cpp
         ${CMAKE_SOURCE_DIR}/src/server/admin/Command.cpp
+        ConnectionTests.cpp
         MapJsonTests.cpp
         CustomMapTests.cpp
         CustomMapListTests.cpp

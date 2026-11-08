@@ -15,7 +15,7 @@ carries several messages:
 | Field | Role |
 |---|---|
 | magic | always `0x5254`, anything else is dropped |
-| sequence | +1 per datagram; a datagram not newer than the last one received is dropped |
+| sequence | +1 per datagram; in a datagram not newer than the last one received, only the reliable and engine messages are handled |
 | token | session token given by the server, `0` only during the handshake |
 
 A message:
