@@ -437,10 +437,12 @@ TEST(the_death_runs_have_no_monster)
 
 TEST(a_death_run_mixes_every_kind_of_trap)
 {
-    for (std::size_t i = 0; i + 1 < map3().size(); ++i) {
+    const std::vector<LevelDef> runs = map3();
+
+    for (std::size_t i = 0; i + 1 < runs.size(); ++i) {
         bool kinds[static_cast<std::size_t>(ObstacleKind::Count)] = {};
 
-        for (const ObstacleStep &step : map3()[i].obstacles) {
+        for (const ObstacleStep &step : runs[i].obstacles) {
             kinds[static_cast<std::size_t>(step.kind)] = true;
         }
         CHECK(kinds[static_cast<std::size_t>(ObstacleKind::Spike)]);
