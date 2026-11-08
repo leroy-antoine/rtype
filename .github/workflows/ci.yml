@@ -101,7 +101,6 @@ jobs:
 
   sync-official:
     name: Push to the official repository
-    needs: [build-linux, build-windows, docs]
     if: >-
       github.event_name == 'push' &&
       github.repository == 'leroy-antoine/rtype'
