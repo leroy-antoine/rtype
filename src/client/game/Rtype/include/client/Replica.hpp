@@ -71,7 +71,7 @@ namespace client {
         [[nodiscard]] rtype::Zone zone() const;
 
     private:
-        static constexpr double INTERPOLATION_DELAY = 3.0;
+        static constexpr double INTERPOLATION_DELAY = 5.0;
         static constexpr double MAX_CLOCK_ERROR = 10.0;
         static constexpr double CLOCK_CORRECTION_RATE = 5.0;
 
@@ -93,6 +93,7 @@ namespace client {
 
         Engine::Registry _reg;
         std::unordered_map<std::uint32_t, Engine::Entity> _entities;
+        std::unordered_map<std::uint16_t, std::uint32_t> _shortIds;
         std::unordered_map<std::uint32_t, std::deque<Sample>> _samples;
         std::optional<double> _latestTick;
         std::optional<double> _renderTick;

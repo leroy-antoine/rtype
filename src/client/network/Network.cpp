@@ -210,6 +210,11 @@ namespace client {
         return std::exchange(_refusal, std::nullopt);
     }
 
+    bool Network::takeClosed()
+    {
+        return std::exchange(_closed, false);
+    }
+
     void Network::flush()
     {
         _client.flush();
@@ -251,6 +256,14 @@ namespace client {
             if (const std::optional<rtype::protocol::RoomId> room = rtype::protocol::decodeRoomId(event.payload)) {
                 _room = *room;
                 replica = Replica{};
+            }
+            return true;
+        }
+        if (event.type == rtype::protocol::ROOM_CLOSED) {
+            if (_room && event.payload.empty()) {
+                _room.reset();
+                _upload.reset();
+                _closed = true;
             }
             return true;
         }

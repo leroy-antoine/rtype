@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <optional>
 #include "logic/Config.hpp"
@@ -140,6 +141,44 @@ namespace server {
     {
         _server.send(client, rtype::protocol::ROOM_REFUSED, rtype::protocol::encode(reason),
             Engine::Delivery::Reliable);
+    }
+
+    bool Lobby::close(const rtype::protocol::RoomId room)
+    {
+        const auto found = _rooms.find(room);
+
+        if (found == _rooms.end()) {
+            return false;
+        }
+        std::vector<Engine::ClientId> members;
+
+        for (const auto &[client, id] : _members) {
+            if (id == room) {
+                members.push_back(client);
+            }
+        }
+        _rooms.erase(found);
+        for (const Engine::ClientId client : members) {
+            _members.erase(client);
+            _server.send(client, rtype::protocol::ROOM_CLOSED, {}, Engine::Delivery::Reliable);
+            browse(client);
+        }
+        std::cout << "room " << room << " closed by admin" << std::endl;
+        return true;
+    }
+
+    std::vector<PlayerInfo> Lobby::players() const
+    {
+        std::vector<PlayerInfo> players;
+
+        for (const Engine::ClientId client : _browsing) {
+            players.push_back({client, std::nullopt});
+        }
+        for (const auto &[client, room] : _members) {
+            players.push_back({client, room});
+        }
+        std::ranges::sort(players, {}, &PlayerInfo::client);
+        return players;
     }
 
     std::vector<rtype::protocol::RoomInfo> Lobby::list() const

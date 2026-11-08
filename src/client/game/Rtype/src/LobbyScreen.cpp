@@ -62,6 +62,12 @@ namespace client {
         _messageUntil = elapsed + MESSAGE_DURATION;
     }
 
+    void LobbyScreen::showClosed(const float elapsed)
+    {
+        _message = "ROOM CLOSED BY ADMIN";
+        _messageUntil = elapsed + MESSAGE_DURATION;
+    }
+
     std::size_t LobbyScreen::selection(const std::size_t count) const
     {
         if (count == 0) {
