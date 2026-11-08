@@ -14,6 +14,7 @@ add_executable(rtype_tests
         DifficultyTests.cpp
         ProtocolTests.cpp
         RoomTests.cpp
+        ConnectionTests.cpp
         MapJsonTests.cpp
         CustomMapTests.cpp
         CustomMapListTests.cpp

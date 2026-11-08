@@ -622,8 +622,10 @@ per message:
   until an Ack comes back, the receiver applies the messages in order.
 - **Unreliable** (`INPUT`, `STATES`, `STATUS`, `OWN_STATE`): they are repeated every tick
   or every frame, so a lost one is replaced by the next. Resending an old
-  position would be useless. A datagram that is not newer than the last one
-  received is dropped, so a late `STATES` never moves a ship backwards.
+  position would be useless. The unreliable messages of a datagram that is not
+  newer than the last one received are dropped, so a late `STATES` never moves a
+  ship backwards. Its reliable messages, `Ack` and `Pong` are still handled, so
+  a datagram that arrives out of order does not delay a `SPAWN`.
 
 ## Error handling and security
 
