@@ -42,6 +42,17 @@ namespace Engine {
         return std::chrono::duration_cast<std::chrono::milliseconds>(*session->connection.latency());
     }
 
+    std::optional<Address> Server::address(ClientId client)
+    {
+        const std::lock_guard lock(_mutex);
+        const Session *session = find(client);
+
+        if (session == nullptr) {
+            return std::nullopt;
+        }
+        return session->address;
+    }
+
     void Server::update()
     {
         const std::lock_guard lock(_mutex);
