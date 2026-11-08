@@ -4,12 +4,14 @@
 #include <optional>
 #include <string>
 #include <cstddef>
+#include <vector>
 #include "engine/network/Client.hpp"
 #include "engine/network/Event.hpp"
 #include "logic/Augments.hpp"
 #include "logic/Components.hpp"
 #include "logic/Settings.hpp"
 #include "client/Replica.hpp"
+#include "rtype/Protocol.hpp"
 
 namespace client {
     class Network {
@@ -26,6 +28,9 @@ namespace client {
         void requestReady(bool ready);
         void requestHistory();
         void changeSettings(const rtype::Settings &settings);
+        void createRoom();
+        void joinRoom(rtype::protocol::RoomId room);
+        void leaveRoom();
 
         // Sends the JSON of a map in pieces (a few at each update), then asks
         // the server to play it.
@@ -34,6 +39,10 @@ namespace client {
         [[nodiscard]] bool uploading() const;
         void flush();
         [[nodiscard]] bool connected() const;
+        [[nodiscard]] const std::optional<rtype::protocol::RoomId> &room() const;
+        [[nodiscard]] const std::vector<rtype::protocol::RoomInfo> &rooms() const;
+        std::optional<rtype::protocol::RoomRefusal> takeRefusal();
+        bool takeClosed();
 
     private:
         // Pieces sent at each update: enough to be quick, few enough not to
@@ -54,9 +63,14 @@ namespace client {
         void handle(Replica &replica, const Engine::ClientEvents::Unreachable &event);
         void handle(Replica &replica, const Engine::ClientEvents::Disconnected &event);
         void handle(Replica &replica, const Engine::ClientEvents::Message &event);
+        bool handleRoom(Replica &replica, const Engine::ClientEvents::Message &event);
 
         Engine::Client _client;
         bool _open = true;
         std::optional<Upload> _upload;
+        std::optional<rtype::protocol::RoomId> _room;
+        std::vector<rtype::protocol::RoomInfo> _rooms;
+        std::optional<rtype::protocol::RoomRefusal> _refusal;
+        bool _closed = false;
     };
 }

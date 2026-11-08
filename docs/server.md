@@ -33,8 +33,38 @@ From the subject, the server MUST:
 ```
 
 The server listens on every IPv4 interface, in **UDP**. Open the port in UDP
-in the firewall to play from another machine. `Ctrl+C` (SIGINT) or SIGTERM
-stops it cleanly.
+in the firewall to play from another machine. `Ctrl+C` (SIGINT), SIGTERM or
+`/quit` stops it cleanly.
+
+## Admin console
+
+Commands typed in the terminal of the server, one per line, starting with `/`:
+
+| Command | Does |
+|---|---|
+| `/rooms` | lists the rooms: id, players, phase (`waiting`, `playing`, `shop`, `victory`, `defeat`) |
+| `/players` | lists the clients: id, address, room (or `browsing`), ping |
+| `/kick <client>` | disconnects a client (reason `Kicked`); its game closes, it can come back |
+| `/close <room>` | closes a room; its players get `ROOM_CLOSED` and go back to the room list |
+| `/quit` | stops the server |
+| `/help` | shows the commands |
+
+```
+/players
+client 0  127.0.0.1:36103  room 1  4 ms
+client 1  127.0.0.1:52022  room 2  4 ms
+/close 1
+room 1 closed by admin
+```
+
+A wrong line prints the usage or `unknown command`, it never stops the server.
+
+The console reads `stdin` on its own thread (`admin/Console`), which only
+pushes the lines into a queue under a mutex. The commands run on the main
+thread, between two network updates, so they touch the `Lobby` without lock.
+The reading thread is detached: `std::getline` cannot be interrupted, so a
+joined thread would block the shutdown until a line is typed. When `stdin` is
+closed (server started in the background), the thread just ends.
 
 ## Architecture
 
@@ -76,7 +106,9 @@ API is in
 | Thread | Does |
 |---|---|
 | **network thread** (inside `Engine::UdpSocket`, Asio) | receives datagrams and queues them (bounded), sends the outgoing ones. It never touches the game |
-| **game thread** (`main`) | owns `Game` and all the sessions: reads the queue in `update()`, simulates, writes the packets in `flush()` |
+| **main thread** | owns the `Lobby`: reads the network queue in `update()`, routes each client to its room, runs the admin commands, writes the packets in `flush()` |
+| **room threads** (one `std::jthread` per room) | each owns the `Game` of its room and simulates it at 60 Hz |
+| **console thread** (detached) | reads the admin commands on `stdin` |
 
 The game thread never waits for a client: it takes what the network thread
 has already received, and goes on. A slow or silent client costs nothing to
@@ -181,8 +213,9 @@ spawns of bullets (`SPAWN`). The kill of a player or of a monster is a
 
 ## Limits and open questions
 
-- There is **one game per server**: every client joins the same lobby and the
-  same match, up to 4 players. Several rooms are not implemented.
+- A server runs at most **8 rooms of 4 players** (32 clients). Each room has
+  its own game and its own thread; the leaderboards are shared. See
+  [the rooms](../../../docs/protocol.md#rooms).
 - There is no per-client rate limit on `INPUT` messages beyond the bounded
   queue. Each `INPUT` only overwrites the previous one, so flooding does not
   grow the game state, but a limit could be added.

@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <span>
 #include <utility>
@@ -45,7 +46,7 @@ namespace rtype::protocol {
         std::uint8_t speedPercent = 100;
     };
 
-    constexpr std::uint8_t VERSION = 25;
+    constexpr std::uint8_t VERSION = 28;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
@@ -78,7 +79,8 @@ namespace rtype::protocol {
     constexpr std::size_t OWN_STATE_SIZE = 14;
     constexpr std::uint8_t FLAG_INVERTED = 1 << 0;
     constexpr std::size_t SPAWN_SIZE = 22;
-    constexpr std::size_t STATE_SIZE = 12;
+    constexpr std::size_t STATE_SIZE = 6;
+    constexpr float POSITION_SCALE = 4.f;
     constexpr std::size_t STATES_HEADER_SIZE = 5;
     constexpr std::size_t MAX_STATES_PER_MESSAGE =
         (Engine::Protocol::MAX_PAYLOAD_SIZE - STATES_HEADER_SIZE) / STATE_SIZE;
@@ -109,6 +111,29 @@ namespace rtype::protocol {
     constexpr std::size_t MAX_OWNED_AUGMENTS = 32;
 
     using OwnedAugment = std::array<std::vector<AugmentId>, config::MAX_PLAYERS>;
+
+    constexpr Engine::MessageType ROOM_CREATE = 0x31;
+    constexpr Engine::MessageType ROOM_JOIN = 0x32;
+    constexpr Engine::MessageType ROOM_LEAVE = 0x33;
+    constexpr Engine::MessageType ROOM_LIST = 0x38;
+    constexpr Engine::MessageType ROOM_JOINED = 0x39;
+    constexpr Engine::MessageType ROOM_REFUSED = 0x3A;
+    constexpr Engine::MessageType ROOM_CLOSED = 0x3B;
+    constexpr std::size_t MAX_ROOMS = 8;
+    constexpr std::size_t ROOM_ID_SIZE = 2;
+    constexpr std::size_t ROOM_INFO_SIZE = 4;
+
+    using RoomId = std::uint16_t;
+
+    struct RoomInfo {
+        RoomId id = 0;
+        std::uint8_t players = 0;
+        Phase phase = Phase::Lobby;
+
+        bool operator==(const RoomInfo &) const = default;
+    };
+
+    enum class RoomRefusal : std::uint8_t { NotFound, Full, TooManyRooms, AlreadyInRoom };
 
     inline void writeVec2(Engine::BinaryWriter &writer,
         const gameLogic::Vec2 &v)
@@ -275,6 +300,20 @@ namespace rtype::protocol {
         return EntityDestroyed{*id};
     }
 
+    inline std::int16_t quantize(const float value)
+    {
+        const float scaled = std::round(value * POSITION_SCALE);
+
+        return static_cast<std::int16_t>(std::clamp(scaled,
+            static_cast<float>(std::numeric_limits<std::int16_t>::min()),
+            static_cast<float>(std::numeric_limits<std::int16_t>::max())));
+    }
+
+    inline float dequantize(const std::uint16_t value)
+    {
+        return static_cast<float>(static_cast<std::int16_t>(value)) / POSITION_SCALE;
+    }
+
     inline Payload encodeStateChunk(const std::uint32_t tick,
           const std::span<const EntityState> chunk)
     {
@@ -283,8 +322,9 @@ namespace rtype::protocol {
         writer.writeU32(tick);
         writer.writeU8(static_cast<std::uint8_t>(chunk.size()));
         for (const EntityState &state : chunk) {
-            writer.writeU32(state.id);
-            writeVec2(writer, state.pos);
+            writer.writeU16(static_cast<std::uint16_t>(state.id));
+            writer.writeU16(static_cast<std::uint16_t>(quantize(state.pos.x)));
+            writer.writeU16(static_cast<std::uint16_t>(quantize(state.pos.y)));
         }
         return writer.data();
     }
@@ -307,13 +347,14 @@ namespace rtype::protocol {
 
     inline std::optional<EntityState> readState(Engine::BinaryReader &reader)
     {
-        const std::optional<std::uint32_t> id = reader.readU32();
-        const std::optional<gameLogic::Vec2> pos = readVec2(reader);
+        const std::optional<std::uint16_t> id = reader.readU16();
+        const std::optional<std::uint16_t> x = reader.readU16();
+        const std::optional<std::uint16_t> y = reader.readU16();
 
-        if (!id || !pos) {
+        if (!id || !x || !y) {
             return std::nullopt;
         }
-        return EntityState{*id, gameLogic::Vec2Pos{*pos}};
+        return EntityState{*id, gameLogic::Vec2Pos{{dequantize(*x), dequantize(*y)}}};
     }
 
     inline std::optional<StatesSnapshot> decodeStates(const Payload &payload)
@@ -883,5 +924,74 @@ namespace rtype::protocol {
             return std::nullopt;
         }
         return BuyResult{*id, *ok == 1};
+    }
+
+
+    inline Payload encodeRoomId(const RoomId room)
+    {
+        Engine::BinaryWriter writer;
+
+        writer.writeU16(room);
+        return writer.data();
+    }
+
+    inline std::optional<RoomId> decodeRoomId(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+
+        if (payload.size() != ROOM_ID_SIZE) {
+            return std::nullopt;
+        }
+        return reader.readU16();
+    }
+
+    inline Payload encode(const std::vector<RoomInfo> &rooms)
+    {
+        Engine::BinaryWriter writer;
+        const std::size_t count = std::min(rooms.size(), MAX_ROOMS);
+
+        writer.writeU8(static_cast<std::uint8_t>(count));
+        for (std::size_t i = 0; i < count; ++i) {
+            writer.writeU16(rooms[i].id);
+            writer.writeU8(rooms[i].players);
+            writer.writeU8(static_cast<std::uint8_t>(rooms[i].phase));
+        }
+        return writer.data();
+    }
+
+    inline std::optional<std::vector<RoomInfo>> decodeRoomList(const Payload &payload)
+    {
+        Engine::BinaryReader reader(payload);
+        const std::optional<std::uint8_t> count = reader.readU8();
+        std::vector<RoomInfo> rooms;
+
+        if (!count || *count > MAX_ROOMS || reader.remaining() != *count * ROOM_INFO_SIZE) {
+            return std::nullopt;
+        }
+        for (std::size_t i = 0; i < *count; ++i) {
+            const std::optional<std::uint16_t> id = reader.readU16();
+            const std::optional<std::uint8_t> players = reader.readU8();
+            const std::optional<std::uint8_t> phase = reader.readU8();
+
+            if (!id || !players || !phase || *players > config::MAX_PLAYERS
+                || *phase > static_cast<std::uint8_t>(Phase::Shop)) {
+                return std::nullopt;
+            }
+            rooms.push_back({*id, *players, static_cast<Phase>(*phase)});
+        }
+        return rooms;
+    }
+
+    inline Payload encode(const RoomRefusal reason)
+    {
+        return {static_cast<std::uint8_t>(reason)};
+    }
+
+    inline std::optional<RoomRefusal> decodeRoomRefusal(const Payload &payload)
+    {
+        if (payload.size() != 1 || payload[0] > static_cast<std::uint8_t>(RoomRefusal::AlreadyInRoom)) {
+            return std::nullopt;
+        }
+        return static_cast<RoomRefusal>(payload[0]);
     }
 }

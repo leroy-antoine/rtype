@@ -24,37 +24,81 @@ namespace client {
         GameView view(renderer, sprites, WORLD_TO_SCREEN, WINDOW_WIDTH, WINDOW_HEIGHT);
         Audio audio(_assets);
         ShopPanel shop(renderer, sprites, WINDOW_WIDTH, WINDOW_HEIGHT);
+        LobbyScreen lobby(renderer, WINDOW_WIDTH, WINDOW_HEIGHT);
 
         window.setFramerateLimit(FRAMERATE);
         _start = Clock::now();
         _last = _start;
-        if (!loop(window, view, audio, shop)) {
+        if (!loop(window, view, audio, shop, lobby)) {
             return RTYPE_ERROR;
         }
         return RTYPE_SUCCESS;
     }
 
-    bool App::loop(Engine::Window &window, GameView &view, Audio &audio, ShopPanel &shop)
+    bool App::loop(Engine::Window &window, GameView &view, Audio &audio, ShopPanel &shop, LobbyScreen &lobby)
     {
         while (window.isOpen()) {
             if (!_network.update(_replica)) {
                 return false;
             }
-            _controls.poll(window);
-            handleBack(window);
-            const float dt = advance();
-            if (const std::optional<rtype::protocol::BuyResult> result = _replica.takeBuyResult()) {
-                shop.showResult(*result, elapsed());
+            if (_network.takeClosed()) {
+                resetRoom(audio);
+                lobby.showClosed(elapsed());
             }
-            sendControls(dt, shop);
-            _replica.update(dt);
-            playSounds(audio);
+            _controls.poll(window);
+            handleBack(window, audio);
+            const float dt = advance();
             window.clear(4, 4, 18);
-            view.draw(_replica, _custom, elapsed());
-            shop.draw(_replica, elapsed());
+            if (_network.room()) {
+                playRoom(dt, view, audio, shop);
+            } else {
+                browseRooms(lobby);
+            }
             window.display();
         }
         return true;
+    }
+
+    void App::playRoom(const float dt, GameView &view, Audio &audio, ShopPanel &shop)
+    {
+        if (const std::optional<rtype::protocol::BuyResult> result = _replica.takeBuyResult()) {
+            shop.showResult(*result, elapsed());
+        }
+        sendControls(dt, shop);
+        _replica.update(dt);
+        playSounds(audio);
+        view.draw(_replica, _custom, elapsed());
+        shop.draw(_replica, elapsed());
+    }
+
+    void App::browseRooms(LobbyScreen &lobby)
+    {
+        if (const std::optional<rtype::protocol::RoomRefusal> refusal = _network.takeRefusal()) {
+            lobby.showRefusal(*refusal, elapsed());
+        }
+        if (const std::optional<LobbyAction> action = lobby.handle(_controls.pressedKeys(), _network.rooms())) {
+            if (action->kind == LobbyAction::Kind::Create) {
+                _network.createRoom();
+            } else {
+                _network.joinRoom(action->room);
+            }
+        }
+        _network.flush();
+        lobby.draw(_network.rooms(), elapsed());
+    }
+
+    void App::leaveRoom(Audio &audio)
+    {
+        _network.leaveRoom();
+        _network.flush();
+        resetRoom(audio);
+    }
+
+    void App::resetRoom(Audio &audio)
+    {
+        _replica = Replica{};
+        _connectedSince.reset();
+        audio.stop();
     }
 
     void App::playSounds(Audio &audio)
@@ -148,17 +192,19 @@ namespace client {
         return status && status->phase == rtype::Phase::Lobby;
     }
 
-    // Echap revient au choix de la map, ou quitte depuis ailleurs.
-    void App::handleBack(Engine::Window &window)
+    // Echap revient au choix de la map, puis a la liste des rooms, puis quitte.
+    void App::handleBack(Engine::Window &window, Audio &audio)
     {
         if (!_controls.backRequested()) {
             return;
         }
-        if (inLobby() && _replica.menu().step() != LobbyStep::Map) {
+        if (!_network.room()) {
+            window.close();
+        } else if (inLobby() && _replica.menu().step() != LobbyStep::Map) {
             _replica.menu().back();
-            return;
+        } else {
+            leaveRoom(audio);
         }
-        window.close();
     }
 
     void App::useMenu()

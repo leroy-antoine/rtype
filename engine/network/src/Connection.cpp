@@ -46,13 +46,16 @@ namespace Engine {
         if (hasHandshakeMessage(packet)) {
             return false;
         }
-        if (_remoteSequence && !Protocol::isNewer(packet.sequence(), *_remoteSequence)) {
-            return false;
+        const bool late = _remoteSequence && !Protocol::isNewer(packet.sequence(), *_remoteSequence);
+
+        if (!late) {
+            _remoteSequence = packet.sequence();
         }
-        _remoteSequence = packet.sequence();
         _lastReceived = now;
         for (const Message &message : packet.messages()) {
-            handle(message, now);
+            if (!late || message.reliable || message.type < Protocol::FIRST_USER_MESSAGE) {
+                handle(message, now);
+            }
         }
         return true;
     }

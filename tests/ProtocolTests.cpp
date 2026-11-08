@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdint>
 #include <optional>
 #include <vector>
@@ -547,4 +548,56 @@ TEST(each_difficulty_has_its_own_top_three)
     CHECK(board.all()[0][2].empty());
     CHECK(DIFFICULTY_BY_RANK.front() == Difficulty::Brutal);
     CHECK(DIFFICULTY_BY_RANK.back() == Difficulty::Easy);
+}
+
+TEST(states_keep_positions_to_a_quarter_pixel)
+{
+    const std::vector<EntityState> states{{7, gameLogic::Vec2Pos{{12.3f, -40.6f}}},
+        {70000, gameLogic::Vec2Pos{{1919.9f, 1080.f}}}};
+    const std::vector<protocol::Payload> payloads = protocol::encodeStates(42, states);
+
+    CHECK(payloads.size() == 1);
+    CHECK(payloads[0].size() == protocol::STATES_HEADER_SIZE + 2 * protocol::STATE_SIZE);
+    const std::optional<protocol::StatesSnapshot> decoded = protocol::decodeStates(payloads[0]);
+
+    CHECK(decoded.has_value());
+    CHECK(decoded->tick == 42);
+    CHECK(decoded->states.size() == 2);
+    CHECK(decoded->states[0].id == 7);
+    CHECK(decoded->states[1].id == static_cast<std::uint16_t>(70000));
+    CHECK(std::abs(decoded->states[0].pos.x - 12.3f) <= 0.125f);
+    CHECK(std::abs(decoded->states[0].pos.y + 40.6f) <= 0.125f);
+    CHECK(std::abs(decoded->states[1].pos.x - 1919.9f) <= 0.125f);
+    CHECK(decoded->states[1].pos.y == 1080.f);
+}
+
+TEST(states_clamp_positions_far_outside_the_map)
+{
+    const std::vector<EntityState> states{{1, gameLogic::Vec2Pos{{100000.f, -100000.f}}}};
+    const auto decoded = protocol::decodeStates(protocol::encodeStates(0, states)[0]);
+
+    CHECK(decoded.has_value());
+    CHECK(decoded->states[0].pos.x == 32767.f / protocol::POSITION_SCALE);
+    CHECK(decoded->states[0].pos.y == -32768.f / protocol::POSITION_SCALE);
+}
+
+TEST(states_with_a_wrong_size_are_rejected)
+{
+    const std::vector<EntityState> states{{1, gameLogic::Vec2Pos{{1.f, 2.f}}}};
+    protocol::Payload payload = protocol::encodeStates(0, states)[0];
+
+    payload.pop_back();
+    CHECK(!protocol::decodeStates(payload).has_value());
+    payload.push_back(0);
+    payload.push_back(0);
+    CHECK(!protocol::decodeStates(payload).has_value());
+}
+
+TEST(a_large_world_is_split_into_several_states)
+{
+    const std::vector<EntityState> states(protocol::MAX_STATES_PER_MESSAGE + 1);
+    const std::vector<protocol::Payload> payloads = protocol::encodeStates(0, states);
+
+    CHECK(payloads.size() == 2);
+    CHECK(payloads[0].size() <= Engine::Protocol::MAX_PAYLOAD_SIZE);
 }

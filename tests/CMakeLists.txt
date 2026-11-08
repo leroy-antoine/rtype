@@ -13,13 +13,18 @@ add_executable(rtype_tests
         SettingsTests.cpp
         DifficultyTests.cpp
         ProtocolTests.cpp
+        RoomTests.cpp
+        AdminTests.cpp
+        ${CMAKE_SOURCE_DIR}/src/server/admin/Command.cpp
+        ConnectionTests.cpp
         MapJsonTests.cpp
         CustomMapTests.cpp
         CustomMapListTests.cpp
         ${CMAKE_SOURCE_DIR}/src/client/game/Rtype/src/CustomMapList.cpp)
 target_include_directories(rtype_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/src/client/game/Rtype/include
-        ${CMAKE_SOURCE_DIR}/engine/window/include)
+        ${CMAKE_SOURCE_DIR}/engine/window/include
+        ${CMAKE_SOURCE_DIR}/src/server)
 target_link_libraries(rtype_tests PRIVATE rtype::common rtype::game rtype::protocol rtype::maps rtype::mapjson)
 target_compile_definitions(rtype_tests PRIVATE
         CUSTOM_MAPS_DIR="${CMAKE_SOURCE_DIR}/src/client/game/Rtype/CustomMaps")

@@ -14,6 +14,7 @@ A new client can be written from these two pages alone.
 - [Data types](#data-types)
 - [Transport summary](#transport-summary)
 - [Connection lifecycle](#connection-lifecycle)
+- [Rooms](#rooms)
 - [Game messages](#game-messages)
 - [Reliability](#reliability)
 - [Error handling and security](#error-handling-and-security)
@@ -27,8 +28,8 @@ A new client can be written from these two pages alone.
 | Direction | the client sends keys, the server sends the world |
 | Datagram | at most **1200 bytes**, carries one or several messages |
 | Byte order | **big-endian** for every integer and float |
-| Protocol version | `25` (`rtype::protocol::VERSION`), checked at connection |
-| Tick | the server simulates at 60 Hz and sends the states every tick |
+| Protocol version | `28` (`rtype::protocol::VERSION`), checked at connection |
+| Tick | the server simulates at 60 Hz and sends the world every 2 ticks (30 Hz) |
 
 The server is the authority. A client never sends a position, a hit or a
 damage: only the state of its keys.
@@ -42,6 +43,7 @@ damage: only the state of its keys.
 | `varint` | 1 or 2 | size of a payload, see the network module |
 | `bool` | 1 | `0` or `1`, any other value is rejected |
 | `Vec2` | 8 | `x float`, `y float` |
+| `QVec2` | 4 | `x`, `y` as `i16` in quarter units: the value is `round(v × 4)`, clamped to −32768..32767, read back as `v / 4` (±8191.75 map units, 0.125 max error) |
 
 Coordinates are in **map units**: the map is 1920 x 1080, the origin is the
 top-left corner, `x` grows to the right and `y` grows downwards.
@@ -62,8 +64,11 @@ Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
 
 ```
  client                                   server
-   │ ── Connect(version=25) ─────────────►  │  every 500 ms, 10 tries at most
+   │ ── Connect(version=28) ─────────────►  │  every 500 ms, 10 tries at most
    │ ◄───────────── Accept(token) ──────── │  or Refuse(0 version, 1 full)
+   │ ◄──────────────────── ROOM_LIST ───── │  reliable, the client is in the lobby
+   │ ── ROOM_CREATE / ROOM_JOIN(room) ──►  │  reliable
+   │ ◄─────── ROOM_JOINED / ROOM_REFUSED ─ │  reliable
    │ ◄───────────────────── YOU(slot) ──── │  reliable
    │ ◄────────────────── SPAWN × n ─────── │  reliable, the whole world
    │ ◄──────────────────── LEADERBOARD ─── │  reliable, the best times
@@ -73,8 +78,8 @@ Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
    │ ── SELECT_MAP(map) ────────────────►  │  reliable, the host, in the lobby
    │ ◄───────────────── AUGMENTS, SHOP ─── │  reliable, augments owned and on sale
    │ ── INPUT(sequence, keys) ──────────►  │  every frame of the client
-   │ ◄─────────────── STATES, STATUS ───── │  every tick / every 6 ticks
-   │ ◄──────────────────── OWN_STATE ───── │  every tick, to this client only
+   │ ◄─────────────── STATES, STATUS ───── │  every 2 ticks / every 6 ticks
+   │ ◄──────────────────── OWN_STATE ───── │  every 2 ticks, to this client only
    │ ◄─────────────── SPAWN, DESTROY ───── │  reliable, when something happens
    │ ◄─────────────── AUGMENTS, SHOP ───── │  reliable, when they change
    │ ── BUY(id) ────────────────────────►  │  reliable, when the player buys
@@ -83,14 +88,68 @@ Refuse, Ping, Pong, Disconnect, Ack), `0x07`-`0x0F` are reserved and
 ```
 
 - A client is refused when the version differs (`reason 0`) or when the
-  server has no free slot (`reason 1`). The server also disconnects a client
-  right after accepting it if the game has no free player slot.
+  server is full (`reason 1`, 32 clients). Everything after `ROOM_JOINED`
+  happens inside a room (see [Rooms](#rooms)).
 - Both sides send a Ping every second. A peer silent for **5 seconds** is
   timed out and removed.
 - When a client leaves or times out, its ship is destroyed in the game. The
-  server announces it to **all the other clients** with a `DESTROY` message,
-  so the others see the ship disappear. The server keeps running.
-- When the last client leaves, the game goes back to the lobby.
+  server announces it to **the other clients of its room** with a `DESTROY`
+  message, so they see the ship disappear. The server keeps running.
+- When the last client of a room leaves, the room is closed.
+
+## Rooms
+
+One server runs up to **8 rooms** (`MAX_ROOMS`) of 4 players each. Every room
+has its own game and its own thread. A client that is not in a room is in the
+**lobby**: it only receives `ROOM_LIST`, and the server ignores its game
+messages. The game messages of a client in a room are routed to that room
+only.
+
+| Type | Name | From | Delivery | Payload size |
+|---|---|---|---|---|
+| `0x31` | `ROOM_CREATE` | C | R | 0 |
+| `0x32` | `ROOM_JOIN` | C | R | 2 |
+| `0x33` | `ROOM_LEAVE` | C | R | 0 |
+| `0x38` | `ROOM_LIST` | S | R | 1 + 4 × n |
+| `0x39` | `ROOM_JOINED` | S | R | 2 |
+| `0x3A` | `ROOM_REFUSED` | S | R | 1 |
+| `0x3B` | `ROOM_CLOSED` | S | R | 0 |
+
+- `ROOM_CREATE` opens a new room and puts the client in it, as its host.
+- `ROOM_JOIN` (`room u16`) joins a room, even when its match has started: the
+  player gets a free slot and the whole world right away.
+- `ROOM_LEAVE` takes the client back to the lobby. When the host leaves, the
+  player with the lowest slot becomes the host. An empty room is closed.
+- `ROOM_LIST` is sent when a client enters the lobby, then again to every
+  client in the lobby each time a room changes.
+- `ROOM_JOINED` (`room u16`) is followed by `YOU`, the world, `AUGMENTS`,
+  `SHOP` and `LEADERBOARD`. The waiting room is the `Lobby` phase of the game:
+  the host picks the map with `SELECT_MAP`.
+- `ROOM_CLOSED` tells a client that an admin closed its room (`/close` in the
+  server console). It is followed by `ROOM_LIST`: the client is back in the
+  lobby, as after a `ROOM_LEAVE`. A client that is not in a room ignores it.
+
+The leaderboards are shared by every room of the server.
+
+### `ROOM_LIST` (0x38)
+
+| Offset | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | count | `u8` | number of rooms, at most 8 |
+| 1 + 4i | id | `u16` | room id |
+| 3 + 4i | players | `u8` | players in the room, at most 4 |
+| 4 + 4i | phase | `u8` | `Phase` of its game, as in `STATUS` |
+
+The size must be exactly `1 + 4 × count`.
+
+### `ROOM_REFUSED` (0x3A)
+
+| Value | Reason |
+|---|---|
+| 0 | `NotFound`: no room with this id |
+| 1 | `Full`: the room has 4 players |
+| 2 | `TooManyRooms`: the server already runs 8 rooms |
+| 3 | `AlreadyInRoom`: the client must leave its room first |
 
 ## Game messages
 
@@ -114,7 +173,7 @@ Sender: **C** is the client, **S** is the server. Delivery: **R** is reliable
 | `0x1C` | `CUSTOM_RECORDS_GET` | C | R | 8 |
 | `0x20` | `SPAWN` | S | R | 22 |
 | `0x21` | `DESTROY` | S | R | 4 |
-| `0x22` | `STATES` | S | U | 5 + 12 × n |
+| `0x22` | `STATES` | S | U | 5 + 6 × n |
 | `0x23` | `STATUS` | S | U | 22 + 6 × n |
 | `0x24` | `YOU` | S | R | 1 |
 | `0x25` | `OWN_STATE` | S | U | 14 |
@@ -372,18 +431,26 @@ A value of 35 or more is invalid, and so is a player slot of 4 or more.
 
 ### `STATES` (0x22)
 
-The positions of the moving entities, sent every tick.
+The positions of the moving entities, sent every 2 ticks (30 times per second).
 
 | Offset | Field | Type | Meaning |
 |---|---|---|---|
 | 0 | tick | `u32` | server tick of this snapshot, used by the client to interpolate |
 | 4 | count `n` | `u8` | |
-| 5 + 12 × i | id | `u32` | |
-| 9 + 12 × i | position | `Vec2` | |
+| 5 + 6 × i | id | `u16` | the low 16 bits of the entity id given by `SPAWN` |
+| 7 + 6 × i | position | `QVec2` | |
 
-The payload size must be exactly `5 + 12 × n`. At most 98 entities fit in one
+The payload size must be exactly `5 + 6 × n`. At most 197 entities fit in one
 message, so the server splits a large world into several `STATES` messages.
-A state for an unknown id is ignored by the client.
+The client finds the entity whose `SPAWN` id has the same low 16 bits; a state
+for an unknown id is ignored. Two living entities would only collide if their
+ids were 65536 spawns apart.
+
+The `SPAWN`, `DESTROY` and `OWN_STATE` messages of a tick are sent on the same
+tick as `STATES`, so they share one datagram. Compared with 4-byte ids, float
+positions and 60 sends per second, this cuts the download of a client from
+about 12.8 KB/s to 4.4 KB/s on average (peak 21 KB/s to 6.7 KB/s with about
+30 entities).
 
 ### `STATUS` (0x23)
 
@@ -423,8 +490,8 @@ The client uses it to know which ship is its own (HUD, respawn hint).
 
 ### `OWN_STATE` (0x25)
 
-The authoritative position of the ship of one client, sent every tick to that
-client only.
+The authoritative position of the ship of one client, sent every 2 ticks to
+that client only.
 
 | Offset | Field | Type | Meaning |
 |---|---|---|---|
@@ -561,15 +628,17 @@ messages tell every client what changed.
 UDP can lose, duplicate and reorder datagrams. The protocol picks the delivery
 per message:
 
-- **Reliable** (`SPAWN`, `DESTROY`, `YOU`, `RESPAWN`, `SELECT_MAP`, `LEAVE_MATCH`, `PAUSE`, `LEADERBOARD`, `HISTORY`,
+- **Reliable** (every `ROOM_*` message, `SPAWN`, `DESTROY`, `YOU`, `RESPAWN`, `SELECT_MAP`, `LEAVE_MATCH`, `PAUSE`, `LEADERBOARD`, `HISTORY`,
   `HISTORY_REQUEST`, `SETTINGS`, `AUGMENTS`, `SHOP`, `BUY`, `READY`,
   `BUY_RESULT`, and the messages of the custom maps): a spawn, a death or a purchase must
   not be missed, or the client would draw a wrong world. The sender resends
   until an Ack comes back, the receiver applies the messages in order.
-- **Unreliable** (`INPUT`, `STATES`, `STATUS`, `OWN_STATE`): they are repeated every tick
+- **Unreliable** (`INPUT`, `STATES`, `STATUS`, `OWN_STATE`): they are repeated every few ticks
   or every frame, so a lost one is replaced by the next. Resending an old
-  position would be useless. A datagram that is not newer than the last one
-  received is dropped, so a late `STATES` never moves a ship backwards.
+  position would be useless. The unreliable messages of a datagram that is not
+  newer than the last one received are dropped, so a late `STATES` never moves a
+  ship backwards. Its reliable messages, `Ack` and `Pong` are still handled, so
+  a datagram that arrives out of order does not delay a `SPAWN`.
 
 ## Error handling and security
 

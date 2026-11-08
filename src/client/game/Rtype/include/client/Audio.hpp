@@ -21,6 +21,7 @@ namespace client {
         void play(const std::vector<Cue> &cues);
         // Suit l'etat de la partie : musique du niveau ou du boss, jingles de fin.
         void follow(Replica &replica);
+        void stop();
 
     private:
         enum class Sound { Shoot, Hit, Explosion, BossAlert, Victory, Defeat,

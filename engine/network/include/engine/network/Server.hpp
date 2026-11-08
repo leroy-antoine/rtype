@@ -5,6 +5,7 @@
 #include <random>
 #include <vector>
 #include <cstdint>
+#include <mutex>
 #include <cstddef>
 #include <optional>
 #include "engine/network/Event.hpp"
@@ -28,6 +29,7 @@ namespace Engine {
         std::uint16_t port() const;
         std::size_t clientCount() const;
         std::optional<std::chrono::milliseconds> latency(ClientId client);
+        std::optional<Address> address(ClientId client);
 
         void update();
         std::optional<ServerEvent> pollEvent();
@@ -70,5 +72,6 @@ namespace Engine {
         std::deque<ServerEvent> _events;
         ClientId _nextClientId = 0;
         std::random_device _random;
+        mutable std::mutex _mutex;
     };
 }

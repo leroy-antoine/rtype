@@ -3,10 +3,9 @@
 #include "CustomMaps.hpp"
 
 namespace server {
-    CustomMaps::CustomMaps(std::filesystem::path recordsFile)
-        : _recordsFile(std::move(recordsFile))
+    CustomMaps::CustomMaps(rtype::CustomLeaderboard &board, std::filesystem::path recordsFile)
+        : _recordsFile(std::move(recordsFile)), _board(board)
     {
-        _board.load(_recordsFile);
     }
 
     bool CustomMaps::begin(const int slot,

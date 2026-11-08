@@ -36,13 +36,18 @@ namespace client {
             _reg.add(e, rtype::Lifetime{});
         }
         _entities[spawn.id] = e;
+        _shortIds[static_cast<std::uint16_t>(spawn.id)] = spawn.id;
         recordSpawnCue(spawn);
     }
 
     void Replica::apply(const rtype::EntityDestroyed &destroy)
     {
         const auto found = _entities.find(destroy.id);
+        const auto shortId = _shortIds.find(static_cast<std::uint16_t>(destroy.id));
 
+        if (shortId != _shortIds.end() && shortId->second == destroy.id) {
+            _shortIds.erase(shortId);
+        }
         _samples.erase(destroy.id);
         if (found == _entities.end()) {
             return;
@@ -65,10 +70,12 @@ namespace client {
 
     void Replica::record(const double tick, const rtype::EntityState &state)
     {
-        if (!_entities.contains(state.id)) {
+        const auto id = _shortIds.find(static_cast<std::uint16_t>(state.id));
+
+        if (id == _shortIds.end()) {
             return;
         }
-        std::deque<Sample> &samples = _samples[state.id];
+        std::deque<Sample> &samples = _samples[id->second];
 
         if (samples.empty() || tick > samples.back().tick) {
             samples.push_back({tick, state.pos});
