@@ -53,9 +53,11 @@ namespace server {
         _game.update(_timestep.step());
         _phase.store(_game.phase());
         recordVictory();
-        broadcastEvents();
-        broadcastStates();
-        sendOwnStates();
+        if (_ticks % SEND_EVERY_TICKS == 0) {
+            broadcastEvents();
+            broadcastStates();
+            sendOwnStates();
+        }
         if (_ticks++ % STATUS_EVERY_TICKS == 0) {
             broadcastStatus();
         }

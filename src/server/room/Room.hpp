@@ -44,6 +44,7 @@ namespace server {
             using Clock = std::chrono::steady_clock;
 
             static constexpr std::size_t STATUS_EVERY_TICKS = 6;
+            static constexpr std::size_t SEND_EVERY_TICKS = 2;
 
             void run(const std::stop_token &stop);
             void tick();
