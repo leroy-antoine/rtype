@@ -118,5 +118,9 @@ jobs:
         env:
           TOKEN: ${{ secrets.OFFICIAL_TOKEN }}
         run: |
-          git remote add official "https://x-access-token:${TOKEN}@${OFFICIAL}"
+          if [ -z "${TOKEN}" ]; then
+            echo "The secret OFFICIAL_TOKEN is empty or missing."
+            exit 1
+          fi
+          git remote add official "https://${TOKEN}@${OFFICIAL}"
           git push official "HEAD:refs/heads/${GITHUB_REF_NAME}"
