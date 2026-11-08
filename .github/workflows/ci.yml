@@ -122,5 +122,7 @@ jobs:
             echo "The secret OFFICIAL_TOKEN is empty or missing."
             exit 1
           fi
+          TOKEN="$(printf '%s' "${TOKEN}" | tr -d '[:space:]')"
+          echo "Token length: ${#TOKEN} (a classic token has 40)"
           git remote add official "https://${TOKEN}@${OFFICIAL}"
           git push official "HEAD:refs/heads/${GITHUB_REF_NAME}"
