@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <span>
 #include <utility>
@@ -45,7 +46,7 @@ namespace rtype::protocol {
         std::uint8_t speedPercent = 100;
     };
 
-    constexpr std::uint8_t VERSION = 26;
+    constexpr std::uint8_t VERSION = 27;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
@@ -78,7 +79,8 @@ namespace rtype::protocol {
     constexpr std::size_t OWN_STATE_SIZE = 14;
     constexpr std::uint8_t FLAG_INVERTED = 1 << 0;
     constexpr std::size_t SPAWN_SIZE = 22;
-    constexpr std::size_t STATE_SIZE = 12;
+    constexpr std::size_t STATE_SIZE = 6;
+    constexpr float POSITION_SCALE = 4.f;
     constexpr std::size_t STATES_HEADER_SIZE = 5;
     constexpr std::size_t MAX_STATES_PER_MESSAGE =
         (Engine::Protocol::MAX_PAYLOAD_SIZE - STATES_HEADER_SIZE) / STATE_SIZE;
@@ -297,6 +299,20 @@ namespace rtype::protocol {
         return EntityDestroyed{*id};
     }
 
+    inline std::int16_t quantize(const float value)
+    {
+        const float scaled = std::round(value * POSITION_SCALE);
+
+        return static_cast<std::int16_t>(std::clamp(scaled,
+            static_cast<float>(std::numeric_limits<std::int16_t>::min()),
+            static_cast<float>(std::numeric_limits<std::int16_t>::max())));
+    }
+
+    inline float dequantize(const std::uint16_t value)
+    {
+        return static_cast<float>(static_cast<std::int16_t>(value)) / POSITION_SCALE;
+    }
+
     inline Payload encodeStateChunk(const std::uint32_t tick,
           const std::span<const EntityState> chunk)
     {
@@ -305,8 +321,9 @@ namespace rtype::protocol {
         writer.writeU32(tick);
         writer.writeU8(static_cast<std::uint8_t>(chunk.size()));
         for (const EntityState &state : chunk) {
-            writer.writeU32(state.id);
-            writeVec2(writer, state.pos);
+            writer.writeU16(static_cast<std::uint16_t>(state.id));
+            writer.writeU16(static_cast<std::uint16_t>(quantize(state.pos.x)));
+            writer.writeU16(static_cast<std::uint16_t>(quantize(state.pos.y)));
         }
         return writer.data();
     }
@@ -329,13 +346,14 @@ namespace rtype::protocol {
 
     inline std::optional<EntityState> readState(Engine::BinaryReader &reader)
     {
-        const std::optional<std::uint32_t> id = reader.readU32();
-        const std::optional<gameLogic::Vec2> pos = readVec2(reader);
+        const std::optional<std::uint16_t> id = reader.readU16();
+        const std::optional<std::uint16_t> x = reader.readU16();
+        const std::optional<std::uint16_t> y = reader.readU16();
 
-        if (!id || !pos) {
+        if (!id || !x || !y) {
             return std::nullopt;
         }
-        return EntityState{*id, gameLogic::Vec2Pos{*pos}};
+        return EntityState{*id, gameLogic::Vec2Pos{{dequantize(*x), dequantize(*y)}}};
     }
 
     inline std::optional<StatesSnapshot> decodeStates(const Payload &payload)
