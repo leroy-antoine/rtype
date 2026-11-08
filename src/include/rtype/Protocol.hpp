@@ -46,7 +46,7 @@ namespace rtype::protocol {
         std::uint8_t speedPercent = 100;
     };
 
-    constexpr std::uint8_t VERSION = 27;
+    constexpr std::uint8_t VERSION = 28;
 
     constexpr Engine::MessageType INPUT = 0x10;
     constexpr Engine::MessageType RESPAWN = 0x11;
@@ -118,6 +118,7 @@ namespace rtype::protocol {
     constexpr Engine::MessageType ROOM_LIST = 0x38;
     constexpr Engine::MessageType ROOM_JOINED = 0x39;
     constexpr Engine::MessageType ROOM_REFUSED = 0x3A;
+    constexpr Engine::MessageType ROOM_CLOSED = 0x3B;
     constexpr std::size_t MAX_ROOMS = 8;
     constexpr std::size_t ROOM_ID_SIZE = 2;
     constexpr std::size_t ROOM_INFO_SIZE = 4;
