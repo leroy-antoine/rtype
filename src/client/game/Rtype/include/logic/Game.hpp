@@ -173,10 +173,11 @@ namespace rtype {
             std::size_t &coins = _reg.get<CoinCounter>(_coinCounter).total;
 
             if (_phase != Phase::Shop || !isUsedSlot(slot)
-                || offer == _shopOffers.end() || coins < priceOf(id)) {
+                || offer == _shopOffers.end()
+                || coins < priceFor(id, playerCount())) {
                 return false;
             }
-            coins -= priceOf(id);
+            coins -= priceFor(id, playerCount());
             _shopOffers.erase(offer);
             _purchased.push_back(id);
             return addAugment(slot, id);
@@ -348,6 +349,12 @@ namespace rtype {
             const auto index = static_cast<std::size_t>(slot);
 
             return slot >= 0 && index < _usedSlots.size() && _usedSlots[index];
+        }
+
+        [[nodiscard]] std::size_t playerCount() const
+        {
+            return static_cast<std::size_t>(std::ranges::count(_usedSlots,
+                true));
         }
 
         [[nodiscard]] bool hasPlayers() const
@@ -673,6 +680,7 @@ namespace rtype {
             destroyAll(collectProjectileEntities(_reg));
             destroyAll(collectWith<Missile>(_reg));
             destroyAll(collectObstacles(_reg));
+            destroyAll(collectWith<Lifetime>(_reg));
         }
 
         // Apres le dernier shop on retourne au lobby, sinon le niveau suivant
@@ -691,9 +699,9 @@ namespace rtype {
 
         void updateShop(const float dt)
         {
-            lifetimeSystem(_reg, dt);
             playerControlSystem(_reg);
-            movementSystem(_reg, dt);
+            movePlayers(_reg, dt);
+            droneFollowSystem(_reg, dt);
             updateCountdown(dt);
         }
 

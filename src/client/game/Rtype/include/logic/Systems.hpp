@@ -89,6 +89,16 @@ namespace rtype {
             });
     }
 
+    // Au shop, seuls les vaisseaux bougent : tout le reste est fige.
+    inline void movePlayers(Engine::Registry &reg, const float dt)
+    {
+        reg.each<PlayerTag, gameLogic::Vec2Pos, gameLogic::Vec2Velocity>(
+            [dt](Engine::Entity, const PlayerTag &, gameLogic::Vec2Pos &pos,
+                const gameLogic::Vec2Velocity &vel) {
+                pos = gameLogic::Vec2Pos{calculatePos(pos, vel, dt)};
+            });
+    }
+
     inline void contactSystem(Engine::Registry &reg)
     {
         const std::vector<Collider> monsters = collectColliders(reg, collectMonsters(reg));

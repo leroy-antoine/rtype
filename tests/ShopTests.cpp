@@ -184,7 +184,7 @@ TEST(a_purchase_spends_the_coins_and_gives_the_augment)
     const AugmentId offer = game.shopOffers().front();
 
     CHECK(game.buyAugment(0, offer));
-    CHECK(game.coins() == 1000 - priceOf(offer));
+    CHECK(game.coins() == 1000 - priceFor(offer, 1));
     CHECK(game.ownedAugments(0) == std::vector<AugmentId>{offer});
     CHECK(game.shopOffers().size() == config::SHOP_OFFER_COUNT - 1);
 }
@@ -372,7 +372,7 @@ TEST(the_next_level_starts_when_the_countdown_ends)
     runFor(game, config::SHOP_COUNTDOWN + 0.1f);
     CHECK(game.phase() == Phase::Playing);
     CHECK(game.isPlayerAlive(0));
-    CHECK(game.coins() == 1000 - priceOf(bought));
+    CHECK(game.coins() == 1000 - priceFor(bought, 1));
     CHECK(game.ownedAugments(0) == std::vector<AugmentId>{bought});
     CHECK(!game.status().players[0].ready);
     CHECK(game.shopOffers().empty());
@@ -554,4 +554,74 @@ TEST(an_augment_bought_in_the_last_game_can_be_offered_again)
         offeredAgain = isExcluded(bought, game.shopOffers());
     }
     CHECK(offeredAgain);
+}
+
+TEST(the_coins_stop_scrolling_while_the_shop_is_open)
+{
+    Game game = gameAtTheEndOfALevel();
+    std::mt19937 rng(1);
+    const Engine::Entity coin = createCoin(game.registry(), rng);
+
+    game.registry().add(coin, gameLogic::Vec2Pos{{900.f, 300.f}});
+    CHECK(game.phase() == Phase::Shop);
+    runFor(game, 2.f);
+    CHECK(game.registry().get<gameLogic::Vec2Pos>(coin).x == 900.f);
+}
+
+TEST(the_ships_can_still_move_while_the_shop_is_open)
+{
+    Game game = gameAtTheEndOfALevel();
+    PlayerInput keys;
+
+    keys.down = true;
+    game.setInput(0, keys);
+    const float before = game.registry().get<gameLogic::Vec2Pos>(
+        *findPlayerBySlot(game.registry(), 0)).y;
+
+    runFor(game, 0.5f);
+    CHECK(game.registry().get<gameLogic::Vec2Pos>(
+        *findPlayerBySlot(game.registry(), 0)).y > before);
+}
+
+TEST(the_effects_in_progress_are_cleared_when_the_shop_opens)
+{
+    Game game(1, twoLevels());
+
+    game.addPlayer();
+    runFor(game, 2.4f);
+    createExplosion(game.registry(), {500.f, 500.f}, 80.f);
+    runFor(game, 0.4f);
+    CHECK(game.phase() == Phase::Shop);
+    CHECK(collectWith<Lifetime>(game.registry()).empty());
+}
+
+TEST(the_prices_follow_the_number_of_players)
+{
+    const std::size_t base = priceOf(AugmentId::MultiShot);
+
+    CHECK(priceFor(AugmentId::MultiShot, 4) == base);
+    const AugmentId id = AugmentId::MultiShot;
+
+    CHECK(priceFor(id, 1) < priceFor(id, 2));
+    CHECK(priceFor(id, 2) < priceFor(id, 3));
+    CHECK(priceFor(id, 3) < priceFor(id, 4));
+    CHECK(priceFor(id, 0) == priceFor(id, 1));
+    CHECK(priceFor(id, 9) == base);
+    CHECK(priceFor(AugmentId::DamageUp, 1) >= 1);
+}
+
+TEST(a_purchase_costs_the_price_of_the_current_number_of_players)
+{
+    Game solo = shopWithCoins(1000);
+    Game duo = shopWithCoins(1000);
+    const AugmentId offer = solo.shopOffers().front();
+
+    duo.addPlayer();
+    duo.restockShop(ShopTier{});
+    const AugmentId chosen = duo.shopOffers().front();
+
+    CHECK(solo.buyAugment(0, offer));
+    CHECK(duo.buyAugment(0, chosen));
+    CHECK(solo.coins() == 1000 - priceFor(offer, 1));
+    CHECK(duo.coins() == 1000 - priceFor(chosen, 2));
 }

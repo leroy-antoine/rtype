@@ -190,7 +190,7 @@ another one replaces it, and the last one bought comes back when you respawn.
 ### Drone
 
 The drone is a small ship that flies ahead of your ship and above it and fires
-by itself at the closest enemy within 700 that is already on the screen, with half your damage. It cannot be
+by itself at the closest enemy that is already on the screen, wherever it is, with half your damage. It cannot be
 hit. It disappears with your ship and comes back with it when you respawn.
 Three shop items, each one better and more expensive than the last, give it
 a level: **Drone** (level 1) gives you the drone, **Drone Boost** (level 2)
@@ -244,7 +244,13 @@ that says what it does (with the real numbers, for example `+5 DAMAGE ON EVERY
 SHOT`), its rarity and its price.
 Press **Space** to say you are ready: when every player is ready a five second
 countdown starts, then the next level begins (after the last victory the game
-goes back to the lobby). The clock does not run while the shop is open.
+goes back to the lobby). The clock does not run while the shop is open, and everything is paused: the
+enemies, the coins on the screen and the effects are removed or frozen. Only
+your ship can still move, and the drone follows it without firing.
+
+The prices depend on the number of players, because the coins are shared:
+half the price alone, 70 % with two players, 85 % with three and the full
+price with four.
 
 ## Coins, time and level skip
 

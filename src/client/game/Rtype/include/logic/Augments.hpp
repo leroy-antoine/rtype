@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -200,6 +201,19 @@ namespace rtype {
             return 0;
         }
         return def->price;
+    }
+
+    // Le prix de base est celui de 4 joueurs ; il baisse avec leur nombre.
+    inline std::size_t priceFor(const AugmentId id,
+        const std::size_t players)
+    {
+        const std::size_t count = std::clamp<std::size_t>(players, 1,
+            config::MAX_PLAYERS);
+        const float price = static_cast<float>(priceOf(id))
+            * config::PRICE_BY_PLAYERS[count - 1];
+
+        return std::max<std::size_t>(1,
+            static_cast<std::size_t>(std::lround(price)));
     }
 
     inline bool applyAugment(Engine::Registry &reg, const Engine::Entity e,

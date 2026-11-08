@@ -246,3 +246,50 @@ TEST(the_drone_augments_are_sold_in_the_shop)
         CHECK(def->price > 0);
     }
 }
+
+TEST(the_drone_shoots_an_enemy_far_away_on_the_screen)
+{
+    Engine::Registry reg;
+
+    droneShip(reg);
+    tankAt(reg, 1500.f, 400.f);
+    run(reg, 0.1f);
+    CHECK(bullets(reg) == 1);
+}
+
+TEST(the_drone_is_sent_to_the_clients_like_any_moving_entity)
+{
+    Game game(1);
+
+    game.addPlayer();
+    game.addAugment(0, AugmentId::Drone);
+    game.update(config::FIXED_DT);
+    game.update(config::FIXED_DT);
+    const Engine::Entity drone =
+        collectWith<DroneBody>(game.registry()).front();
+    const auto states = game.states();
+    const std::uint32_t id = game.registry().get<NetId>(drone).value;
+    bool sent = false;
+
+    for (const EntityState &state : states) {
+        sent = sent || state.id == id;
+    }
+    CHECK(sent);
+}
+
+TEST(the_drone_keeps_following_the_ship_while_the_shop_is_open)
+{
+    Engine::Registry reg;
+    const Engine::Entity player = droneShip(reg);
+
+    run(reg, 0.2f);
+    const Engine::Entity drone = drones(reg).front();
+
+    reg.get<gameLogic::Vec2Pos>(player) = gameLogic::Vec2Pos{{100.f, 800.f}};
+    for (int i = 0; i < 240; ++i) {
+        droneFollowSystem(reg, config::FIXED_DT);
+    }
+    CHECK(std::fabs(reg.get<gameLogic::Vec2Pos>(drone).y
+        - (800.f - config::DRONE_OFFSET_Y)) < 2.f);
+    CHECK(bullets(reg) == 0);
+}

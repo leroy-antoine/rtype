@@ -85,11 +85,23 @@ namespace client {
         _messageUntil = elapsed + MESSAGE_DURATION;
     }
 
+    std::size_t ShopPanel::priceShown(const Replica &replica,
+        const rtype::AugmentId id)
+    {
+        const std::optional<rtype::GameStatus> &status = replica.status();
+
+        if (!status) {
+            return rtype::priceOf(id);
+        }
+        return rtype::priceFor(id, status->players.size());
+    }
+
     bool ShopPanel::affordable(const Replica &replica, const rtype::AugmentId id)
     {
         const std::optional<rtype::GameStatus> &status = replica.status();
 
-        return status && status->coins >= rtype::priceOf(id);
+        return status && status->coins >= rtype::priceFor(id,
+            status->players.size());
     }
 
     std::size_t ShopPanel::selection(const std::size_t count) const
@@ -157,7 +169,7 @@ namespace client {
         drawAugmentText(id, centerX, position.y + 52.f, text);
         _font.drawCentered(rarityName(def->rarity), centerX, position.y + 158.f,
             2.f, canBuy ? rarityColor(def->rarity) : GREY);
-        drawPrice(def->price, centerX, position.y + 184.f,
+        drawPrice(priceShown(replica, id), centerX, position.y + 184.f,
             canBuy ? YELLOW : RED, elapsed);
     }
 

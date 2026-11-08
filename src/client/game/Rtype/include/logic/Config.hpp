@@ -129,16 +129,20 @@ namespace rtype::config {
     constexpr float AUGMENT_SPEED_BONUS = 75.f;
     constexpr int AUGMENT_HP_BONUS = 25;
 
-    constexpr std::size_t AUGMENT_DAMAGE_PRICE = 50;
-    constexpr std::size_t AUGMENT_SPEED_PRICE = 50;
-    constexpr std::size_t AUGMENT_HP_PRICE = 100;
-    constexpr std::size_t AUGMENT_FIRE_RATE_PRICE = 200;
-    constexpr std::size_t AUGMENT_REGENERATION_PRICE = 150;
-    constexpr std::size_t AUGMENT_SHIELD_PRICE = 250;
-    constexpr std::size_t AUGMENT_MULTISHOT_PRICE = 400;
-    constexpr std::size_t AUGMENT_ROCKET_PRICE = 350;
-    constexpr std::size_t AUGMENT_LASER_PRICE = 450;
-    constexpr std::size_t AUGMENT_LIGHTNING_PRICE = 450;
+    // Les prix de base sont ceux d'une partie a 4 joueurs ; moins il y a de
+    // joueurs, moins la caisse commune se remplit et moins c'est cher.
+    constexpr std::array<float, MAX_PLAYERS> PRICE_BY_PLAYERS = {
+        0.5f, 0.7f, 0.85f, 1.f};
+    constexpr std::size_t AUGMENT_DAMAGE_PRICE = 40;
+    constexpr std::size_t AUGMENT_SPEED_PRICE = 40;
+    constexpr std::size_t AUGMENT_HP_PRICE = 75;
+    constexpr std::size_t AUGMENT_FIRE_RATE_PRICE = 150;
+    constexpr std::size_t AUGMENT_REGENERATION_PRICE = 110;
+    constexpr std::size_t AUGMENT_SHIELD_PRICE = 190;
+    constexpr std::size_t AUGMENT_MULTISHOT_PRICE = 300;
+    constexpr std::size_t AUGMENT_ROCKET_PRICE = 260;
+    constexpr std::size_t AUGMENT_LASER_PRICE = 340;
+    constexpr std::size_t AUGMENT_LIGHTNING_PRICE = 340;
     constexpr float ROCKET_COOLDOWN = 1.2f;
     constexpr float ROCKET_SPEED = 450.f;
     constexpr float ROCKET_WIDTH = 30.f;
@@ -151,15 +155,15 @@ namespace rtype::config {
     constexpr float LASER_HEIGHT = 40.f;
     constexpr float LASER_DURATION = 0.4f;
     constexpr int LASER_DAMAGE_FACTOR = 8;
-    constexpr std::size_t AUGMENT_DRONE_PRICE = 300;
-    constexpr std::size_t AUGMENT_DRONE_BOOST_PRICE = 400;
-    constexpr std::size_t AUGMENT_DRONE_TWIN_PRICE = 500;
+    constexpr std::size_t AUGMENT_DRONE_PRICE = 225;
+    constexpr std::size_t AUGMENT_DRONE_BOOST_PRICE = 300;
+    constexpr std::size_t AUGMENT_DRONE_TWIN_PRICE = 375;
     constexpr int DRONE_MAX_LEVEL = 3;
     constexpr float DRONE_OFFSET_X = 60.f;
     constexpr float DRONE_OFFSET_Y = 50.f;
-    constexpr float DRONE_FOLLOW = 8.f;
+    constexpr float DRONE_FOLLOW = 12.f;
     constexpr float DRONE_SIZE = 24.f;
-    constexpr float DRONE_RANGE = 700.f;
+    constexpr float DRONE_RANGE = MAP_WIDTH;
     constexpr int DRONE_DAMAGE_DIVISOR = 2;
     constexpr float DRONE_SPREAD = 0.08f;
     constexpr float LIGHTNING_COOLDOWN = 0.8f;

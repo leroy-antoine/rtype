@@ -49,6 +49,8 @@ namespace client {
         void drawAugmentText(rtype::AugmentId id, float centerX, float top,
             Engine::Color color);
         [[nodiscard]] static std::size_t infoColumns();
+        static std::size_t priceShown(const Replica &replica,
+            rtype::AugmentId id);
         void drawPrice(std::size_t price, float centerX, float top, Engine::Color color, float elapsed);
         void drawMessage(float elapsed);
 

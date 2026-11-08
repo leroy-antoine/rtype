@@ -59,6 +59,7 @@ namespace rtype {
         reg.add(drone, dronePerch(reg, owner));
         reg.add(drone, gameLogic::Vec2Hitbox{{config::DRONE_SIZE,
             config::DRONE_SIZE}});
+        reg.add(drone, gameLogic::Vec2Velocity{});
         reg.add(drone, Team{TeamId::Player});
         reg.add(drone, Damage{1});
         reg.add(drone, Renderable{SpriteId::PlayerDrone});
@@ -147,6 +148,16 @@ namespace rtype {
             found = found || body.owner == owner;
         });
         return found;
+    }
+
+    // Au shop, les drones suivent leur vaisseau sans tirer.
+    inline void droneFollowSystem(Engine::Registry &reg, const float dt)
+    {
+        for (const Engine::Entity drone : collectWith<DroneBody>(reg)) {
+            if (reg.alive(reg.get<DroneBody>(drone).owner)) {
+                followOwner(reg, drone, dt);
+            }
+        }
     }
 
     // Un drone par joueur equipe, detruit avec son proprietaire.
